@@ -72,7 +72,9 @@ def build_wheel(binary: str, target: str, version: str, output: str) -> str:
         info_dir.mkdir()
 
         # METADATA
-        (info_dir / "METADATA").write_text(
+        readme_path = Path(__file__).parent / "README.md"
+        readme_text = readme_path.read_text(encoding="utf-8") if readme_path.exists() else ""
+        metadata = (
             f"Metadata-Version: 2.1\n"
             f"Name: chub\n"
             f"Version: {version}\n"
@@ -81,7 +83,11 @@ def build_wheel(binary: str, target: str, version: str, output: str) -> str:
             f"License: MIT\n"
             f"Requires-Python: >=3.8\n"
             f"Author-email: Viet-Anh Nguyen <vietanh.dev@gmail.com>\n"
+            f"Description-Content-Type: text/markdown\n"
         )
+        if readme_text:
+            metadata += f"\n{readme_text}"
+        (info_dir / "METADATA").write_text(metadata)
 
         # WHEEL
         (info_dir / "WHEEL").write_text(
