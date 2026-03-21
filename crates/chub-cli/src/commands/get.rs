@@ -138,33 +138,22 @@ pub async fn run(args: GetArgs, json: bool, merged: &MergedRegistry) -> Result<(
             }
         }
 
-        let resolved = resolve_doc_path(
+        let mut resolved = resolve_doc_path(
             &entry,
             effective_lang.as_deref(),
             effective_version.as_deref(),
         );
 
+        // If the requested language isn't available, fall back to no language preference
+        // (auto-select single language or prompt for multiple)
+        if resolved.is_none() && effective_lang.is_some() {
+            resolved = resolve_doc_path(&entry, None, effective_version.as_deref());
+        }
+
         let resolved = match resolved {
             Some(r) => r,
             None => {
-                if args.lang.is_some() {
-                    if let Some(langs) = entry.languages() {
-                        let available: Vec<_> = langs.iter().map(|l| l.language.as_str()).collect();
-                        output::error(
-                            &format!(
-                                "Language \"{}\" is not available for \"{}\". Available: {}.",
-                                args.lang.as_deref().unwrap_or(""),
-                                id,
-                                available.join(", ")
-                            ),
-                            json,
-                        );
-                    } else {
-                        output::error(&format!("No content found for \"{}\".", id), json);
-                    }
-                } else {
-                    output::error(&format!("No content found for \"{}\".", id), json);
-                }
+                output::error(&format!("No content found for \"{}\".", id), json);
                 std::process::exit(1);
             }
         };
