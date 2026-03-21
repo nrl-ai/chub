@@ -26,8 +26,8 @@ chub list
 ## Features
 
 - **1,553+ curated docs** — API references for popular libraries and frameworks
-- **~26ms cold start** — native Rust binary, no Node.js runtime needed
-- **1.2MB binary** — vs ~70MB with node_modules
+- **~44ms cold start** — native Rust binary, no Node.js runtime needed
+- **10 MB binary** — vs ~22 MB node_modules
 - **MCP server** — AI agents search and fetch docs automatically
 - **Doc pinning** — lock versions so every agent uses the same reference
 - **Team annotations** — shared knowledge committed to git

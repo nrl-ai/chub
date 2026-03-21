@@ -23,7 +23,7 @@ The npm package (`@nrl-ai/chub`) is a thin wrapper that automatically downloads 
 | `@nrl-ai/chub-win32-x64` | Windows x86_64 |
 
 ::: tip
-If you already have Node.js installed for your project, npm is the fastest path. The binary is ~1.2 MB.
+If you already have Node.js installed for your project, npm is the fastest path. The binary is ~10 MB.
 :::
 
 ## pip (Python)

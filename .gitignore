@@ -31,3 +31,6 @@ __pycache__/
 
 # Website
 /website/node_modules
+
+# References code/docs
+/references

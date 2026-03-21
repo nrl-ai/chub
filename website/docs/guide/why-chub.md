@@ -10,15 +10,16 @@ A native Rust binary replaces the Node.js runtime:
 
 | Metric | Context Hub (JS) | Chub (Rust) | Improvement |
 |---|---|---|---|
-| Build (4 entries) | 1,050 ms | **38 ms** | **27x faster** |
-| Build (1,559 entries) | 6,300 ms | **2,500 ms** | **2.5x faster** |
-| Validate only | 6,300 ms | **360 ms** | **17x faster** |
-| Cold start (`--help`) | 120 ms | **26 ms** | **4.6x faster** |
-| Binary size | ~70 MB | **1.2 MB** | **58x smaller** |
-| Memory (1,559 entries) | ~120 MB | **~15 MB** | **8x less** |
+| Search | 1,060 ms | **56 ms** | **19x faster** |
+| Validate only | 1,920 ms | **380 ms** | **5x faster** |
+| Build (1,560 entries) | 3,460 ms | **1,770 ms** | **2x faster** |
+| Get (cached doc) | 148 ms | **63 ms** | **2.3x faster** |
+| Cold start (`--help`) | 131 ms | **44 ms** | **3x faster** |
+| Package size | ~22 MB | **10 MB** | **2.2x smaller** |
+| Peak memory (build) | ~122 MB | **~23 MB** | **5.3x less** |
 | Runtime dependency | Node.js 20+ | **None** | Single binary |
 
-Every operation completes under 50ms. Speed matters because agents shouldn't wait for context.
+Measured on Windows 11 with the production corpus (1,553 docs, 7 skills). Median of 5 runs. Reproduce with `./scripts/benchmark.sh`.
 
 ## 2. Team Features
 
@@ -51,4 +52,4 @@ Identical registry format, search index, and config schema. Content authored for
 3. **Three-tier inheritance** — personal -> project -> profile. No tier is required.
 4. **Agent-native** — every feature is accessible via MCP. CLI is for humans, MCP is for agents.
 5. **Zero cloud dependency** — everything works offline and locally.
-6. **Fast** — every operation under 50ms.
+6. **Fast** — search in ~56ms, cold start in ~44ms.

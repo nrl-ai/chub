@@ -32,7 +32,7 @@ Coding agents hallucinate APIs and forget what they learn between sessions. Cont
 
 | | |
 |---|---|
-| **Native speed** | 27x faster builds, 26ms cold start, 1.2 MB binary — no Node.js required |
+| **Native speed** | 5x faster builds, 19x faster search, 10 MB binary — no Node.js required |
 | **Team pins** | Lock docs to specific versions so every agent on the team uses the same reference |
 | **Shared annotations** | Team knowledge lives in `.chub/annotations/` — committed to git, surfaced automatically |
 | **Custom project context** | Your architecture docs, API conventions, and runbooks, served alongside public docs |
@@ -305,24 +305,34 @@ See [docs/plan.md](docs/plan.md) for the full roadmap.
 
 ## Benchmarks
 
-Measured on the production corpus (1,553 docs, 6 skills, 1,691 files).
+Measured on the production corpus (1,553 docs, 7 skills). Median of 5 runs on Windows 11, Node.js v22, Rust release build. Reproduce with `./scripts/benchmark.sh`.
 
-### Build performance
+### Performance
 
-| Operation | JS (`chub`) | Rust (`Chub`) | Speedup |
+| Operation | Context Hub (JS) | Chub (Rust) | Speedup |
 |---|---|---|---|
-| `build` (4 entries) | 1,050 ms | **38 ms** | **27x** |
-| `build` (1,559 entries) | 6,300 ms | **2,500 ms** | **2.5x** |
-| `build --validate-only` | 6,300 ms | **360 ms** | **17x** |
-| Cold start (`--help`) | 120 ms | **26 ms** | **4.6x** |
+| `search "stripe payments"` | 1,060 ms | **56 ms** | **19x** |
+| `build --validate-only` | 1,920 ms | **380 ms** | **5x** |
+| `build` (1,560 entries) | 3,460 ms | **1,770 ms** | **2x** |
+| `get stripe/api` | 148 ms | **63 ms** | **2.3x** |
+| Cold start (`--help`) | 131 ms | **44 ms** | **3x** |
 
 ### Resource usage
 
-| Metric | JS | Rust |
+| Metric | Context Hub (JS) | Chub (Rust) |
 |---|---|---|
-| Binary size | ~70 MB (with `node_modules`) | **1.2 MB** |
-| Runtime dependency | Node.js 20+ | **None** (single binary) |
-| Memory (build, 1,559 entries) | ~120 MB | **~15 MB** |
+| Package size | ~22 MB (`node_modules`) | **10 MB** (single binary) |
+| Runtime dependency | Node.js 20+ | **None** |
+| Peak memory (build, 1,560 entries) | ~122 MB | **~23 MB** (5.3x less) |
+
+### Features
+
+| | Context Hub (JS) | Chub (Rust) |
+|---|---|---|
+| CLI commands | 7 | **20** |
+| MCP tools | 5 | **7** |
+| Team features (pins, profiles, snapshots, etc.) | — | **Yes** |
+| Registry format compatibility | — | **Identical** |
 
 ---
 

@@ -10,7 +10,7 @@
 [Context Hub](https://github.com/andrewyng/context-hub) by Andrew Ng solves a real problem: coding agents hallucinate APIs and forget what they learn between sessions. Its solution — curated, versioned markdown docs served via CLI and MCP — works well. Chub is built on that foundation.
 
 **What Chub adds**:
-1. **Performance** — a native Rust binary replaces the Node.js runtime: 27× faster builds, ~26ms cold start vs 120ms, 1.2 MB binary vs ~70 MB with `node_modules`.
+1. **Performance** — a native Rust binary replaces the Node.js runtime: 5× faster validation, 19× faster search, ~44ms cold start vs 131ms, 10 MB binary vs ~22 MB `node_modules`.
 2. **Team features** — doc pinning, shared annotations, custom project context, and agent config sync; things an individual tool doesn't need but a team does.
 3. **Full compatibility** — identical registry format, search index, and config schema. Content authored for Context Hub works in Chub without changes.
 
@@ -18,20 +18,21 @@
 
 ### Capability comparison
 
-| Capability | Context Hub (JS) | Chub (current) | Chub (planned) |
-|---|---|---|---|
-| Public library docs | 1,600+ curated | 1,600+ curated | 1,600+ curated |
-| Custom/private docs | Yes (build cmd) | Yes (build cmd) | Yes + team workflow |
-| Offline mode | Yes (bundle) | Yes (bundle) | Yes |
-| Team collaboration | No | No | **Core focus** |
-| Project awareness | No | No | **Auto-detect deps** |
-| Agent config sync | No | No | **AGENTS.md gen** |
-| Git-tracked context | No | No | **`.chub/` in repo** |
-| Monorepo support | No | No | **Path-scoped profiles** |
-| Self-hosted registry | Yes | Yes | Yes + `chub serve` |
-| MCP server | Yes | Yes | Yes + team tools |
-| Cold start | ~120 ms | ~26 ms | ~26 ms |
-| Binary size | ~70 MB (Node) | 1.2 MB (native) | 1.2 MB (native) |
+| Capability | Context Hub (JS) | Chub (Rust) |
+|---|---|---|
+| Public library docs | 1,600+ curated | 1,600+ curated |
+| Custom/private docs | Yes (build cmd) | Yes (build cmd) |
+| Offline mode | Yes (bundle) | Yes (bundle) |
+| Team collaboration | No | **Yes** (pins, profiles, annotations) |
+| Project awareness | No | **Yes** (auto-detect deps) |
+| Agent config sync | No | **Yes** (CLAUDE.md, .cursorrules, AGENTS.md) |
+| Git-tracked context | No | **Yes** (`.chub/` in repo) |
+| Context profiles | No | **Yes** (role-scoped) |
+| Self-hosted registry | Yes | Yes + `chub serve` |
+| MCP server | 5 tools | **7 tools** (+ team tools) |
+| CLI commands | 7 | **20** |
+| Cold start | ~131 ms | **~44 ms** |
+| Binary size | ~22 MB (node_modules) | **10 MB** (native) |
 
 ---
 

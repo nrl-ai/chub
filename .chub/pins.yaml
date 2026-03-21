@@ -1,16 +1,13 @@
 pins:
-  - id: serde/derive
-    lang: rust
-    reason: "Core serialization framework — used everywhere for JSON/YAML"
-
-  - id: clap/derive
-    lang: rust
-    reason: "CLI argument parsing with derive macros"
-
-  - id: tokio/runtime
-    lang: rust
-    reason: "Async runtime for MCP server and HTTP serving"
-
-  - id: axum/routing
-    lang: rust
-    reason: "HTTP framework for chub serve"
+- id: serde/derive
+  lang: rust
+  reason: Core serialization framework — used everywhere for JSON/YAML
+- id: clap/derive
+  lang: rust
+  reason: CLI argument parsing with derive macros
+- id: tokio/runtime
+  lang: rust
+  reason: Async runtime for MCP server and HTTP serving
+- id: axum/routing
+  lang: rust
+  reason: HTTP framework for chub serve

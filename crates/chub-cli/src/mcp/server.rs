@@ -1,6 +1,6 @@
 use std::sync::Arc;
 
-use rmcp::model::{ServerCapabilities, ServerInfo};
+use rmcp::model::{Implementation, ServerCapabilities, ServerInfo};
 use rmcp::transport::stdio;
 use rmcp::{tool_handler, ServerHandler, ServiceExt};
 
@@ -15,6 +15,7 @@ impl ServerHandler for ChubMcpServer {
                 .enable_resources()
                 .build(),
         )
+        .with_server_info(Implementation::new("chub", env!("CARGO_PKG_VERSION")))
         .with_instructions(
             "Context Hub MCP Server - search and retrieve LLM-optimized docs and skills",
         )
