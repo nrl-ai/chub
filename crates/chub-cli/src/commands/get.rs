@@ -125,7 +125,24 @@ pub async fn run(args: GetArgs, json: bool, merged: &MergedRegistry) -> Result<(
         };
 
         let entry_type = entry.entry_type.to_string();
-        let resolved = resolve_doc_path(&entry, args.lang.as_deref(), args.version.as_deref());
+
+        // Apply pin overrides: if the entry is pinned, use pinned lang/version as defaults
+        let mut effective_lang = args.lang.clone();
+        let mut effective_version = args.version.clone();
+        if let Some(pin) = chub_core::team::pins::get_pin(entry.id()) {
+            if effective_lang.is_none() {
+                effective_lang = pin.lang.clone();
+            }
+            if effective_version.is_none() {
+                effective_version = pin.version.clone();
+            }
+        }
+
+        let resolved = resolve_doc_path(
+            &entry,
+            effective_lang.as_deref(),
+            effective_version.as_deref(),
+        );
 
         let resolved = match resolved {
             Some(r) => r,

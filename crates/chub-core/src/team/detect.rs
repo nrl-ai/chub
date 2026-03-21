@@ -231,25 +231,40 @@ fn detect_cargo(path: &Path) -> Vec<DetectedDep> {
     };
 
     let mut deps = Vec::new();
+
+    let extract_deps = |table: &toml::map::Map<String, toml::Value>,
+                        deps: &mut Vec<DetectedDep>| {
+        for (name, val) in table {
+            let version = match val {
+                toml::Value::String(s) => Some(s.clone()),
+                toml::Value::Table(t) => t
+                    .get("version")
+                    .and_then(|v| v.as_str())
+                    .map(|s| s.to_string()),
+                _ => None,
+            };
+            deps.push(DetectedDep {
+                name: name.clone(),
+                version,
+                source_file: "Cargo.toml".to_string(),
+                language: "rust".to_string(),
+            });
+        }
+    };
+
     for section in &["dependencies", "dev-dependencies"] {
         if let Some(table) = toml_val.get(section).and_then(|d| d.as_table()) {
-            for (name, val) in table {
-                let version = match val {
-                    toml::Value::String(s) => Some(s.clone()),
-                    toml::Value::Table(t) => t
-                        .get("version")
-                        .and_then(|v| v.as_str())
-                        .map(|s| s.to_string()),
-                    _ => None,
-                };
-                deps.push(DetectedDep {
-                    name: name.clone(),
-                    version,
-                    source_file: "Cargo.toml".to_string(),
-                    language: "rust".to_string(),
-                });
-            }
+            extract_deps(table, &mut deps);
         }
+    }
+
+    // Workspace Cargo.toml: [workspace.dependencies]
+    if let Some(table) = toml_val
+        .get("workspace")
+        .and_then(|w| w.get("dependencies"))
+        .and_then(|d| d.as_table())
+    {
+        extract_deps(table, &mut deps);
     }
 
     deps

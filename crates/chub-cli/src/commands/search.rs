@@ -20,6 +20,10 @@ pub struct SearchArgs {
     #[arg(long)]
     lang: Option<String>,
 
+    /// Filter by type (doc or skill)
+    #[arg(long = "type")]
+    entry_type: Option<String>,
+
     /// Max results
     #[arg(long, default_value = "20")]
     limit: usize,
@@ -54,8 +58,9 @@ fn format_entry_list(entries: &[TaggedEntry]) {
             .unwrap_or_default();
 
         let desc = entry.description();
-        let desc_display = if desc.len() > 60 {
-            format!("{}...", &desc[..57])
+        let desc_display = if desc.chars().count() > 60 {
+            let truncated: String = desc.chars().take(57).collect();
+            format!("{}...", truncated)
         } else {
             desc.to_string()
         };
@@ -123,6 +128,7 @@ pub fn run(args: SearchArgs, json: bool, merged: &MergedRegistry) {
     let filters = SearchFilters {
         tags: args.tags,
         lang: args.lang,
+        entry_type: args.entry_type,
     };
 
     // No query: list all

@@ -234,6 +234,10 @@ fn apply_filters<'a>(
         });
     }
 
+    if let Some(ref entry_type) = filters.entry_type {
+        result.retain(|e| e.entry_type == *entry_type);
+    }
+
     result
 }
 
@@ -241,6 +245,7 @@ fn apply_filters<'a>(
 pub struct SearchFilters {
     pub tags: Option<String>,
     pub lang: Option<String>,
+    pub entry_type: Option<String>,
 }
 
 pub fn is_multi_source() -> bool {
@@ -781,6 +786,8 @@ pub fn resolve_doc_path(
 
             let lang_obj = if let Some(ref lang) = lang {
                 d.languages.iter().find(|l| l.language == *lang)
+            } else if d.languages.len() == 1 {
+                d.languages.first()
             } else {
                 return Some(ResolvedPath::NeedsLanguage {
                     available: d.languages.iter().map(|l| l.language.clone()).collect(),

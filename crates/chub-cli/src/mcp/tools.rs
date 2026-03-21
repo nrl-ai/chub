@@ -193,6 +193,7 @@ impl ChubMcpServer {
         let filters = SearchFilters {
             tags: params.tags,
             lang: params.lang,
+            entry_type: None,
         };
 
         let entries = if let Some(ref query) = params.query {
@@ -395,6 +396,7 @@ impl ChubMcpServer {
         let filters = SearchFilters {
             tags: params.tags,
             lang: params.lang,
+            entry_type: None,
         };
 
         let entries = list_entries(&filters, &self.merged);
