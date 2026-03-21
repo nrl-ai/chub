@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "chub"
-version = "0.1.10"
+version = "0.1.11"
 description = "Chub: high-performance curated docs for AI coding agents with team sharing"
 readme = "README.md"
 license = "MIT"
