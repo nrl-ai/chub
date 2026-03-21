@@ -17,7 +17,7 @@
 | Three-tier annotations | No | **Yes** (personal / team / org server) |
 | Project awareness | No | **Yes** (auto-detect deps) |
 | Agent config sync | No | **Yes** (CLAUDE.md, .cursorrules, AGENTS.md) |
-| Claude Code integration | No | **Yes** (MCP + skills + plugin + hooks) |
+| Agent integrations | No | **Yes** (MCP + 10 agent config targets) |
 | Git-tracked context | No | **Yes** (`.chub/` in repo) |
 | Context profiles | No | **Yes** (role-scoped, with inheritance) |
 | Self-hosted registry | Yes | Yes + `chub serve` |
@@ -53,7 +53,7 @@
 | P3 | CI/CD integration | **Planned** | GitHub Actions, freshness checks, pin validation |
 | P3 | Python/npm SDKs | **Partial** | npm wrapper done; Python CLI wrapper done; native Python API not started |
 | P3 | IDE extensions | **Planned** | VS Code, JetBrains, Neovim |
-| P2 | Claude Code integration | **Done** | MCP server + skills + plugin + hooks |
+| P2 | Agent integrations | **Done** | MCP server + 10 agent config targets (Claude Code, Cursor, Windsurf, Copilot, Gemini CLI, Kiro, Cline, Roo Code, Augment, Codex) |
 
 ### Test coverage
 
@@ -89,15 +89,16 @@ Returns ranked docs relevant to the task description. Does NOT add to pins, does
     fail-on-drift: true        # fail if generated files differ from committed
 ```
 
-### Claude Code integration (Done)
+### Agent integrations (Done)
 
-Three-layer integration with Claude Code:
+Two integration layers for AI coding agents:
 
-1. **MCP server** (`.claude/settings.json`) — 7 tools: `chub_search`, `chub_get`, `chub_list`, `chub_context`, `chub_pins`, `chub_annotate`, `chub_feedback`
-2. **Skills** (`.claude/skills/`) — `/docs`, `/annotate`, `/setup` slash commands
-3. **Plugin** (`claude-plugin/`) — distributable package with MCP + skills + permissions
+1. **MCP server** (`chub mcp`) — 7 tools, works with any MCP client
+2. **Agent config** (`chub agent-config sync`) — generates static rules for 10 targets covering Claude Code, Cursor, Windsurf, Copilot, Gemini CLI, Kiro, Cline, Roo Code, Augment, and Codex
 
-See `docs/claude-code-integration.md` for full guide.
+Claude Code also gets: skills (`/docs`, `/annotate`, `/setup`), a distributable plugin (`claude-plugin/`), and a pre-commit freshness hook.
+
+See `docs/integrations.md` for full setup guide.
 
 ### IDE extensions
 

@@ -145,9 +145,13 @@ Config file: `~/.chub/config.yaml`. Multiple sources supported via `sources:` li
 
 All on-disk formats (`registry.json`, `search-index.json`, annotation JSONs) are byte-for-byte identical with the original JS Context Hub. The `serde(rename)` attributes on `types.rs` structs enforce camelCase field names to maintain this parity.
 
-## Chub MCP integration
+## Integrations
 
-This repo uses its own chub MCP server (configured in `.claude/settings.json`) to provide runtime doc lookups. Available MCP tools:
+Chub integrates with AI coding agents via MCP (runtime tools) and agent config generation (static rules). See `docs/integrations.md` for full setup guides.
+
+### MCP tools
+
+Available via `chub mcp` (stdio server). Works with any MCP-compatible client.
 
 | Tool | Purpose |
 |------|---------|
@@ -158,6 +162,14 @@ This repo uses its own chub MCP server (configured in `.claude/settings.json`) t
 | `chub_pins` | Add/remove/list pinned docs |
 | `chub_annotate` | Read/write team annotations |
 | `chub_feedback` | Submit doc quality feedback |
+
+### Agent config generation
+
+`chub agent-config sync` generates rules files from `.chub/config.yaml` for 10 targets:
+
+`claude.md`, `cursorrules`, `windsurfrules`, `agents.md`, `copilot`, `gemini.md`, `clinerules`, `roorules`, `augmentrules`, `kiro`
+
+See `docs/integrations.md` for full reference.
 
 ### Skills (slash commands)
 
@@ -172,12 +184,3 @@ This repo uses its own chub MCP server (configured in `.claude/settings.json`) t
 Pinned docs (`.chub/pins.yaml`): `serde/derive`, `clap/derive`, `tokio/runtime`, `axum/routing`.
 
 Project context docs (`.chub/context/`): `architecture.md`, `conventions.md`, `team-features.md`. Access via `chub get project/<name>` or `chub_context` MCP tool.
-
-### Claude Code plugin
-
-The `claude-plugin/` directory contains a distributable Claude Code plugin. Install with:
-```sh
-claude /plugin install https://github.com/nrl-ai/chub
-```
-
-See `docs/claude-code-integration.md` for full setup guide.

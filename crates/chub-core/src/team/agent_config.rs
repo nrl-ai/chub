@@ -13,6 +13,11 @@ pub enum Target {
     WindsurfRules,
     AgentsMd,
     Copilot,
+    GeminiMd,
+    ClinerRules,
+    RooRules,
+    AugmentRules,
+    KiroSteering,
 }
 
 impl Target {
@@ -23,6 +28,11 @@ impl Target {
             "windsurfrules" | ".windsurfrules" => Some(Target::WindsurfRules),
             "agents.md" | "agentsmd" => Some(Target::AgentsMd),
             "copilot" | "copilot-instructions" => Some(Target::Copilot),
+            "gemini.md" | "geminimd" => Some(Target::GeminiMd),
+            "clinerules" | ".clinerules" => Some(Target::ClinerRules),
+            "roorules" | "roo-rules" => Some(Target::RooRules),
+            "augmentrules" | "augment-rules" => Some(Target::AugmentRules),
+            "kiro" | "kiro-steering" => Some(Target::KiroSteering),
             _ => None,
         }
     }
@@ -34,7 +44,28 @@ impl Target {
             Target::WindsurfRules => ".windsurfrules",
             Target::AgentsMd => "AGENTS.md",
             Target::Copilot => ".github/copilot-instructions.md",
+            Target::GeminiMd => "GEMINI.md",
+            Target::ClinerRules => ".clinerules",
+            Target::RooRules => ".roo/rules/chub-rules.md",
+            Target::AugmentRules => ".augment/rules/chub-rules.md",
+            Target::KiroSteering => ".kiro/steering/chub-rules.md",
         }
+    }
+
+    /// Returns all known target names for documentation and help text.
+    pub fn all_target_names() -> &'static [&'static str] {
+        &[
+            "claude.md",
+            "cursorrules",
+            "windsurfrules",
+            "agents.md",
+            "copilot",
+            "gemini.md",
+            "clinerules",
+            "roorules",
+            "augmentrules",
+            "kiro",
+        ]
     }
 }
 

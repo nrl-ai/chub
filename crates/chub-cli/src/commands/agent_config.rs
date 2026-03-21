@@ -13,7 +13,7 @@ pub struct AgentConfigArgs {
 
 #[derive(Subcommand)]
 pub enum AgentConfigCommand {
-    /// Generate all target files (CLAUDE.md, .cursorrules, etc.)
+    /// Generate all target files (CLAUDE.md, .cursorrules, GEMINI.md, etc.)
     Generate,
     /// Update targets only if source changed (idempotent)
     Sync,

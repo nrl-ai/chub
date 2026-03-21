@@ -218,7 +218,12 @@ chub detect --pin                        # auto-pin matches
 
 ## chub agent-config
 
-Generate or sync agent config files (CLAUDE.md, .cursorrules, etc.) from pinned docs and annotations.
+Generate or sync agent config files from `.chub/config.yaml` rules. 10 targets: `claude.md`, `cursorrules`, `windsurfrules`, `agents.md`, `copilot`, `gemini.md`, `clinerules`, `roorules`, `augmentrules`, `kiro`.
+
+```bash
+chub agent-config sync       # generate all configured targets
+chub agent-config diff       # preview changes without writing
+```
 
 ## chub check
 
