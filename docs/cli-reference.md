@@ -18,6 +18,7 @@ Search docs and skills. No query lists all entries.
 |------|---------|
 | `--tags <csv>` | Filter by comma-separated tags |
 | `--lang <language>` | Filter by language |
+| `--type <type>` | Filter by type (`doc` or `skill`) |
 | `--limit <n>` | Max results (default: 20) |
 
 ```bash
@@ -25,6 +26,7 @@ chub search                          # list everything
 chub search "stripe"                 # fuzzy search by name/description
 chub search stripe/payments          # exact id — shows full detail
 chub search --tags automation        # filter by tag
+chub search --type skill             # list only skills
 ```
 
 **Exact ID match** returns the full entry detail (versions, languages, files). **Fuzzy search** returns a list of matches ranked by relevance.
@@ -40,12 +42,13 @@ Fetch one or more docs or skills by ID. Auto-detects type (doc vs skill). Auto-i
 | `--full` | Fetch all files, not just the entry point |
 | `--file <paths>` | Fetch specific file(s) by path (comma-separated) |
 | `-o, --output <path>` | Write to file or directory |
+| `--pinned` | Fetch all pinned docs at once |
 
 ```bash
 chub get stripe/api                  # single doc (auto-infers lang)
-chub get openai/chat-api --lang py   # specific language
+chub get openai/chat --lang py   # specific language
 chub get pw-community/login-flows    # fetch a skill
-chub get stripe/api openai/chat-api  # multiple entries
+chub get stripe/api openai/chat  # multiple entries
 chub get stripe/api -o .context/     # save to file
 ```
 
@@ -75,7 +78,7 @@ With `--json`, the response includes an `additionalFiles` array listing availabl
 
 If a doc is available in multiple languages and `--lang` is not specified, the CLI lists available languages and asks you to choose.
 
-If a doc has only one language, `--lang` is not required — it's auto-inferred.
+If a doc has only one language, `--lang` is not required — it's auto-inferred. If `--lang` is specified but unavailable for an entry, the CLI falls back to auto-selection rather than erroring.
 
 ## chub annotate [id] [note]
 
