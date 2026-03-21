@@ -1,6 +1,6 @@
 # Dependency Auto-Detection
 
-Scan your project's dependency files and auto-pin matching docs.
+Scan your project's dependency files and auto-pin matching docs. Detection runs automatically during project init when you use `chub init --from-deps`, or you can run it standalone at any time.
 
 ## Usage
 
@@ -38,3 +38,26 @@ Detected 6 dependencies with available docs:
 
 Pin all? chub detect --pin
 ```
+
+## Version matching
+
+Use `chub get --match-env` to auto-detect the version of a dependency from your project's dep files and fetch the matching doc version:
+
+```sh
+# Reads openai version from requirements.txt / pyproject.toml
+# and fetches the closest matching doc version
+chub get openai/chat --lang python --match-env
+```
+
+This is especially useful when upgrading a library — you get the doc that matches what's actually installed, not what's pinned.
+
+## Freshness
+
+After pinning, use `chub check` to detect when pinned doc versions lag behind the library version installed in your project:
+
+```sh
+chub check         # Compare pinned vs installed versions
+chub check --fix   # Auto-update outdated pins
+```
+
+See [Snapshots & Freshness](/guide/snapshots) for the full freshness and auditing workflow.

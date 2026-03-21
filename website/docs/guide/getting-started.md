@@ -155,16 +155,16 @@ chub pins              # list all pins
 chub get --pinned      # fetch all pinned docs at once
 ```
 
-## Three-tier config
+## Config inheritance
 
-Chub uses a layered config system — no tier is required:
+Chub uses a layered config file system — no layer is required. Settings cascade from personal defaults through project config to active role profiles:
 
 ```
-~/.chub/config.yaml          # Tier 1 — personal defaults
+~/.chub/config.yaml          # Personal defaults (machine-wide)
     ↓ overridden by
-.chub/config.yaml            # Tier 2 — project config (shared)
+.chub/config.yaml            # Project config (git-tracked, shared with team)
     ↓ overridden by
-.chub/profiles/<name>.yaml   # Tier 3 — role/task profile
+.chub/profiles/<name>.yaml   # Role/task profile (e.g. backend, frontend)
 ```
 
 ## What to learn next
@@ -176,10 +176,11 @@ Now that you have Chub installed, explore the features that matter to your workf
 | Understand why Chub exists | [Why Chub](/guide/why-chub) |
 | Lock doc versions for your team | [Doc Pinning](/guide/pinning) |
 | Give different roles different context | [Context Profiles](/guide/profiles) |
-| Share team knowledge in git | [Team Annotations](/guide/annotations) |
+| Share team knowledge in git | [Annotations & Self-Learning](/guide/annotations) |
 | Add custom project docs | [Project Context](/guide/project-context) |
 | Auto-detect deps and pin docs | [Dep Auto-Detection](/guide/detect) |
 | Sync CLAUDE.md / .cursorrules | [Agent Config Sync](/guide/agent-config) |
 | See all CLI commands | [CLI Reference](/reference/cli) |
 | Configure Chub | [Configuration](/reference/configuration) |
 | Connect AI agents via MCP | [MCP Server](/reference/mcp-server) |
+| Build a custom private registry | [Self-Hosting](/guide/self-hosting) |

@@ -39,15 +39,26 @@ export default defineConfig({
           ]
         },
         {
+          text: 'Self-Learning',
+          items: [
+            { text: 'Annotations', link: '/guide/annotations' },
+            { text: 'Agent Config Sync', link: '/guide/agent-config' },
+          ]
+        },
+        {
           text: 'Team Features',
           items: [
             { text: 'Doc Pinning', link: '/guide/pinning' },
             { text: 'Context Profiles', link: '/guide/profiles' },
-            { text: 'Annotations & Self-Learning', link: '/guide/annotations' },
             { text: 'Project Context', link: '/guide/project-context' },
             { text: 'Dep Auto-Detection', link: '/guide/detect' },
-            { text: 'Agent Config Sync', link: '/guide/agent-config' },
             { text: 'Snapshots & Freshness', link: '/guide/snapshots' },
+          ]
+        },
+        {
+          text: 'Going Further',
+          items: [
+            { text: 'Self-Hosting a Registry', link: '/guide/self-hosting' },
           ]
         },
       ],

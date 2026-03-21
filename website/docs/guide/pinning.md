@@ -37,17 +37,6 @@ chub pins              # List all pins
 chub get --pinned      # Fetch all pinned docs at once
 ```
 
-## MCP Integration
-
-When an agent calls `chub_get`, pinned version and language are automatically applied. The agent doesn't need to know which version to use.
-
-A team notice is appended to pinned docs:
-
-```
----
-[Team pin] Locked to v4.0 (python). Reason: We use v4 streaming API.
-```
-
 ## Update a pin
 
 Running `chub pin` on an already-pinned ID updates it:
@@ -59,3 +48,42 @@ chub pin openai/chat --version 4.5
 # Add a reason
 chub pin openai/chat --reason "Migrated to v4.5"
 ```
+
+## Freshness checks
+
+Pinned versions can drift behind the library version actually installed in your project. Use `chub check` to detect this:
+
+```sh
+chub check         # Compare pinned doc versions vs installed library versions
+chub check --fix   # Auto-update outdated pins
+```
+
+See [Snapshots & Freshness](/guide/snapshots) for the full freshness workflow and snapshot-based auditing.
+
+## MCP integration
+
+When an agent calls `chub_get`, the pinned version and language are automatically applied — the agent never needs to know which version to use.
+
+A team notice is appended to pinned docs:
+
+```
+---
+[Team pin] Locked to v4.0 (python). Reason: We use v4 streaming API.
+```
+
+The `chub_pins` MCP tool lets agents read and manage pins directly:
+
+```json
+// List all pins
+{}
+
+// Add a pin
+{ "id": "openai/chat", "lang": "python", "version": "4.0", "reason": "Use v4 streaming" }
+
+// Remove a pin
+{ "id": "openai/chat", "remove": true }
+```
+
+---
+
+See [Dep Auto-Detection](/guide/detect) to auto-pin from your dependency files.

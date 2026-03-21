@@ -100,15 +100,16 @@ Always use the official OpenAI Node.js SDK.
 
 ```sh
 # Annotate docs with team-specific guidance
-chub annotate openai/chat "Always use streaming for chat. Set max_tokens=4096."
+chub annotate openai/chat "Always use streaming. Set max_tokens=4096." \
+  --kind practice --team
 ```
 
 Now when any team member or AI agent fetches this doc, they see:
 
 ```
 ---
-[Agent note — 2025-03-21]
-Always use streaming for chat. Set max_tokens=4096.
+⚠ USER-CONTRIBUTED ANNOTATIONS (not part of official documentation):
+[Team practice — you (2026-03-21)] Always use streaming. Set max_tokens=4096.
 ```
 
 ### 5. Add project context
@@ -210,14 +211,12 @@ Pinned 4 docs:
 # .chub/profiles/backend.yaml
 name: backend
 description: Backend API development
-includes:
-  - fastapi/package
-  - stripe/payments
-  - pydantic/settings
+context:
+  - api-conventions.md
 rules:
-  - Use Pydantic v2 model_validator, not v1 validator
-  - All Stripe webhook handlers must verify signatures
-  - Use async def for all FastAPI endpoints
+  - "Use Pydantic v2 model_validator, not v1 validator"
+  - "All Stripe webhook handlers must verify signatures"
+  - "Use async def for all FastAPI endpoints"
 ```
 
 ### 3. Add Stripe-specific annotations
@@ -271,11 +270,11 @@ Chub auto-detects from 9 file types:
 | File | Language | Example |
 |---|---|---|
 | `package.json` | JavaScript/TypeScript | `"express": "^4.21.0"` |
+| `Cargo.toml` | Rust | `[dependencies]` and `[workspace.dependencies]` |
 | `requirements.txt` | Python | `fastapi==0.115.0` |
 | `pyproject.toml` | Python | `[project.dependencies]` |
-| `Cargo.toml` | Rust | `[dependencies]` and `[workspace.dependencies]` |
+| `Pipfile` | Python | `[packages]` |
 | `go.mod` | Go | `require github.com/gin-gonic/gin v1.10` |
 | `Gemfile` | Ruby | `gem 'rails', '~> 7.0'` |
-| `pom.xml` | Java | `<dependency>` |
-| `build.gradle` | Java/Kotlin | `implementation 'org.springframework...'` |
-| `composer.json` | PHP | `"require": { "laravel/framework": "^11.0" }` |
+| `pom.xml` | Java (Maven) | `<dependency>` |
+| `build.gradle` / `build.gradle.kts` | Java/Kotlin (Gradle) | `implementation 'org.springframework...'` |

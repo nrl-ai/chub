@@ -81,11 +81,42 @@ extends: base              # optional inheritance
 description: "Backend dev context"
 rules:
   - "Use Zod for validation"
-pins:
+pins:                      # list of entry ID strings, not objects
   - openai/chat
+  - stripe/api
 context:
   - api-conventions.md
 ```
+
+The `pins:` field in a profile is a list of entry ID strings (e.g. `openai/chat`). For per-pin version and language overrides, use `.chub/pins.yaml` instead.
+
+## Team annotation format
+
+Team annotations live in `.chub/annotations/` as per-entry YAML files. The filename uses `--` as a path separator (e.g. `openai--chat.yaml` for the `openai/chat` entry).
+
+```yaml
+# .chub/annotations/openai--chat.yaml
+id: openai/chat
+issues:
+  - author: alice
+    date: 2026-03-20
+    severity: high        # high | medium | low
+    note: "Rate limit errors occur above 50 req/s — add exponential backoff"
+fixes:
+  - author: alice
+    date: 2026-03-20
+    note: "Use exponential backoff with jitter; see utils/retry.ts"
+practices:
+  - author: bob
+    date: 2026-03-18
+    note: "Always use streaming for chat completions; set max_tokens=4096"
+notes:
+  - author: carol
+    date: 2026-03-15
+    note: "v4 SDK required — v3 patterns will not work with our setup"
+```
+
+Annotation kinds: `issues` (known problems), `fixes` (workarounds), `practices` (team conventions), `notes` (general observations). All annotations are appended to the doc when fetched via `chub get` or MCP.
 
 ## Context doc frontmatter
 

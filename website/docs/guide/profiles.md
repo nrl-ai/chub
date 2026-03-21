@@ -2,6 +2,18 @@
 
 Different roles need different context. Profiles scope which docs, rules, and context an agent loads — without changing shared pins.
 
+## Profile files
+
+Profiles live in `.chub/profiles/` and are plain YAML files committed to git. Each file defines the context for a specific role or task.
+
+```
+.chub/profiles/
+  base.yaml       # shared rules for all roles
+  backend.yaml    # backend/API development
+  frontend.yaml   # UI/frontend development
+  data.yaml       # data engineering and ML
+```
+
 ## Profile inheritance
 
 Profiles can extend a base so shared rules are written once:
@@ -31,6 +43,19 @@ context:
 rules:
   - "Use Zod for all request validation"
 ```
+
+## Profile fields
+
+| Field | Type | Description |
+|---|---|---|
+| `name` | string | Display name for the profile |
+| `extends` | string | Name of another profile to inherit from |
+| `description` | string | Short description shown in `chub profile list` |
+| `rules` | list of strings | Instructions injected into agent context |
+| `pins` | list of strings | Entry IDs to include when this profile is active (e.g. `openai/chat`) |
+| `context` | list of strings | Project context doc filenames from `.chub/context/` to include |
+
+Inherited fields from `extends` are merged with the child profile's fields. Child rules are appended after parent rules. Child `context` and `pins` lists are unioned with the parent's.
 
 ## Commands
 
@@ -62,4 +87,16 @@ Start the MCP server with a profile:
 chub mcp --profile backend
 ```
 
-Agents get focused, relevant context instead of the full registry.
+Agents get focused, relevant context instead of the full registry. The `chub_context` MCP tool returns the full active context in a single call — profile rules, context docs, pinned docs, and annotations:
+
+```json
+{ "task": "implement payment flow" }
+// Returns profile rules, context docs, pinned docs, and annotations in one call
+```
+
+The agent receives everything it needs to work correctly for the active role without making multiple separate requests.
+
+## Related features
+
+- [Project Context](/guide/project-context) — author the custom docs referenced in `context:`
+- [Agent Config Sync](/guide/agent-config) — sync profile rules to `CLAUDE.md` / `.cursorrules`

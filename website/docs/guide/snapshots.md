@@ -1,5 +1,7 @@
 # Snapshots & Freshness
 
+This page covers three related features: doc snapshots, freshness checks, and usage analytics.
+
 ## Doc Snapshots
 
 Capture point-in-time snapshots of all pins for reproducible builds and regression audits.
