@@ -15,6 +15,7 @@ export default defineConfig({
     nav: [
       { text: 'Guide', link: '/guide/getting-started' },
       { text: 'Reference', link: '/reference/cli' },
+      { text: 'Registry', link: 'https://cdn.chub.nrl.ai' },
       {
         text: 'Links',
         items: [

@@ -78,16 +78,26 @@ def build_wheel(binary: str, target: str, version: str, output: str) -> str:
             f"Metadata-Version: 2.1\n"
             f"Name: chub\n"
             f"Version: {version}\n"
-            f"Summary: Chub: high-performance curated docs for AI coding agents\n"
+            f"Summary: Chub: high-performance curated docs for AI coding agents with team sharing\n"
             f"Home-page: https://github.com/nrl-ai/chub\n"
             f"License: MIT\n"
             f"Requires-Python: >=3.8\n"
             f"Author-email: Viet-Anh Nguyen <vietanh.dev@gmail.com>\n"
-            f"Description-Content-Type: text/markdown\n"
+            f"Keywords: ai,documentation,mcp,context,coding-agent\n"
+            f"Classifier: Development Status :: 4 - Beta\n"
+            f"Classifier: Environment :: Console\n"
+            f"Classifier: Intended Audience :: Developers\n"
+            f"Classifier: License :: OSI Approved :: MIT License\n"
+            f"Classifier: Programming Language :: Rust\n"
+            f"Classifier: Topic :: Software Development :: Documentation\n"
+            f"Project-URL: Homepage, https://github.com/nrl-ai/chub\n"
+            f"Project-URL: Repository, https://github.com/nrl-ai/chub\n"
+            f"Project-URL: Issues, https://github.com/nrl-ai/chub/issues\n"
+            f"Description-Content-Type: text/markdown; charset=UTF-8\n"
         )
         if readme_text:
             metadata += f"\n{readme_text}"
-        (info_dir / "METADATA").write_text(metadata)
+        (info_dir / "METADATA").write_text(metadata, encoding="utf-8")
 
         # WHEEL
         (info_dir / "WHEEL").write_text(
