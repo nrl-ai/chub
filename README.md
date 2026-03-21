@@ -5,7 +5,7 @@
 <h1 align="center">Chub</h1>
 
 <p align="center">
-  <strong>The missing context layer for AI-assisted development teams.</strong>
+  <strong>Serve curated, versioned API docs to AI coding agents — so they stop hallucinating your APIs.</strong>
 </p>
 
 <p align="center">
@@ -21,131 +21,169 @@
 
 ---
 
-Built on [Context Hub](https://github.com/andrewyng/context-hub) by Andrew Ng — Chub is a high-performance Rust rewrite that extends the original with team-first features: shared doc pinning, git-tracked annotations, context profiles, and agent config sync.
+## The Problem
 
-**For individuals**: drop-in replacement for `chub` with a faster binary, better search, and persistent annotations.
-**For teams**: commit a `.chub/` directory to your repo and every developer and every AI agent gets the same versioned context, automatically.
+AI coding agents (Claude, Cursor, Copilot) hallucinate API signatures, use deprecated endpoints, and forget what they learned between sessions. You paste docs into chat, but they get lost in context. Your teammates paste different docs. Nobody's on the same page.
 
-## Why Chub
+## The Solution
 
-Coding agents hallucinate APIs and forget what they learn between sessions. Context Hub's answer — curated, versioned markdown docs served via CLI and MCP — works well. Chub keeps that foundation and adds:
+Chub is a CLI + MCP server that serves curated, versioned API documentation directly to your AI agents. Think of it as a package manager for AI context: you pin the docs you need, your agents fetch them on demand, and your whole team shares the same source of truth — tracked in git.
 
-| | |
-|---|---|
-| **Native speed** | 5x faster builds, 19x faster search, 10 MB binary — no Node.js required |
-| **Team pins** | Lock docs to specific versions so every agent on the team uses the same reference |
-| **Shared annotations** | Team knowledge lives in `.chub/annotations/` — committed to git, surfaced automatically |
-| **Custom project context** | Your architecture docs, API conventions, and runbooks, served alongside public docs |
-| **Context profiles** | Scope which docs and rules each role (backend, frontend, etc.) gets |
-| **Agent config sync** | Generate and keep `CLAUDE.md`, `.cursorrules`, `AGENTS.md` in sync from one source |
-| **Private registry** | Self-host internal docs alongside the public registry — no cloud required |
-| **Full compatibility** | Same registry format, search index, and config schema as Context Hub |
+```
+You type:   chub get openai/chat --lang python
+Agent sees: The complete, accurate OpenAI Chat API reference for Python
+```
+
+Built on [Context Hub](https://github.com/andrewyng/context-hub) by Andrew Ng — Chub is a high-performance Rust rewrite that extends the original with team features: shared doc pinning, git-tracked annotations, context profiles, agent config sync, and content integrity verification.
 
 ---
 
-## Installation
+## How It Works
 
-### npm (recommended)
-
-```sh
-npm install -g @nrl-ai/chub
+```
+┌──────────────┐     ┌─────────────┐     ┌──────────────────┐
+│  AI Agent    │────▶│  Chub MCP   │────▶│  Doc Registry    │
+│  (Claude,    │     │  Server     │     │  (CDN / local)   │
+│   Cursor)    │◀────│             │◀────│                  │
+└──────────────┘     └─────────────┘     └──────────────────┘
+   Gets accurate        Searches,             1,500+ curated
+   API docs on          caches, and           docs covering
+   demand               verifies docs         major APIs
 ```
 
-### pip
-
-```sh
-pip install chub
-```
-
-Pre-built wheels for Linux (x64, ARM64), macOS (x64, Apple Silicon), and Windows (x64).
-
-### Cargo (build from source)
-
-```sh
-cargo install chub
-```
-
-### Homebrew (macOS / Linux)
-
-```sh
-brew install nrl-ai/tap/chub
-```
-
-### Binary download
-
-Download prebuilt binaries from [GitHub Releases](https://github.com/nrl-ai/chub/releases):
-
-| Platform | Binary |
-|---|---|
-| Linux x64 | `chub-linux-x64` |
-| Linux ARM64 | `chub-linux-arm64` |
-| macOS x64 | `chub-darwin-x64` |
-| macOS ARM (Apple Silicon) | `chub-darwin-arm64` |
-| Windows x64 | `chub-win32-x64.exe` |
-
-### Verify installation
-
-```sh
-chub --version
-```
+1. **Agent needs API docs** — asks Chub via MCP (or you run `chub get`)
+2. **Chub searches the registry** — BM25 search with lexical boosting, 19x faster than the JS version
+3. **Returns the right version** — respects your team's pins, language preference, and version locks
+4. **Appends team knowledge** — annotations, project context, and profile rules travel with the doc
 
 ---
 
 ## Quick Start
 
-### Search for docs
+### Install
 
 ```sh
-chub search "stripe payments"
+npm install -g @nrl-ai/chub     # npm (recommended)
+pip install chub                 # pip
+cargo install chub               # cargo (build from source)
+brew install nrl-ai/tap/chub     # homebrew (macOS / Linux)
 ```
 
-### Fetch a doc
+Or download a prebuilt binary from [GitHub Releases](https://github.com/nrl-ai/chub/releases) — single 10 MB binary, no runtime dependencies.
+
+### Use
 
 ```sh
-chub get openai/chat --lang python
+chub search "stripe payments"                  # find docs
+chub get openai/chat --lang python             # fetch a doc
+chub get stripe/api --match-env                # auto-detect version from your package.json
+chub list                                      # browse everything
 ```
 
-### List all available docs
+### Connect to Your AI Agent
 
-```sh
-chub list
+Add to `.mcp.json` (Claude Code) or `.cursor/mcp.json` (Cursor):
+
+```json
+{
+  "mcpServers": {
+    "chub": {
+      "command": "chub",
+      "args": ["mcp"]
+    }
+  }
+}
 ```
 
-### Initialize a project for team sharing
-
-```sh
-chub init                    # create .chub/ directory
-chub init --from-deps        # auto-detect dependencies and pin matching docs
-```
+Your agent now has access to `chub_search`, `chub_get`, `chub_list`, `chub_annotate`, `chub_context`, `chub_pins`, and `chub_feedback` tools.
 
 ---
 
-## Usage
+## Team Sharing
 
-### Search and fetch
+This is where Chub goes beyond Context Hub. Initialize a `.chub/` directory in your repo and commit it — every developer and every AI agent gets the same versioned context, automatically.
 
 ```sh
-chub search "stripe"                    # BM25 search across all docs
-chub search "auth" --limit 5            # limit results
-chub search "react" --source official   # search specific source
-chub get openai/chat --lang python      # fetch doc by ID
-chub get stripe/api --lang javascript   # language-specific
-chub get openai/chat --version 4.0      # specific version
-chub list                               # list all available docs
-chub list --json                        # JSON output (works with all commands)
+chub init --from-deps            # auto-detect deps, create .chub/, pin matching docs
 ```
 
-### Doc pinning
+```
+my-project/
+├── .chub/                       # committed to git
+│   ├── config.yaml              # project-level config
+│   ├── pins.yaml                # locked doc versions
+│   ├── annotations/             # team knowledge (e.g., "use streaming API for this endpoint")
+│   ├── context/                 # your own docs: architecture, conventions, runbooks
+│   └── profiles/                # role-scoped context (backend.yaml, frontend.yaml)
+```
+
+### Pin docs to specific versions
 
 ```sh
 chub pin openai/chat --lang python --version 4.0 --reason "Use v4 API"
 chub pin stripe/api --lang javascript
+chub get --pinned                # fetch all pinned docs at once
+```
+
+### Add team knowledge that follows the docs
+
+```sh
+chub annotate openai/chat "Always use streaming for chat completions" --team
+chub annotate stripe/api "We use Stripe Connect, not standard Checkout" --team
+```
+
+When any agent fetches these docs, your annotations appear alongside the official content — clearly marked as team-contributed.
+
+### Scope context by role
+
+```sh
+chub profile use backend         # backend devs get backend-relevant docs
+chub profile use frontend        # frontend devs get frontend-relevant docs
+```
+
+### Keep versions fresh
+
+```sh
+chub detect                      # scan package.json, requirements.txt, Cargo.toml, etc.
+chub check                       # compare pinned doc versions vs installed package versions
+chub check --fix                 # auto-update outdated pins
+```
+
+### Sync agent config files
+
+```sh
+chub agent-config generate       # generate CLAUDE.md, .cursorrules, AGENTS.md from one source
+chub agent-config sync           # update only if changed
+```
+
+---
+
+## CLI Reference
+
+### Search and Fetch
+
+```sh
+chub search "stripe"                    # BM25 search across all docs
+chub search "auth" --limit 5            # limit results
+chub get openai/chat --lang python      # fetch doc by ID
+chub get stripe/api --version 2.0       # specific version
+chub get stripe/api --match-env         # auto-detect version from project deps
+chub get openai/chat --full             # fetch all files in the entry
+chub get openai/chat --file refs.md     # fetch a specific file
+chub list                               # list all available docs
+chub list --json                        # JSON output (works with all commands)
+```
+
+### Doc Pinning
+
+```sh
+chub pin openai/chat --lang python --version 4.0 --reason "Use v4 API"
 chub pins                               # list all pins
 chub unpin openai/chat                  # remove a pin
 chub get --pinned                       # fetch all pinned docs at once
 ```
 
-### Context profiles
+### Context Profiles
 
 ```sh
 chub profile use backend                # activate a profile
@@ -153,21 +191,23 @@ chub profile use none                   # clear profile
 chub profile list                       # list available profiles
 ```
 
-### Team annotations
+### Team Annotations
 
 ```sh
 chub annotate openai/chat "Use streaming API" --team       # git-tracked
 chub annotate openai/chat "My local note" --personal       # local only
 ```
 
-### Dependency auto-detection
+### Dependency Detection
 
 ```sh
 chub detect                             # show detected deps with matching docs
 chub detect --pin                       # auto-pin all matches
 ```
 
-### Agent config sync
+Supports: `package.json`, `requirements.txt`, `pyproject.toml`, `Cargo.toml`, `go.mod`, `Gemfile`, `Pipfile`, `pom.xml`, `build.gradle`.
+
+### Agent Config Sync
 
 ```sh
 chub agent-config generate              # generate CLAUDE.md, .cursorrules, etc.
@@ -175,7 +215,7 @@ chub agent-config sync                  # update only if changed
 chub agent-config diff                  # preview changes
 ```
 
-### Snapshots and freshness
+### Snapshots and Freshness
 
 ```sh
 chub snapshot create v1.0               # save current pins
@@ -186,7 +226,7 @@ chub check                              # check pinned vs installed versions
 chub check --fix                        # auto-update outdated pins
 ```
 
-### Cache management
+### Cache Management
 
 ```sh
 chub update                             # refresh cached registry
@@ -194,118 +234,48 @@ chub cache status                       # show cache state
 chub cache clear                        # clear local cache
 ```
 
-### Usage analytics
-
-```sh
-chub stats                              # show fetch analytics (local, opt-in)
-chub stats --json                       # JSON output
-```
-
 ---
 
-## MCP Integration
-
-Chub includes a built-in MCP (Model Context Protocol) server that lets AI agents search and fetch docs directly.
+## MCP Server
 
 ```sh
 chub mcp                                # start MCP stdio server
 chub mcp --profile backend              # with a profile
 ```
 
-### Claude Code
-
-Add to `.mcp.json` in your project root:
-
-```json
-{
-  "mcpServers": {
-    "chub": {
-      "command": "chub",
-      "args": ["mcp"]
-    }
-  }
-}
-```
-
-### Cursor
-
-Add to `.cursor/mcp.json`:
-
-```json
-{
-  "mcpServers": {
-    "chub": {
-      "command": "chub",
-      "args": ["mcp"]
-    }
-  }
-}
-```
-
-### Windsurf / Other agents
-
-Any MCP-compatible agent can use Chub. The transport is stdio — just point the agent at `chub mcp`.
-
-### MCP tools
+### Available tools
 
 | Tool | Description |
 |---|---|
-| `chub_search` | Search docs by query |
-| `chub_get` | Fetch a doc by ID |
-| `chub_list` | List all available docs |
-| `chub_annotate` | Add an annotation |
-| `chub_feedback` | Submit doc feedback |
+| `chub_search` | Search docs by query, tags, or language |
+| `chub_get` | Fetch a doc by ID (supports `match_env` for auto version detection) |
+| `chub_list` | List all available docs and skills |
+| `chub_annotate` | Read, write, or list annotations |
+| `chub_context` | Get optimal context for a task (pins + annotations + profile) |
+| `chub_pins` | List, add, or remove pinned docs |
+| `chub_feedback` | Submit quality feedback for a doc |
 
 Registry resource: `chub://registry`
 
+Works with any MCP-compatible agent: Claude Code, Cursor, Windsurf, and others. The transport is stdio.
+
 ---
 
-## Team Features
+## Security
 
-The `.chub/` directory at the project root is committed to git and shared with the team.
+Chub includes several security measures for safe use in team environments:
 
-```
-my-project/
-├── .chub/
-│   ├── config.yaml          # Project-level config
-│   ├── pins.yaml            # Pinned doc versions
-│   ├── annotations/         # Team knowledge, git-tracked
-│   ├── context/             # Custom docs: architecture, conventions
-│   └── profiles/            # Role-scoped context (backend.yaml, frontend.yaml)
-```
-
-### Three-tier config inheritance
-
-```
-~/.chub/config.yaml          # Tier 1 — personal defaults
-    ↓ overridden by
-.chub/config.yaml            # Tier 2 — project config (shared)
-    ↓ overridden by
-.chub/profiles/<name>.yaml   # Tier 3 — role/task profile
-```
-
-### Feature overview
-
-| Feature | Status | Description |
-|---|---|---|
-| Project init (`chub init`) | Done | Create `.chub/` with sensible defaults |
-| Doc pinning | Done | Lock doc versions in `pins.yaml` |
-| Team annotations | Done | Git-tracked annotations with merge |
-| Context profiles | Done | Role-scoped context with inheritance |
-| Project context | Done | Custom markdown docs served via MCP |
-| Dep auto-detection | Done | 9 file types (npm, Cargo, pip, Go, etc.) |
-| Agent config sync | Done | Generate CLAUDE.md, .cursorrules, etc. |
-| Doc snapshots | Done | Point-in-time pin snapshots |
-| Doc freshness | Done | Compare pinned vs installed versions |
-| Usage analytics | Done | Local opt-in fetch tracking |
-
-See [docs/plan.md](docs/plan.md) for the full roadmap.
+- **Content integrity verification** — `chub build` computes SHA-256 hashes of all doc content, stored in the registry. Fetched content is verified against these hashes to detect CDN tampering.
+- **Annotation trust framing** — User-contributed annotations are clearly marked as non-official content when served to agents, mitigating prompt injection risks.
+- **Annotation length limits** — Notes are capped at 4,000 characters to prevent context flooding.
+- **Path traversal protection** — File path parameters are validated and normalized.
+- **Graceful process lifecycle** — The MCP server handles signals cleanly to prevent orphan processes.
 
 ---
 
 ## Benchmarks
 
-Measured on the production corpus (1,553 docs, 7 skills). Median of 5 runs on Windows 11, Node.js v22, Rust release build. Reproduce with `./scripts/benchmark.sh`.
+Measured on the production corpus (1,553 docs, 7 skills). Median of 5 runs on Windows 11, Node.js v22, Rust release build.
 
 ### Performance
 
@@ -317,62 +287,35 @@ Measured on the production corpus (1,553 docs, 7 skills). Median of 5 runs on Wi
 | `get stripe/api` | 148 ms | **63 ms** | **2.3x** |
 | Cold start (`--help`) | 131 ms | **44 ms** | **3x** |
 
-### Resource usage
+### Resources
 
 | Metric | Context Hub (JS) | Chub (Rust) |
 |---|---|---|
 | Package size | ~22 MB (`node_modules`) | **10 MB** (single binary) |
 | Runtime dependency | Node.js 20+ | **None** |
-| Peak memory (build, 1,560 entries) | ~122 MB | **~23 MB** (5.3x less) |
+| Peak memory (build) | ~122 MB | **~23 MB** (5.3x less) |
 
-### Features
+### Feature comparison
 
 | | Context Hub (JS) | Chub (Rust) |
 |---|---|---|
 | CLI commands | 7 | **20** |
 | MCP tools | 5 | **7** |
 | Team features (pins, profiles, snapshots, etc.) | — | **Yes** |
+| Content integrity verification | — | **Yes** |
+| Auto version detection (`--match-env`) | — | **Yes** |
 | Registry format compatibility | — | **Identical** |
-
----
-
-## Test Suite
-
-99 tests covering behavioral parity and team features:
-
-| Suite | Tests | Coverage |
-|---|---|---|
-| Tokenizer | 6 | Stop words, punctuation, edge cases |
-| BM25 search | 7 | Scoring, ranking, limits, field weights |
-| Inverted index | 1 | Parity with linear scan |
-| Frontmatter parser | 9 | YAML, CRLF, BOM, empty, numeric |
-| Language normalization | 4 | Aliases, case, unknown |
-| Build integration | 15 | Output format, validation, structure |
-| Search parity | 20 | Multi-word, tags, descriptions |
-| Team features | 33 | Pins, profiles, annotations, snapshots, detect, freshness, agent config, analytics |
-
-All tests use isolated temp directories — no writes to the repo's `.chub/`.
-
-```sh
-cargo test --all                     # run all tests
-```
 
 ---
 
 ## Content Registry
 
-### Building from source content
+### Build your own docs
 
 ```sh
 chub build ./content -o ./dist                             # build registry
 chub build ./content --validate-only                       # validate only
 chub build ./content --base-url https://cdn.example.com/v1 # with CDN URL
-```
-
-### Serving a local registry
-
-```sh
-chub serve ./dist --port 4242        # serve as HTTP registry
 ```
 
 ### Content format
@@ -385,6 +328,35 @@ content/
       <lang>/<version>/DOC.md        # versioned variant
     skills/<entry-name>/
       SKILL.md
+```
+
+### Self-host
+
+```sh
+chub serve ./dist --port 4242        # serve as HTTP registry
+```
+
+Add your private registry as an additional source in `~/.chub/config.yaml` — no cloud required. See [Private Content](docs/private-content.md) for details.
+
+---
+
+## Test Suite
+
+99 tests covering behavioral parity with Context Hub and all team features:
+
+| Suite | Tests | Coverage |
+|---|---|---|
+| Tokenizer | 6 | Stop words, punctuation, edge cases |
+| BM25 search | 7 | Scoring, ranking, limits, field weights |
+| Inverted index | 1 | Parity with linear scan |
+| Frontmatter parser | 9 | YAML, CRLF, BOM, empty, numeric |
+| Language normalization | 4 | Aliases, case, unknown |
+| Build integration | 15 | Output format, validation, structure |
+| Search parity | 20 | Multi-word, tags, descriptions |
+| Team features | 33 | Pins, profiles, annotations, snapshots, detect, freshness |
+
+```sh
+cargo test --all                     # run all tests
 ```
 
 ---
@@ -403,6 +375,7 @@ Full documentation at [chub.nrl.ai](https://chub.nrl.ai):
 - [CLI Reference](https://chub.nrl.ai/reference/cli) — all commands and flags
 - [Configuration](https://chub.nrl.ai/reference/configuration) — config file format
 - [MCP Server](https://chub.nrl.ai/reference/mcp-server) — agent integration
+- [Showcases](https://chub.nrl.ai/guide/showcases) — real-world usage examples
 
 ---
 
