@@ -26,6 +26,8 @@ enum Commands {
     Build(commands::build::BuildArgs),
     /// Search docs and skills (no query lists all)
     Search(commands::search::SearchArgs),
+    /// List all available docs and skills
+    List(commands::search::SearchArgs),
     /// Fetch docs or skills by ID (auto-detects type)
     Get(commands::get::GetArgs),
     /// Refresh the cached registry index
@@ -164,7 +166,7 @@ async fn main() {
     let merged = chub_core::registry::load_merged();
 
     match cli.command {
-        Commands::Search(args) => {
+        Commands::Search(args) | Commands::List(args) => {
             commands::search::run(args, cli.json, &merged);
         }
         Commands::Get(args) => {
