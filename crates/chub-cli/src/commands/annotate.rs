@@ -15,7 +15,7 @@ pub struct AnnotateArgs {
     /// Annotation text
     note: Option<String>,
 
-    /// Remove annotation
+    /// Remove annotation (respects --team flag: removes team annotation when --team is set)
     #[arg(long)]
     clear: bool,
 
@@ -158,13 +158,33 @@ pub fn run(args: AnnotateArgs, json: bool) {
     };
 
     if args.clear {
-        let removed = clear_annotation(&id);
-        if json {
-            println!("{}", serde_json::json!({ "id": id, "cleared": removed }));
-        } else if removed {
-            eprintln!("Annotation cleared for {}.", id.bold());
+        // --clear respects --team: removes team annotation when --team is set
+        let removed = if args.team {
+            chub_core::team::team_annotations::clear_team_annotation(&id)
         } else {
-            eprintln!("No annotation found for {}.", id.bold());
+            clear_annotation(&id)
+        };
+        if json {
+            println!(
+                "{}",
+                serde_json::json!({
+                    "id": id,
+                    "cleared": removed,
+                    "scope": if args.team { "team" } else { "personal" },
+                })
+            );
+        } else if removed {
+            eprintln!(
+                "{} annotation cleared for {}.",
+                if args.team { "Team" } else { "Personal" },
+                id.bold()
+            );
+        } else {
+            eprintln!(
+                "No {} annotation found for {}.",
+                if args.team { "team" } else { "personal" },
+                id.bold()
+            );
         }
         return;
     }
@@ -173,7 +193,7 @@ pub fn run(args: AnnotateArgs, json: bool) {
         let kind = parse_kind(args.kind.as_deref());
 
         if args.team {
-            // Write team annotation
+            // Write team annotation (append semantics — adds to the appropriate section)
             let author = args.author.unwrap_or_else(|| {
                 std::env::var("USER")
                     .or_else(|_| std::env::var("USERNAME"))
@@ -190,7 +210,13 @@ pub fn run(args: AnnotateArgs, json: bool) {
                     if json {
                         println!(
                             "{}",
-                            serde_json::json!({"status": "saved", "id": id, "type": "team", "kind": kind.as_str(), "author": author})
+                            serde_json::json!({
+                                "status": "saved",
+                                "id": id,
+                                "scope": "team",
+                                "kind": kind.as_str(),
+                                "author": author,
+                            })
                         );
                     } else {
                         output::success(&format!(
@@ -210,7 +236,8 @@ pub fn run(args: AnnotateArgs, json: bool) {
                 }
             }
         } else {
-            let data = write_annotation(&id, &note, kind.clone());
+            // Write personal annotation (overwrite semantics — replaces previous note for this entry)
+            let data = write_annotation(&id, &note, kind.clone(), args.severity.clone());
             if json {
                 println!(
                     "{}",
@@ -223,7 +250,7 @@ pub fn run(args: AnnotateArgs, json: bool) {
         return;
     }
 
-    // Show existing annotation (merged if not --personal)
+    // Read mode: show existing annotation
     if args.team {
         if let Some(ann) = chub_core::team::team_annotations::read_team_annotation(&id) {
             if json {

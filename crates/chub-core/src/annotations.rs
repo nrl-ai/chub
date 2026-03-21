@@ -44,12 +44,21 @@ impl AnnotationKind {
     }
 }
 
+/// A personal annotation stored at `~/.chub/annotations/<id>.json`.
+///
+/// **Overwrite semantics**: writing a new annotation for the same entry ID replaces the previous
+/// one entirely. There is no history. Use team annotations (`.chub/annotations/<id>.yaml`) if
+/// you need an append-based history with multiple authors.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Annotation {
     pub id: String,
     pub note: String,
     #[serde(default)]
     pub kind: AnnotationKind,
+    /// Severity level for issue annotations: "high", "medium", or "low". Only used when
+    /// kind=issue; ignored for other kinds.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub severity: Option<String>,
     #[serde(rename = "updatedAt")]
     pub updated_at: String,
 }
@@ -82,7 +91,14 @@ pub fn sanitize_note(note: &str) -> String {
     }
 }
 
-pub fn write_annotation(entry_id: &str, note: &str, kind: AnnotationKind) -> Annotation {
+/// Write a personal annotation. **Overwrites** any existing annotation for this entry.
+/// Severity is only stored when kind=Issue; it is ignored for other kinds.
+pub fn write_annotation(
+    entry_id: &str,
+    note: &str,
+    kind: AnnotationKind,
+    severity: Option<String>,
+) -> Annotation {
     let dir = annotations_dir();
     let _ = fs::create_dir_all(&dir);
 
@@ -114,7 +130,12 @@ pub fn write_annotation(entry_id: &str, note: &str, kind: AnnotationKind) -> Ann
     let data = Annotation {
         id: entry_id.to_string(),
         note,
-        kind,
+        kind: kind.clone(),
+        severity: if kind == AnnotationKind::Issue {
+            severity
+        } else {
+            None
+        },
         updated_at,
     };
 

@@ -60,17 +60,17 @@ Use `chub get project/<name>` for these:
 
 ## Annotation Policy
 
-When you encounter something non-obvious while using a library, record it:
+When you encounter something non-obvious while using a library, record it via the `chub_annotate` MCP tool (or `chub annotate` CLI):
 
-- `chub_annotate id="<id>" kind="issue" note="..."` — undocumented bugs, broken params, misleading examples
-- `chub_annotate id="<id>" kind="fix" note="..."` — workarounds that resolved an issue
-- `chub_annotate id="<id>" kind="practice" note="..."` — patterns the team prefers or has validated
+- **Issue** (confirmed bug): `chub_annotate` with `id`, `kind="issue"`, `severity="high|medium|low"`, `note`
+- **Fix** (workaround): `chub_annotate` with `id`, `kind="fix"`, `note`
+- **Practice** (team convention): `chub_annotate` with `id`, `kind="practice"`, `note`
 
 Rules:
 - Annotate after confirming, not speculatively — only write what you have verified works or fails
 - One fact per annotation — do not bundle multiple issues into one note
 - Be reproducible — include the exact call, param, or value, not vague descriptions
-- Check first — read existing annotations (`chub_annotate id=<id>`) before writing to avoid duplicates
+- Check first — call `chub_annotate` with only `id` to read existing annotations before writing to avoid duplicates
 - Do not annotate what is already in the official docs — only capture what the docs missed or got wrong
 
 ## Module: backend (src/api/**)

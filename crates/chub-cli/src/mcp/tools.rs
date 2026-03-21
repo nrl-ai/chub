@@ -274,7 +274,6 @@ impl ChubMcpServer {
                 effective_version = pin.version.clone();
             }
             pin_notice = team::team_annotations::get_pin_notice(
-                entry.id(),
                 pin.version.as_deref(),
                 pin.lang.as_deref(),
                 pin.reason.as_deref(),
@@ -466,9 +465,19 @@ impl ChubMcpServer {
     )]
     async fn handle_annotate(&self, Parameters(params): Parameters<AnnotateParams>) -> String {
         if params.list.unwrap_or(false) {
+            // Auto-route: list team annotations when a project .chub/ dir exists.
+            if chub_core::team::project::project_chub_dir().is_some() {
+                let annotations = chub_core::team::team_annotations::list_team_annotations();
+                return text_result(serde_json::json!({
+                    "annotations": annotations,
+                    "scope": "team",
+                    "total": annotations.len(),
+                }));
+            }
             let annotations = list_annotations();
             return text_result(serde_json::json!({
                 "annotations": annotations,
+                "scope": "personal",
                 "total": annotations.len(),
             }));
         }
@@ -498,9 +507,18 @@ impl ChubMcpServer {
         }
 
         if params.clear.unwrap_or(false) {
-            let removed = clear_annotation(&id);
+            // Clear team annotation when a project dir exists, personal otherwise.
+            let (scope, removed) = if chub_core::team::project::project_chub_dir().is_some() {
+                (
+                    "team",
+                    chub_core::team::team_annotations::clear_team_annotation(&id),
+                )
+            } else {
+                ("personal", clear_annotation(&id))
+            };
             return text_result(serde_json::json!({
                 "status": if removed { "cleared" } else { "not_found" },
+                "scope": scope,
                 "id": id,
             }));
         }
@@ -512,29 +530,34 @@ impl ChubMcpServer {
                 .and_then(AnnotationKind::parse)
                 .unwrap_or(AnnotationKind::Note);
 
-            // Prefer team annotations when the project .chub/ dir is available.
-            // This makes MCP agents in team projects automatically contribute to shared knowledge.
+            // When a project .chub/ dir is present, write to team tier (git-tracked, shared).
+            // Fail explicitly if team write fails — do NOT silently fall back to personal.
             if chub_core::team::project::project_chub_dir().is_some() {
                 let author = std::env::var("USER")
                     .or_else(|_| std::env::var("USERNAME"))
                     .unwrap_or_else(|_| "agent".to_string());
-                if let Some(saved) = chub_core::team::team_annotations::write_team_annotation(
+                return match chub_core::team::team_annotations::write_team_annotation(
                     &id,
                     &note,
                     &author,
                     kind.clone(),
                     params.severity.clone(),
                 ) {
-                    return text_result(serde_json::json!({
+                    Some(saved) => text_result(serde_json::json!({
                         "status": "saved",
                         "scope": "team",
                         "kind": kind.as_str(),
                         "annotation": saved,
-                    }));
-                }
+                    })),
+                    None => text_result(serde_json::json!({
+                        "error": "Failed to write team annotation. Check that .chub/annotations/ is writable.",
+                        "id": id,
+                    })),
+                };
             }
 
-            let saved = write_annotation(&id, &note, kind.clone());
+            // No project dir: write personal annotation (overwrite semantics).
+            let saved = write_annotation(&id, &note, kind.clone(), params.severity.clone());
             return text_result(serde_json::json!({
                 "status": "saved",
                 "scope": "personal",
@@ -543,12 +566,12 @@ impl ChubMcpServer {
             }));
         }
 
-        // Read mode
-        if let Some(annotation) = read_annotation(&id) {
-            text_result(serde_json::json!({ "annotation": annotation }))
-        } else {
-            text_result(serde_json::json!({ "status": "no_annotation", "id": id }))
+        // Read mode: return merged team + personal annotation if available.
+        // get_merged_annotation covers both team-only, personal-only, and combined cases.
+        if let Some(merged) = team::team_annotations::get_merged_annotation(&id) {
+            return text_result(serde_json::json!({ "annotation": merged }));
         }
+        text_result(serde_json::json!({ "status": "no_annotation", "id": id }))
     }
 
     #[tool(

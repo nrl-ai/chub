@@ -108,11 +108,18 @@ pub fn generate_config(rules: &AgentRules) -> String {
     if rules.include_annotation_policy {
         output.push_str("## Annotation Policy\n\n");
         output.push_str(
-            "When you encounter something non-obvious while using a library, record it:\n\n",
+            "When you encounter something non-obvious while using a library, record it \
+             via the `chub_annotate` MCP tool (or `chub annotate` CLI):\n\n",
         );
-        output.push_str("- `chub_annotate id=\"<id>\" kind=\"issue\" note=\"...\"` — undocumented bugs, broken params, misleading examples\n");
-        output.push_str("- `chub_annotate id=\"<id>\" kind=\"fix\" note=\"...\"` — workarounds that resolved an issue\n");
-        output.push_str("- `chub_annotate id=\"<id>\" kind=\"practice\" note=\"...\"` — patterns the team prefers or has validated\n\n");
+        output.push_str(
+            "- **Issue** (confirmed bug): `chub_annotate` with `id`, `kind=\"issue\"`, `severity=\"high|medium|low\"`, `note`\n",
+        );
+        output.push_str(
+            "- **Fix** (workaround): `chub_annotate` with `id`, `kind=\"fix\"`, `note`\n",
+        );
+        output.push_str(
+            "- **Practice** (team convention): `chub_annotate` with `id`, `kind=\"practice\"`, `note`\n\n",
+        );
         output.push_str("Rules:\n");
         output.push_str("- Annotate after confirming, not speculatively — only write what you have verified works or fails\n");
         output
@@ -120,12 +127,14 @@ pub fn generate_config(rules: &AgentRules) -> String {
         output.push_str(
             "- Be reproducible — include the exact call, param, or value, not vague descriptions\n",
         );
-        output.push_str("- Check first — read existing annotations (`chub_annotate id=<id>`) before writing to avoid duplicates\n");
+        output.push_str("- Check first — call `chub_annotate` with only `id` to read existing annotations before writing to avoid duplicates\n");
         output.push_str("- Do not annotate what is already in the official docs — only capture what the docs missed or got wrong\n\n");
     }
 
-    // Module rules
-    for (module_name, module_rules) in &rules.modules {
+    // Module rules — sort by name for deterministic output (HashMap iteration is unordered).
+    let mut sorted_modules: Vec<_> = rules.modules.iter().collect();
+    sorted_modules.sort_by_key(|(name, _)| name.as_str());
+    for (module_name, module_rules) in sorted_modules {
         output.push_str(&format!(
             "## Module: {} ({})\n",
             module_name, module_rules.path

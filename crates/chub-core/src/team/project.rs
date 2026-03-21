@@ -138,9 +138,9 @@ pub fn init_project(from_deps: bool, monorepo: bool) -> Result<PathBuf> {
 #   global:
 #     - "Follow the project coding conventions"
 #   modules: {}
-#   include_pins: true
-#   include_context: true
-#   include_annotation_policy: true
+#   include_pins: true          # list pinned docs so agents know what to fetch
+#   include_context: true       # list project context docs so agents know what to fetch
+#   include_annotation_policy: true  # add standing instructions for agents to write annotations
 #   targets:
 #     - claude.md
 "#;

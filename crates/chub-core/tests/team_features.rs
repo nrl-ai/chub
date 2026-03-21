@@ -333,7 +333,6 @@ fn team_annotations_merged() {
 #[test]
 fn team_annotations_pin_notice() {
     let notice = chub_core::team::team_annotations::get_pin_notice(
-        "openai/chat",
         Some("4.0"),
         Some("python"),
         Some("use streaming API"),
@@ -342,6 +341,34 @@ fn team_annotations_pin_notice() {
     assert!(notice.contains("v4.0"));
     assert!(notice.contains("python"));
     assert!(notice.contains("use streaming API"));
+}
+
+// ==================== TEAM ANNOTATION CLEAR ====================
+
+#[test]
+fn clear_team_annotation_works() {
+    let (_tmp, _guard) = setup_isolated_project();
+
+    chub_core::team::team_annotations::write_team_annotation(
+        "openai/chat",
+        "test note",
+        "alice",
+        chub_core::annotations::AnnotationKind::Note,
+        None,
+    );
+
+    let cleared = chub_core::team::team_annotations::clear_team_annotation("openai/chat");
+    assert!(cleared);
+
+    let ann = chub_core::team::team_annotations::read_team_annotation("openai/chat");
+    assert!(ann.is_none());
+}
+
+#[test]
+fn clear_team_annotation_missing_returns_false() {
+    let (_tmp, _guard) = setup_isolated_project();
+    let cleared = chub_core::team::team_annotations::clear_team_annotation("nonexistent/entry");
+    assert!(!cleared);
 }
 
 // ==================== STRUCTURED ANNOTATION KINDS ====================
@@ -539,6 +566,84 @@ agent_rules:
     let content = chub_core::team::agent_config::generate_config(&rules);
 
     assert!(!content.contains("Annotation Policy"));
+}
+
+// ==================== PERSONAL ANNOTATION SEMANTICS ====================
+// These tests use ENV_MUTEX because personal annotations read CHUB_DIR from the environment.
+
+#[test]
+fn personal_annotation_overwrites_previous() {
+    // Personal annotations use overwrite semantics: a second write replaces the first.
+    // This is intentional and differs from team annotations (which append).
+    let _guard = ENV_MUTEX.lock().unwrap_or_else(|e| e.into_inner());
+    let tmp = tempfile::tempdir().unwrap();
+    unsafe {
+        std::env::set_var("CHUB_DIR", tmp.path());
+    }
+    chub_core::annotations::write_annotation(
+        "test/entry",
+        "first note",
+        chub_core::annotations::AnnotationKind::Note,
+        None,
+    );
+    chub_core::annotations::write_annotation(
+        "test/entry",
+        "second note",
+        chub_core::annotations::AnnotationKind::Note,
+        None,
+    );
+    let ann = chub_core::annotations::read_annotation("test/entry").unwrap();
+    assert_eq!(
+        ann.note, "second note",
+        "write_annotation must overwrite, not append"
+    );
+    unsafe {
+        std::env::remove_var("CHUB_DIR");
+    }
+}
+
+#[test]
+fn personal_annotation_stores_kind_and_severity() {
+    let _guard = ENV_MUTEX.lock().unwrap_or_else(|e| e.into_inner());
+    let tmp = tempfile::tempdir().unwrap();
+    unsafe {
+        std::env::set_var("CHUB_DIR", tmp.path());
+    }
+    chub_core::annotations::write_annotation(
+        "test/entry",
+        "broken param",
+        chub_core::annotations::AnnotationKind::Issue,
+        Some("high".to_string()),
+    );
+    let ann = chub_core::annotations::read_annotation("test/entry").unwrap();
+    assert_eq!(ann.kind, chub_core::annotations::AnnotationKind::Issue);
+    assert_eq!(ann.severity.as_deref(), Some("high"));
+    unsafe {
+        std::env::remove_var("CHUB_DIR");
+    }
+}
+
+#[test]
+fn personal_annotation_severity_stripped_for_non_issues() {
+    let _guard = ENV_MUTEX.lock().unwrap_or_else(|e| e.into_inner());
+    let tmp = tempfile::tempdir().unwrap();
+    unsafe {
+        std::env::set_var("CHUB_DIR", tmp.path());
+    }
+    chub_core::annotations::write_annotation(
+        "test/entry",
+        "a practice",
+        chub_core::annotations::AnnotationKind::Practice,
+        Some("high".to_string()),
+    );
+    let ann = chub_core::annotations::read_annotation("test/entry").unwrap();
+    assert_eq!(
+        ann.severity, None,
+        "severity must be None for non-issue kinds"
+    );
+    unsafe {
+        std::env::remove_var("CHUB_DIR");
+    }
 }
 
 // ==================== SNAPSHOTS ====================

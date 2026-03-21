@@ -32,7 +32,7 @@ chub search "auth" --source official --json
 Fetch a specific doc or skill by ID.
 
 ```sh
-chub get <id> [--lang <language>] [--version <ver>] [--source <name>] [--pinned] [--json]
+chub get <id> [--lang <language>] [--version <ver>] [--source <name>] [--pinned] [--match-env] [--json]
 ```
 
 | Flag | Description |
@@ -42,6 +42,7 @@ chub get <id> [--lang <language>] [--version <ver>] [--source <name>] [--pinned]
 | `--version <ver>` | Specific version (e.g., `4.0`) |
 | `--source <name>` | From a specific source |
 | `--pinned` | Fetch all pinned docs at once |
+| `--match-env` | Auto-detect version from `package.json`, `Cargo.toml`, etc. |
 | `--json` | JSON output |
 
 **Examples:**
@@ -49,9 +50,14 @@ chub get <id> [--lang <language>] [--version <ver>] [--source <name>] [--pinned]
 ```sh
 chub get openai/chat --lang python
 chub get stripe/api --lang javascript --version 2024
-chub get --pinned                        # fetch all pinned docs
-chub get project/architecture            # fetch a project context doc
+chub get --pinned                            # fetch all pinned docs
+chub get project/architecture                # project context doc
+chub get openai/chat --match-env             # version matched from project deps
 ```
+
+The fetched doc automatically includes:
+- Team annotations (issues, fixes, practices) appended at the end
+- A pin notice if the doc is pinned by the team
 
 ### chub list
 
@@ -97,7 +103,9 @@ chub init [--from-deps] [--monorepo]
 | Flag | Description |
 |---|---|
 | `--from-deps` | Scan dependency files and auto-pin matching docs |
-| `--monorepo` | Create config with auto-profile rules for monorepo |
+| `--monorepo` | Create config with auto-profile rules for monorepo layout |
+
+Creates `.chub/` with `config.yaml`, `pins.yaml`, `annotations/`, `context/`, and `profiles/`.
 
 ### chub pin / unpin / pins
 
@@ -135,25 +143,77 @@ chub profile list          # list available profiles
 
 ### chub annotate
 
-Add annotations to docs. Team annotations are git-tracked; personal ones are local.
+Read, write, clear, or list annotations for a doc entry.
 
 ```sh
-chub annotate <id> <note> [--team] [--personal] [--author <name>]
+chub annotate [<id>] [<note>] [OPTIONS]
+```
+
+**Modes:**
+
+| Invocation | Effect |
+|---|---|
+| `chub annotate <id>` | Read existing annotation(s) for entry |
+| `chub annotate <id> "<note>"` | Write personal annotation (overwrites previous) |
+| `chub annotate <id> "<note>" --team` | Append team annotation (add to history) |
+| `chub annotate <id> --clear` | Remove personal annotation |
+| `chub annotate <id> --clear --team` | Remove team annotation |
+| `chub annotate --list` | List all personal annotations |
+| `chub annotate --list --team` | List all team annotations |
+
+**Options:**
+
+| Flag | Description | Default |
+|---|---|---|
+| `--kind <KIND>` | `note`, `issue`, `fix`, `practice` | `note` |
+| `--severity <LEVEL>` | `high`, `medium`, `low` (issue kind only) | none |
+| `--team` | Write to `.chub/annotations/` (git-tracked, append semantics) | off |
+| `--personal` | Write to `~/.chub/annotations/` (local, overwrite semantics) | default |
+| `--author <name>` | Author name for team annotations | `$USER` |
+| `--clear` | Remove the annotation |  |
+| `--list` | List all annotations |  |
+
+**Examples:**
+
+```sh
+# Write a team note (default kind)
+chub annotate openai/chat "Use v4 streaming, not completions" --team
+
+# Record a confirmed bug
+chub annotate openai/chat "tool_choice='none' silently ignores tools and returns null" \
+  --kind issue --severity high --team
+
+# Record the fix for the bug above
+chub annotate openai/chat "Use tool_choice='auto' or remove tools from the array" \
+  --kind fix --team
+
+# Record a validated team pattern
+chub annotate openai/chat "Always set max_tokens to avoid unbounded streaming cost" \
+  --kind practice --team
+
+# Read current annotations for an entry
+chub annotate openai/chat --team
+
+# List all team annotations
+chub annotate --list --team
+```
+
+::: tip Personal vs team semantics
+Personal annotations use **overwrite** semantics — each write replaces the previous note for that entry. Team annotations use **append** semantics — each write adds a new entry to the history, preserving author and date. Team annotations live in `.chub/annotations/` and are committed to git.
+:::
+
+### chub feedback
+
+Submit feedback (thumbs up/down) about a doc.
+
+```sh
+chub feedback <id> <rating> [--comment <text>]
 ```
 
 | Flag | Description |
 |---|---|
-| `--team` | Save to `.chub/annotations/` (git-tracked, shared) |
-| `--personal` | Save to `~/.chub/annotations/` (local only) |
-| `--author <name>` | Author name (defaults to `$USER`) |
-
-### chub feedback
-
-Submit feedback about a doc.
-
-```sh
-chub feedback <id> <message>
-```
+| `<rating>` | `up` or `down` |
+| `--comment <text>` | Optional explanation |
 
 ### chub detect
 
@@ -167,30 +227,7 @@ chub detect [--pin]
 |---|---|
 | `--pin` | Auto-pin all detected matches |
 
-Supported: `package.json`, `Cargo.toml`, `requirements.txt`, `pyproject.toml`, `Pipfile`, `go.mod`, `Gemfile`, `pom.xml`, `build.gradle(.kts)`.
-
-### chub agent-config
-
-Generate and sync agent configuration files from `.chub/config.yaml`.
-
-```sh
-chub agent-config generate   # generate all target files
-chub agent-config sync       # update only if source changed
-chub agent-config diff       # show what would change
-```
-
-Targets: `CLAUDE.md`, `.cursorrules`, `.windsurfrules`, `AGENTS.md`, `.github/copilot-instructions.md`.
-
-### chub snapshot
-
-Manage point-in-time pin snapshots.
-
-```sh
-chub snapshot create <name>          # save current pins
-chub snapshot list                   # list all snapshots
-chub snapshot restore <name>         # restore pin state
-chub snapshot diff <name-a> <name-b> # compare two snapshots
-```
+Supported dependency files: `package.json`, `Cargo.toml`, `requirements.txt`, `pyproject.toml`, `Pipfile`, `go.mod`, `Gemfile`, `pom.xml`, `build.gradle(.kts)`.
 
 ### chub check
 
@@ -203,6 +240,29 @@ chub check [--fix]
 | Flag | Description |
 |---|---|
 | `--fix` | Auto-update outdated pins to match installed versions |
+
+### chub agent-config
+
+Generate and sync agent configuration files from `.chub/config.yaml`.
+
+```sh
+chub agent-config generate   # generate all target files
+chub agent-config sync       # update only if source changed
+chub agent-config diff       # show what would change
+```
+
+Supported targets: `CLAUDE.md`, `.cursorrules`, `.windsurfrules`, `AGENTS.md`, `.github/copilot-instructions.md`.
+
+### chub snapshot
+
+Manage point-in-time pin snapshots.
+
+```sh
+chub snapshot create <name>          # save current pins
+chub snapshot list                   # list all snapshots
+chub snapshot restore <name>         # restore pin state
+chub snapshot diff <name-a> <name-b> # compare two snapshots
+```
 
 ### chub stats
 

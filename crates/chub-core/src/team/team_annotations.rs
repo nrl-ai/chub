@@ -18,6 +18,11 @@ pub struct TeamAnnotationNote {
 }
 
 /// A team annotation file (`.chub/annotations/<id>.yaml`).
+///
+/// **Append semantics**: each `write_team_annotation()` call adds a new entry to the
+/// appropriate section. Entries are never replaced — use `clear_team_annotation()` to
+/// remove the entire file. Unlike personal annotations (which overwrite), team annotations
+/// maintain a full history with author and date for each entry.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct TeamAnnotation {
     pub id: String,
@@ -56,6 +61,7 @@ pub fn read_team_annotation(entry_id: &str) -> Option<TeamAnnotation> {
 }
 
 /// Write a team annotation (append a note to the appropriate section).
+/// Severity is only stored when kind=Issue; it is ignored for other kinds.
 pub fn write_team_annotation(
     entry_id: &str,
     note: &str,
@@ -107,6 +113,15 @@ pub fn write_team_annotation(
     Some(ann)
 }
 
+/// Delete the entire team annotation file for an entry.
+/// Returns true if a file was removed, false if it didn't exist.
+pub fn clear_team_annotation(entry_id: &str) -> bool {
+    match team_annotation_path(entry_id) {
+        Some(path) => fs::remove_file(path).is_ok(),
+        None => false,
+    }
+}
+
 /// List all team annotations.
 pub fn list_team_annotations() -> Vec<TeamAnnotation> {
     let dir = match team_annotations_dir() {
@@ -135,8 +150,9 @@ pub fn list_team_annotations() -> Vec<TeamAnnotation> {
         .collect()
 }
 
-/// Merge annotations: team annotations + personal annotations.
-/// Returns a combined annotation string for display, grouped by kind.
+/// Merge team + personal annotations into a display string, grouped by kind.
+/// Team annotations are shown first (issues → fixes → practices → notes),
+/// followed by any personal annotation.
 pub fn get_merged_annotation(entry_id: &str) -> Option<String> {
     let team = read_team_annotation(entry_id);
     let personal = crate::annotations::read_annotation(entry_id);
@@ -177,9 +193,14 @@ pub fn get_merged_annotation(entry_id: &str) -> Option<String> {
 
     if let Some(ref personal_ann) = personal {
         let kind_tag = personal_ann.kind.as_str();
+        let severity_tag = personal_ann
+            .severity
+            .as_deref()
+            .map(|s| format!(" ({})", s))
+            .unwrap_or_default();
         parts.push(format!(
-            "[Personal {} — {}] {}",
-            kind_tag, personal_ann.updated_at, personal_ann.note
+            "[Personal {}{} — {}] {}",
+            kind_tag, severity_tag, personal_ann.updated_at, personal_ann.note
         ));
     }
 
@@ -190,9 +211,8 @@ pub fn get_merged_annotation(entry_id: &str) -> Option<String> {
     }
 }
 
-/// Get the annotation to append when serving a pinned doc.
+/// Generate the notice appended to a pinned doc when it is served.
 pub fn get_pin_notice(
-    _entry_id: &str,
     pinned_version: Option<&str>,
     pinned_lang: Option<&str>,
     reason: Option<&str>,
