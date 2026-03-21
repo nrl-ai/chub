@@ -121,9 +121,9 @@ my-project/
 ### Pin docs to specific versions
 
 ```sh
-chub pin openai/chat --lang python --version 4.0 --reason "Use v4 API"
-chub pin stripe/api --lang javascript
-chub get --pinned                # fetch all pinned docs at once
+chub pin add openai/chat --lang python --version 4.0 --reason "Use v4 API"
+chub pin add stripe/api --lang javascript
+chub pin get                     # fetch all pinned docs at once
 ```
 
 ### Build a self-learning knowledge base
@@ -194,10 +194,10 @@ chub list --json                        # JSON output (works with all commands)
 ### Doc Pinning
 
 ```sh
-chub pin openai/chat --lang python --version 4.0 --reason "Use v4 API"
-chub pins                               # list all pins
-chub unpin openai/chat                  # remove a pin
-chub get --pinned                       # fetch all pinned docs at once
+chub pin add openai/chat --lang python --version 4.0 --reason "Use v4 API"
+chub pin list                           # list all pins
+chub pin remove openai/chat             # remove a pin
+chub pin get                            # fetch all pinned docs at once
 ```
 
 ### Context Profiles
@@ -257,8 +257,9 @@ chub cache clear                        # clear local cache
 
 ```sh
 chub mcp                                # start MCP stdio server
-chub mcp --profile backend              # with a profile
 ```
+
+To scope the session to a profile, activate it first: `chub profile use backend && chub mcp`.
 
 ### Available tools
 
@@ -362,7 +363,7 @@ Add your private registry as an additional source in `~/.chub/config.yaml` — n
 
 ## Test Suite
 
-99 tests covering behavioral parity with Context Hub and all team features:
+117 tests covering behavioral parity with Context Hub and all team features:
 
 | Suite | Tests | Coverage |
 |---|---|---|
@@ -373,7 +374,7 @@ Add your private registry as an additional source in `~/.chub/config.yaml` — n
 | Language normalization | 4 | Aliases, case, unknown |
 | Build integration | 15 | Output format, validation, structure |
 | Search parity | 20 | Multi-word, tags, descriptions |
-| Team features | 33 | Pins, profiles, annotations, snapshots, detect, freshness |
+| Team features | 51 | Pins, profiles, annotations (3 tiers), snapshots, detect, freshness |
 
 ```sh
 cargo test --all                     # run all tests

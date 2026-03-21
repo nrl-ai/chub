@@ -9,14 +9,16 @@ All commands support `--json` for machine-readable output and `--help` for usage
 Search for docs and skills in the registry using BM25 ranking.
 
 ```sh
-chub search <query> [--limit <n>] [--source <name>] [--json]
+chub search [<query>] [--tags <tags>] [--lang <lang>] [--type <type>] [--limit <n>] [--json]
 ```
 
 | Flag | Description | Default |
 |---|---|---|
-| `<query>` | Search query (supports multi-word) | — |
-| `--limit <n>` | Maximum number of results | 10 |
-| `--source <name>` | Search within a specific source | all sources |
+| `<query>` | Search query (supports multi-word). Omit to list all. | — |
+| `--tags <tags>` | Comma-separated tag filter (e.g. `openai,chat`) | all |
+| `--lang <lang>` | Filter by language (e.g. `python`, `js`) | all |
+| `--type <type>` | Filter by type: `doc` or `skill` | all |
+| `--limit <n>` | Maximum number of results | 20 |
 | `--json` | Output results as JSON | off |
 
 **Examples:**
@@ -24,7 +26,7 @@ chub search <query> [--limit <n>] [--source <name>] [--json]
 ```sh
 chub search "stripe payments"
 chub search "react hooks" --limit 5
-chub search "auth" --source official --json
+chub search --tags openai,chat --lang python --json
 ```
 
 ### chub get
@@ -32,17 +34,19 @@ chub search "auth" --source official --json
 Fetch a specific doc or skill by ID.
 
 ```sh
-chub get <id> [--lang <language>] [--version <ver>] [--source <name>] [--pinned] [--match-env] [--json]
+chub get <id>... [--lang <lang>] [--version <ver>] [--pinned] [--match-env] [-o <file>] [--json]
 ```
 
 | Flag | Description |
 |---|---|
-| `<id>` | Doc ID (e.g., `openai/chat`) |
-| `--lang <language>` | Language variant (e.g., `python`, `javascript`) |
+| `<id>` | Doc ID (e.g., `openai/chat`). Multiple IDs allowed. |
+| `--lang <lang>` | Language variant (e.g., `python`, `js`) |
 | `--version <ver>` | Specific version (e.g., `4.0`) |
-| `--source <name>` | From a specific source |
 | `--pinned` | Fetch all pinned docs at once |
 | `--match-env` | Auto-detect version from `package.json`, `Cargo.toml`, etc. |
+| `--full` | Fetch all files in the entry, not just the entry point |
+| `--file <file>` | Fetch a specific sub-file (comma-separated) |
+| `-o <path>` | Write output to a file or directory |
 | `--json` | JSON output |
 
 **Examples:**
@@ -64,22 +68,30 @@ The fetched doc automatically includes:
 List all available docs in the registry.
 
 ```sh
-chub list [--source <name>] [--project] [--json]
+chub list [<query>] [--tags <tags>] [--lang <lang>] [--type <type>] [--limit <n>] [--json]
 ```
 
-| Flag | Description |
-|---|---|
-| `--source <name>` | Filter by source |
-| `--project` | List project context docs only |
-| `--json` | JSON output |
+| Flag | Description | Default |
+|---|---|---|
+| `<query>` | Optional search query to filter results | — |
+| `--tags <tags>` | Comma-separated tag filter | all |
+| `--lang <lang>` | Filter by language | all |
+| `--type <type>` | Filter by type: `doc` or `skill` | all |
+| `--limit <n>` | Max results | 20 |
+| `--json` | JSON output | off |
 
 ### chub update
 
 Refresh the cached registry and search index.
 
 ```sh
-chub update
+chub update [--force] [--full]
 ```
+
+| Flag | Description |
+|---|---|
+| `--force` | Re-download even if cache is fresh |
+| `--full` | Download the full bundle for offline use |
 
 ### chub cache
 
@@ -107,29 +119,41 @@ chub init [--from-deps] [--monorepo]
 
 Creates `.chub/` with `config.yaml`, `pins.yaml`, `annotations/`, `context/`, and `profiles/`.
 
-### chub pin / unpin / pins
+### chub pin
 
 Manage pinned doc versions.
 
 ```sh
-chub pin <id> [--lang <lang>] [--version <ver>] [--reason <text>]
-chub unpin <id>
-chub pins
+chub pin add <id> [--lang <lang>] [--version <ver>] [--reason <text>] [--source <name>]
+chub pin remove <id>
+chub pin list
+chub pin get [--lang <lang>]
 ```
+
+| Subcommand | Description |
+|---|---|
+| `add <id>` | Pin a doc to the project |
+| `remove <id>` | Remove a pinned doc |
+| `list` | List all active pins |
+| `get` | Fetch all pinned docs at once |
+
+**Options for `pin add`:**
 
 | Flag | Description |
 |---|---|
 | `--lang <lang>` | Pin to a specific language |
 | `--version <ver>` | Pin to a specific version |
 | `--reason <text>` | Human-readable reason (shown to agents) |
+| `--source <name>` | Source name for private registry |
 
 **Examples:**
 
 ```sh
-chub pin openai/chat --lang python --version 4.0 --reason "Use v4 streaming API"
-chub pin stripe/api --lang javascript
-chub unpin openai/chat
-chub pins                                # list all active pins
+chub pin add openai/chat --lang python --version 4.0 --reason "Use v4 streaming API"
+chub pin add stripe/api --lang javascript
+chub pin remove openai/chat
+chub pin list                                # list all active pins
+chub pin get                                 # fetch all pinned docs at once
 ```
 
 ### chub profile
@@ -139,6 +163,7 @@ Manage context profiles for role-scoped context.
 ```sh
 chub profile use <name>    # activate a profile ("none" to clear)
 chub profile list          # list available profiles
+chub profile current       # show the currently active profile
 ```
 
 ### chub annotate
@@ -153,10 +178,13 @@ chub annotate [<id>] [<note>] [OPTIONS]
 
 | Invocation | Effect |
 |---|---|
-| `chub annotate <id>` | Read existing annotation(s) for entry |
+| `chub annotate <id>` | Read all annotations (org + team + personal merged) |
 | `chub annotate <id> "<note>"` | Write personal annotation (overwrites previous) |
 | `chub annotate <id> "<note>" --team` | Append team annotation (add to history) |
 | `chub annotate <id> "<note>" --org` | Append to org annotation server (Tier 3) |
+| `chub annotate <id> --personal` | Read personal tier only |
+| `chub annotate <id> --team` | Read team tier only |
+| `chub annotate <id> --org` | Read org tier only |
 | `chub annotate <id> --clear` | Remove personal annotation |
 | `chub annotate <id> --clear --team` | Remove team annotation file |
 | `chub annotate <id> --clear --org` | Remove org annotation from server |
@@ -170,12 +198,12 @@ chub annotate [<id>] [<note>] [OPTIONS]
 |---|---|---|
 | `--kind <KIND>` | `note`, `issue`, `fix`, `practice` | `note` |
 | `--severity <LEVEL>` | `high`, `medium`, `low` (issue kind only) | none |
-| `--personal` | Write to `~/.chub/annotations/` (local, overwrite semantics) | default |
-| `--team` | Write to `.chub/annotations/` (git-tracked, append semantics) | off |
-| `--org` | Write to org annotation server (requires `annotation_server` in config) | off |
+| `--personal` | Target personal tier (`~/.chub/annotations/`, overwrite) | default |
+| `--team` | Target team tier (`.chub/annotations/`, git-tracked, append) | off |
+| `--org` | Target org server (requires `annotation_server` in config) | off |
 | `--author <name>` | Author name for team/org annotations | `$USER` |
-| `--clear` | Remove the annotation |  |
-| `--list` | List all annotations |  |
+| `--clear` | Remove the annotation | |
+| `--list` | List all annotations | |
 
 **Examples:**
 
@@ -199,11 +227,8 @@ chub annotate openai/chat "Always set max_tokens to avoid unbounded streaming co
 chub annotate openai/chat "Always set max_tokens explicitly" \
   --kind practice --org
 
-# Read annotations for an entry (personal, team, and org merged)
+# Read all annotations for an entry (org + team + personal merged)
 chub annotate openai/chat
-
-# Read only team annotations
-chub annotate openai/chat --team
 
 # List all team annotations
 chub annotate --list --team
@@ -214,7 +239,7 @@ chub annotate --list --team
 - **Team** (`--team`): append semantics — adds to history with author + date, stored in `.chub/annotations/`, git-tracked.
 - **Org** (`--org`): append semantics — sent to the org annotation server, requires `annotation_server.url` in `.chub/config.yaml`.
 
-Reading without a flag shows all three tiers merged.
+Reading without a tier flag shows all three tiers merged.
 :::
 
 ### chub feedback
@@ -222,25 +247,34 @@ Reading without a flag shows all three tiers merged.
 Submit feedback (thumbs up/down) about a doc.
 
 ```sh
-chub feedback <id> <rating> [--comment <text>]
+chub feedback <id> <rating> [<comment>] [OPTIONS]
 ```
 
 | Flag | Description |
 |---|---|
 | `<rating>` | `up` or `down` |
-| `--comment <text>` | Optional explanation |
+| `<comment>` | Optional explanation (positional) |
+| `--lang <lang>` | Language variant rated |
+| `--doc-version <ver>` | Version rated |
+| `--file <file>` | Specific file within the entry |
+| `--label <label>` | Structured label, repeatable (e.g. `outdated`, `missing-example`) |
+| `--agent <name>` | AI coding tool name |
+| `--model <model>` | LLM model name |
+| `--entry-type <type>` | Explicit type: `doc` or `skill` |
+| `--status` | Show feedback and telemetry status |
 
 ### chub detect
 
 Scan dependency files and find matching docs.
 
 ```sh
-chub detect [--pin]
+chub detect [--pin] [--diff]
 ```
 
 | Flag | Description |
 |---|---|
 | `--pin` | Auto-pin all detected matches |
+| `--diff` | Show new deps since last detect |
 
 Supported dependency files: `package.json`, `Cargo.toml`, `requirements.txt`, `pyproject.toml`, `Pipfile`, `go.mod`, `Gemfile`, `pom.xml`, `build.gradle(.kts)`.
 
@@ -255,6 +289,19 @@ chub check [--fix]
 | Flag | Description |
 |---|---|
 | `--fix` | Auto-update outdated pins to match installed versions |
+
+### chub context
+
+Browse and query project context docs.
+
+```sh
+chub context [<query>] [--list]
+```
+
+| Flag | Description |
+|---|---|
+| `<query>` | Task description to find relevant context for |
+| `--list` | List all project context docs |
 
 ### chub agent-config
 
@@ -279,13 +326,34 @@ chub snapshot restore <name>         # restore pin state
 chub snapshot diff <name-a> <name-b> # compare two snapshots
 ```
 
+### chub bundle
+
+Manage shareable doc collections.
+
+```sh
+chub bundle create <name> --entries <ids> [--description <text>] [--author <name>] [--notes <text>]
+chub bundle install <name>           # pin all entries in the bundle
+chub bundle list                     # list available bundles
+```
+
+| Flag | Description |
+|---|---|
+| `--entries <ids>` | Comma-separated entry IDs (required for `create`) |
+| `--description <text>` | Bundle description |
+| `--author <name>` | Author name |
+| `--notes <text>` | Additional notes |
+
 ### chub stats
 
 Show local usage analytics (opt-in).
 
 ```sh
-chub stats [--json]
+chub stats [--days <n>] [--json]
 ```
+
+| Flag | Description | Default |
+|---|---|---|
+| `--days <n>` | Number of days to include | 30 |
 
 ## Server Commands
 
@@ -294,24 +362,21 @@ chub stats [--json]
 Start the MCP (Model Context Protocol) stdio server.
 
 ```sh
-chub mcp [--profile <name>]
+chub mcp
 ```
-
-| Flag | Description |
-|---|---|
-| `--profile <name>` | Load a specific context profile |
 
 ### chub serve
 
 Serve a built content directory as an HTTP registry.
 
 ```sh
-chub serve <content-dir> [--port <n>]
+chub serve <content-dir> [-p <port>] [-o <output-dir>]
 ```
 
 | Flag | Description | Default |
 |---|---|---|
-| `--port <n>` | HTTP port | 4242 |
+| `-p, --port <n>` | HTTP port | 4242 |
+| `-o, --output <dir>` | Output directory for built content | temp dir |
 
 ## Build Commands
 
@@ -320,14 +385,15 @@ chub serve <content-dir> [--port <n>]
 Build a content directory into `registry.json` and `search-index.json`.
 
 ```sh
-chub build <content-dir> [-o <output>] [--base-url <url>] [--validate-only]
+chub build <content-dir> [-o <output>] [--base-url <url>] [--validate-only] [--no-incremental]
 ```
 
 | Flag | Description | Default |
 |---|---|---|
-| `-o, --output <dir>` | Output directory | `dist/` |
+| `-o, --output <dir>` | Output directory | `<content-dir>/dist` |
 | `--base-url <url>` | CDN base URL for doc paths | none |
 | `--validate-only` | Validate content without building | off |
+| `--no-incremental` | Rebuild all files, skip change detection | off |
 
 **Examples:**
 

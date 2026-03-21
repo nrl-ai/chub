@@ -6,7 +6,13 @@ Chub includes a built-in MCP (Model Context Protocol) stdio server. Connect it t
 
 ```sh
 chub mcp
-chub mcp --profile backend    # load a specific context profile
+```
+
+To scope the session to a context profile, activate it first:
+
+```sh
+chub profile use backend
+chub mcp
 ```
 
 ## Agent configuration

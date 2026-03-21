@@ -56,7 +56,7 @@ The second agent never has to discover any of this the hard way.
 
 **Annotation policy in CLAUDE.md:** set `include_annotation_policy: true` in your agent config to give every agent standing instructions to write back what it discovers — without repeating yourself in every session.
 
-**Three storage tiers:** personal (`~/.chub/`), team/repo (`.chub/`), and hosted org-wide (Phase 8). Each tier is additive; personal annotations always win.
+**Three storage tiers:** personal (`~/.chub/`), team/repo (`.chub/`), and org-wide via a hosted annotation server. Each tier is additive; personal annotations always win.
 
 ## 3. Team Features
 

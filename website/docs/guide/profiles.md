@@ -81,13 +81,14 @@ When an agent opens a file in `packages/api/`, the `backend` profile is loaded a
 
 ## MCP integration
 
-Start the MCP server with a profile:
+Activate a profile before starting the MCP server, or use the `auto_profile` config to switch automatically based on open files:
 
 ```sh
-chub mcp --profile backend
+chub profile use backend
+chub mcp
 ```
 
-Agents get focused, relevant context instead of the full registry. The `chub_context` MCP tool returns the full active context in a single call — profile rules, context docs, pinned docs, and annotations:
+The `chub_context` MCP tool returns the full active context in a single call — profile rules, context docs, pinned docs, and annotations:
 
 ```json
 { "task": "implement payment flow" }

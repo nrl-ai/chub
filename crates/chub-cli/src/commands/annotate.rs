@@ -407,7 +407,8 @@ pub async fn run(args: AnnotateArgs, json: bool) {
         } else {
             eprintln!("No team annotation for {}.", id.bold());
         }
-    } else {
+    } else if args.personal {
+        // --personal: read personal tier only
         let existing = read_annotation(&id);
         if let Some(ann) = existing {
             if json {
@@ -424,7 +425,22 @@ pub async fn run(args: AnnotateArgs, json: bool) {
         } else if json {
             println!("{}", serde_json::json!({ "id": id, "note": null }));
         } else {
-            eprintln!("No annotation for {}.", id.bold());
+            eprintln!("No personal annotation for {}.", id.bold());
+        }
+    } else {
+        // No flag: show all tiers merged (org + team + personal)
+        let merged = chub_core::team::team_annotations::get_merged_annotation_async(&id).await;
+        if let Some(text) = merged {
+            if json {
+                println!("{}", serde_json::json!({ "id": id, "annotation": text }));
+            } else {
+                eprintln!("{}", id.bold());
+                eprintln!("{}", text);
+            }
+        } else if json {
+            println!("{}", serde_json::json!({ "id": id, "annotation": null }));
+        } else {
+            eprintln!("No annotations for {}.", id.bold());
         }
     }
 }
