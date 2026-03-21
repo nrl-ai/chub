@@ -47,7 +47,7 @@ Built on [Context Hub](https://github.com/andrewyng/context-hub) by Andrew Ng �
 │  (Claude,    │     │  Server     │     │  (CDN / local)   │
 │   Cursor)    │◀────│             │◀────│                  │
 └──────────────┘     └─────────────┘     └──────────────────┘
-   Gets accurate        Searches,             1,500+ curated
+   Gets accurate        Searches,             1,560+ curated
    API docs on          caches, and           docs covering
    demand               verifies docs         major APIs
 ```
@@ -83,7 +83,7 @@ chub list                                      # browse everything
 
 ### Connect to Your AI Agent
 
-Add to `.mcp.json` (Claude Code) or `.cursor/mcp.json` (Cursor):
+Add to `.mcp.json` (Claude Code), `.cursor/mcp.json` (Cursor), or the equivalent for your agent:
 
 ```json
 {
@@ -97,6 +97,8 @@ Add to `.mcp.json` (Claude Code) or `.cursor/mcp.json` (Cursor):
 ```
 
 Your agent now has access to `chub_search`, `chub_get`, `chub_list`, `chub_annotate`, `chub_context`, `chub_pins`, and `chub_feedback` tools.
+
+Works with 12+ MCP-compatible agents: Claude Code, Cursor, Windsurf, GitHub Copilot, Gemini CLI, Kiro, Cline, Roo Code, Augment, Codex, Continue.dev, and Aider.
 
 ---
 
@@ -128,6 +130,14 @@ chub pin get                     # fetch all pinned docs at once
 
 ### Build a self-learning knowledge base
 
+Annotations live in three tiers — each scoped for different audiences:
+
+| Tier | Storage | Visibility |
+|---|---|---|
+| **Personal** | `~/.chub/annotations/` | You only |
+| **Team** | `.chub/annotations/` (git-tracked) | Your repo |
+| **Org** | Remote HTTP API | Entire organization |
+
 Agents can write back what they discover — structured by kind so the knowledge is findable, not just buried in a notes field:
 
 ```sh
@@ -142,7 +152,7 @@ chub annotate openai/chat "use tool_choice='auto' or remove tools from array" --
 chub annotate openai/chat "Always set max_tokens to avoid unbounded cost" --kind practice --team
 ```
 
-When any agent fetches these docs, all annotations appear alongside the official content — grouped by kind, clearly marked as team-contributed. Every debugging session becomes permanent team knowledge.
+Annotation kinds: **note**, **issue** (with severity), **fix**, **practice**. When any agent fetches these docs, all annotations appear alongside the official content — grouped by kind, clearly marked as team-contributed. Every debugging session becomes permanent team knowledge.
 
 Add to `.chub/config.yaml` to automatically instruct agents to annotate:
 
@@ -168,10 +178,14 @@ chub check --fix                 # auto-update outdated pins
 
 ### Sync agent config files
 
+Generate rules files for 10 agent targets from a single `.chub/config.yaml`:
+
 ```sh
-chub agent-config generate       # generate CLAUDE.md, .cursorrules, AGENTS.md from one source
+chub agent-config generate       # generate rules for all configured targets
 chub agent-config sync           # update only if changed
 ```
+
+Supported targets: `claude.md`, `cursorrules`, `windsurfrules`, `agents.md`, `copilot`, `gemini.md`, `clinerules`, `roorules`, `augmentrules`, `kiro`.
 
 ---
 
@@ -227,10 +241,12 @@ Supports: `package.json`, `requirements.txt`, `pyproject.toml`, `Cargo.toml`, `g
 ### Agent Config Sync
 
 ```sh
-chub agent-config generate              # generate CLAUDE.md, .cursorrules, etc.
+chub agent-config generate              # generate rules for all configured targets
 chub agent-config sync                  # update only if changed
 chub agent-config diff                  # preview changes
 ```
+
+Targets: `claude.md`, `cursorrules`, `windsurfrules`, `agents.md`, `copilot`, `gemini.md`, `clinerules`, `roorules`, `augmentrules`, `kiro`.
 
 ### Snapshots and Freshness
 
@@ -293,7 +309,7 @@ Chub includes several security measures for safe use in team environments:
 
 ## Benchmarks
 
-Measured on the production corpus (1,553 docs, 7 skills). Median of 5 runs on Windows 11, Node.js v22, Rust release build.
+Measured on the production corpus (1,561 docs, 7 skills). Median of 5 runs on Windows 11, Node.js v22, Rust release build.
 
 ### Performance
 
@@ -321,7 +337,9 @@ Measured on the production corpus (1,553 docs, 7 skills). Median of 5 runs on Wi
 | MCP tools | 5 | 2 | **7** |
 | Team features (pins, profiles, snapshots) | — | — | **Yes** |
 | Self-learning agents (structured annotations) | — | — | **Yes** |
+| 3-tier annotations (personal, team, org) | — | — | **Yes** |
 | Annotation policy in CLAUDE.md / AGENTS.md | — | — | **Yes** |
+| Agent config sync (10 targets) | — | — | **Yes** |
 | Content integrity verification | — | — | **Yes** |
 | Auto version detection (`--match-env`) | — | — | **Yes** |
 | Self-hosted registry | Yes | — | **Yes** |
@@ -363,7 +381,7 @@ Add your private registry as an additional source in `~/.chub/config.yaml` — n
 
 ## Test Suite
 
-117 tests covering behavioral parity with Context Hub and all team features:
+148 tests covering behavioral parity with Context Hub and all team features:
 
 | Suite | Tests | Coverage |
 |---|---|---|
@@ -372,9 +390,12 @@ Add your private registry as an additional source in `~/.chub/config.yaml` — n
 | Inverted index | 1 | Parity with linear scan |
 | Frontmatter parser | 9 | YAML, CRLF, BOM, empty, numeric |
 | Language normalization | 4 | Aliases, case, unknown |
+| Annotations | 4 | Kind validation, severity, tiers |
+| Agent config | 3 | Target generation, unknown target warnings |
 | Build integration | 15 | Output format, validation, structure |
 | Search parity | 20 | Multi-word, tags, descriptions |
-| Team features | 51 | Pins, profiles, annotations (3 tiers), snapshots, detect, freshness |
+| Team features | 66 | Pins, profiles, annotations (3 tiers), snapshots, detect, freshness, org HTTP |
+| Utilities | 9 | Date helpers, path traversal guards, sanitization |
 
 ```sh
 cargo test --all                     # run all tests
