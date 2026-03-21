@@ -1,6 +1,6 @@
 """Chub: high-performance curated docs for AI coding agents."""
 
-__version__ = "0.1.8"
+__version__ = "0.1.9"
 
 import os
 import platform
