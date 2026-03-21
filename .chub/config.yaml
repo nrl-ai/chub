@@ -1,0 +1,50 @@
+# Chub project configuration
+# Shared with the team via git. Overrides personal ~/.chub/config.yaml.
+
+sources:
+  - name: official
+    url: https://cdn.aichub.org/v1
+
+# Agent rules — single source of truth for CLAUDE.md, .cursorrules, etc.
+agent_rules:
+  global:
+    - "This is a Rust CLI + library project (workspace with chub-core and chub-cli crates)"
+    - "Run `cargo fmt --all` and `cargo clippy --all -- -D warnings` before committing"
+    - "All business logic goes in chub-core; CLI/output/MCP concerns go in chub-cli"
+    - "Maintain byte-for-byte format compatibility with the original JS Context Hub"
+    - "Use serde(rename) attributes to keep camelCase JSON field names"
+    - "Tests are inline #[cfg(test)] blocks, not separate test files (except integration tests)"
+    - "Do not add Co-Authored-By trailers to commits"
+
+  modules:
+    core:
+      path: "crates/chub-core/**"
+      rules:
+        - "No CLI concerns (no stdout/stderr, no clap, no owo-colors)"
+        - "All public functions return Result<T> using crate::error::Error"
+        - "Search pipeline: tokenizer -> BM25 -> inverted index -> lexical boost"
+    cli:
+      path: "crates/chub-cli/**"
+      rules:
+        - "Each command in its own file under src/commands/"
+        - "Use owo-colors for terminal output, support --json flag on all commands"
+        - "MCP tools use schemars::JsonSchema for parameter schema generation"
+    team:
+      path: "crates/chub-core/src/team/**"
+      rules:
+        - "Team features live in .chub/ directory (git-tracked)"
+        - "Three-tier config: ~/.chub/ -> .chub/ -> .chub/profiles/"
+        - "All team modules must work gracefully when .chub/ doesn't exist"
+
+  include_pins: true
+  include_context: true
+
+  targets:
+    - cursorrules
+
+# Auto-profile for monorepo-style path-scoped context
+auto_profile:
+  - path: "crates/chub-core/**"
+    profile: core-dev
+  - path: "crates/chub-cli/**"
+    profile: cli-dev

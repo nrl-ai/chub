@@ -78,41 +78,90 @@ pub fn chub_dir() -> PathBuf {
     }
 }
 
-/// Load config from ~/.chub/config.yaml with defaults and env var overrides.
+/// Load config with three-tier merge:
+/// Tier 1: ~/.chub/config.yaml (personal defaults)
+/// Tier 2: .chub/config.yaml (project, overrides personal)
+/// Tier 3: Active profile (additive — doesn't override config fields)
 pub fn load_config() -> Config {
     let defaults = Config::default();
     let config_path = chub_dir().join("config.yaml");
 
+    // Tier 1: personal config
     let file_config: FileConfig = std::fs::read_to_string(&config_path)
         .ok()
         .and_then(|raw| serde_yaml::from_str(&raw).ok())
         .unwrap_or_default();
 
-    // Build sources list
-    let sources = if let Some(sources) = file_config.sources {
-        sources
-    } else {
-        let url = std::env::var("CHUB_BUNDLE_URL")
-            .ok()
-            .or(file_config.cdn_url)
-            .unwrap_or_else(|| DEFAULT_CDN_URL.to_string());
-        vec![SourceConfig {
-            name: "default".to_string(),
-            url: Some(url),
-            path: None,
-        }]
-    };
+    // Tier 2: project config (override personal)
+    let project_config: FileConfig = find_project_chub_dir()
+        .map(|d| d.join("config.yaml"))
+        .and_then(|p| std::fs::read_to_string(&p).ok())
+        .and_then(|raw| serde_yaml::from_str(&raw).ok())
+        .unwrap_or_default();
+
+    // Merge: project overrides personal, personal overrides defaults
+    let sources = project_config
+        .sources
+        .or(file_config.sources)
+        .unwrap_or_else(|| {
+            let url = std::env::var("CHUB_BUNDLE_URL")
+                .ok()
+                .or(project_config.cdn_url)
+                .or(file_config.cdn_url)
+                .unwrap_or_else(|| DEFAULT_CDN_URL.to_string());
+            vec![SourceConfig {
+                name: "default".to_string(),
+                url: Some(url),
+                path: None,
+            }]
+        });
 
     Config {
         sources,
-        output_dir: file_config.output_dir.unwrap_or(defaults.output_dir),
-        refresh_interval: file_config
+        output_dir: project_config
+            .output_dir
+            .or(file_config.output_dir)
+            .unwrap_or(defaults.output_dir),
+        refresh_interval: project_config
             .refresh_interval
+            .or(file_config.refresh_interval)
             .unwrap_or(defaults.refresh_interval),
-        output_format: file_config.output_format.unwrap_or(defaults.output_format),
-        source: file_config.source.unwrap_or(defaults.source),
-        telemetry: file_config.telemetry.unwrap_or(defaults.telemetry),
-        feedback: file_config.feedback.unwrap_or(defaults.feedback),
-        telemetry_url: file_config.telemetry_url.unwrap_or(defaults.telemetry_url),
+        output_format: project_config
+            .output_format
+            .or(file_config.output_format)
+            .unwrap_or(defaults.output_format),
+        source: project_config
+            .source
+            .or(file_config.source)
+            .unwrap_or(defaults.source),
+        telemetry: project_config
+            .telemetry
+            .or(file_config.telemetry)
+            .unwrap_or(defaults.telemetry),
+        feedback: project_config
+            .feedback
+            .or(file_config.feedback)
+            .unwrap_or(defaults.feedback),
+        telemetry_url: project_config
+            .telemetry_url
+            .or(file_config.telemetry_url)
+            .unwrap_or(defaults.telemetry_url),
+    }
+}
+
+/// Search upward from CWD for a `.chub/` directory (project-level).
+fn find_project_chub_dir() -> Option<PathBuf> {
+    let start = std::env::current_dir().ok()?;
+    let mut current = start.as_path();
+    loop {
+        let candidate = current.join(".chub");
+        if candidate.is_dir() {
+            // Don't use ~/.chub as a project dir
+            let home_chub = chub_dir();
+            if candidate != home_chub {
+                return Some(candidate);
+            }
+        }
+        current = current.parent()?;
     }
 }

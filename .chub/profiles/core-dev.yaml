@@ -1,0 +1,13 @@
+name: Core Library Developer
+extends: base
+description: "Context for working on chub-core (library crate)"
+rules:
+  - "No CLI concerns in chub-core (no stdout, no clap, no colors)"
+  - "All public functions return Result<T> using crate::error::Error"
+  - "Team modules must degrade gracefully when .chub/ is absent"
+context:
+  - architecture.md
+  - team-features.md
+pins:
+  - serde/derive
+  - tokio/runtime

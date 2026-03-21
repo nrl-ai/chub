@@ -22,25 +22,65 @@ pub struct AnnotateArgs {
     /// List all annotations
     #[arg(long)]
     list: bool,
+
+    /// Save as team annotation (git-tracked in .chub/annotations/)
+    #[arg(long)]
+    team: bool,
+
+    /// Save as personal annotation only (default)
+    #[arg(long)]
+    personal: bool,
+
+    /// Author name for team annotations
+    #[arg(long)]
+    author: Option<String>,
 }
 
 pub fn run(args: AnnotateArgs, json: bool) {
     if args.list {
-        let annotations = list_annotations();
-        if json {
-            println!(
-                "{}",
-                serde_json::to_string_pretty(&annotations).unwrap_or_default()
-            );
-        } else {
-            if annotations.is_empty() {
-                eprintln!("No annotations.");
-                return;
+        if args.team {
+            // List team annotations
+            let annotations = chub_core::team::team_annotations::list_team_annotations();
+            if json {
+                println!(
+                    "{}",
+                    serde_json::to_string_pretty(&annotations).unwrap_or_default()
+                );
+            } else {
+                if annotations.is_empty() {
+                    eprintln!("No team annotations.");
+                    return;
+                }
+                for a in &annotations {
+                    eprintln!("{}", a.id.bold());
+                    for note in &a.notes {
+                        eprintln!(
+                            "  {} {} {}",
+                            note.author.cyan(),
+                            format!("({})", note.date).dimmed(),
+                            note.note
+                        );
+                    }
+                    eprintln!();
+                }
             }
-            for a in &annotations {
-                eprintln!("{} {}", a.id.bold(), format!("({})", a.updated_at).dimmed());
-                eprintln!("  {}", a.note);
-                eprintln!();
+        } else {
+            let annotations = list_annotations();
+            if json {
+                println!(
+                    "{}",
+                    serde_json::to_string_pretty(&annotations).unwrap_or_default()
+                );
+            } else {
+                if annotations.is_empty() {
+                    eprintln!("No annotations.");
+                    return;
+                }
+                for a in &annotations {
+                    eprintln!("{} {}", a.id.bold(), format!("({})", a.updated_at).dimmed());
+                    eprintln!("  {}", a.note);
+                    eprintln!();
+                }
             }
         }
         return;
@@ -70,34 +110,88 @@ pub fn run(args: AnnotateArgs, json: bool) {
     }
 
     if let Some(note) = args.note {
-        let data = write_annotation(&id, &note);
-        if json {
-            println!(
-                "{}",
-                serde_json::to_string_pretty(&data).unwrap_or_default()
-            );
+        if args.team {
+            // Write team annotation
+            let author = args.author.unwrap_or_else(|| {
+                std::env::var("USER")
+                    .or_else(|_| std::env::var("USERNAME"))
+                    .unwrap_or_else(|_| "unknown".to_string())
+            });
+            match chub_core::team::team_annotations::write_team_annotation(&id, &note, &author) {
+                Some(_ann) => {
+                    if json {
+                        println!(
+                            "{}",
+                            serde_json::json!({"status": "saved", "id": id, "type": "team", "author": author})
+                        );
+                    } else {
+                        output::success(&format!(
+                            "Team annotation saved for {} (by {})",
+                            id.bold(),
+                            author
+                        ));
+                    }
+                }
+                None => {
+                    output::error(
+                        "Failed to save team annotation. Is .chub/ initialized?",
+                        json,
+                    );
+                    std::process::exit(1);
+                }
+            }
         } else {
-            eprintln!("Annotation saved for {}.", id.bold());
+            let data = write_annotation(&id, &note);
+            if json {
+                println!(
+                    "{}",
+                    serde_json::to_string_pretty(&data).unwrap_or_default()
+                );
+            } else {
+                eprintln!("Annotation saved for {}.", id.bold());
+            }
         }
         return;
     }
 
-    // Show existing annotation
-    let existing = read_annotation(&id);
-    if let Some(ann) = existing {
-        if json {
-            println!("{}", serde_json::to_string_pretty(&ann).unwrap_or_default());
+    // Show existing annotation (merged if not --personal)
+    if args.team {
+        if let Some(ann) = chub_core::team::team_annotations::read_team_annotation(&id) {
+            if json {
+                println!("{}", serde_json::to_string_pretty(&ann).unwrap_or_default());
+            } else {
+                eprintln!("{}", id.bold());
+                for note in &ann.notes {
+                    eprintln!(
+                        "  {} {} {}",
+                        note.author.cyan(),
+                        format!("({})", note.date).dimmed(),
+                        note.note
+                    );
+                }
+            }
+        } else if json {
+            println!("{}", serde_json::json!({ "id": id, "notes": [] }));
         } else {
-            eprintln!(
-                "{} {}",
-                ann.id.bold(),
-                format!("({})", ann.updated_at).dimmed()
-            );
-            eprintln!("{}", ann.note);
+            eprintln!("No team annotation for {}.", id.bold());
         }
-    } else if json {
-        println!("{}", serde_json::json!({ "id": id, "note": null }));
     } else {
-        eprintln!("No annotation for {}.", id.bold());
+        let existing = read_annotation(&id);
+        if let Some(ann) = existing {
+            if json {
+                println!("{}", serde_json::to_string_pretty(&ann).unwrap_or_default());
+            } else {
+                eprintln!(
+                    "{} {}",
+                    ann.id.bold(),
+                    format!("({})", ann.updated_at).dimmed()
+                );
+                eprintln!("{}", ann.note);
+            }
+        } else if json {
+            println!("{}", serde_json::json!({ "id": id, "note": null }));
+        } else {
+            eprintln!("No annotation for {}.", id.bold());
+        }
     }
 }

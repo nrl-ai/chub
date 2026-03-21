@@ -20,5 +20,11 @@ npm/chub-linux-arm64/chub
 npm/chub-linux-x64/chub
 npm/chub-win32-x64/chub.exe
 
+# Python build artifacts
+python/chub/bin/
+python/*.egg-info/
+__pycache__/
+*.pyc
+
 # Test fixtures output
 **/dist/

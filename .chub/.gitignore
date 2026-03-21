@@ -1,0 +1,6 @@
+# Session-local files (not shared via git)
+.active_profile
+.init_from_deps
+
+# Analytics stay local
+analytics.jsonl

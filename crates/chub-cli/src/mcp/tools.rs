@@ -8,6 +8,7 @@ use chub_core::registry::{
     get_entry, list_entries, resolve_doc_path, resolve_entry_file, search_entries, MergedRegistry,
     ResolvedPath, SearchFilters, TaggedEntry,
 };
+use chub_core::team;
 use chub_core::telemetry::{is_feedback_enabled, send_feedback, FeedbackOpts, VALID_LABELS};
 
 use rmcp::handler::server::router::tool::ToolRouter;
@@ -125,6 +126,45 @@ pub struct FeedbackParams {
     pub labels: Option<Vec<String>>,
 }
 
+#[derive(Debug, serde::Deserialize, schemars::JsonSchema)]
+#[allow(dead_code)] // Fields exposed via MCP JSON schema, read by serde
+pub struct ContextParams {
+    /// Task description to find relevant context for
+    #[schemars(default)]
+    pub task: Option<String>,
+    /// Files currently open (for auto-profile detection)
+    #[schemars(default)]
+    pub files_open: Option<Vec<String>>,
+    /// Profile name to scope context to
+    #[schemars(default)]
+    pub profile: Option<String>,
+    /// Maximum token budget (soft limit)
+    #[schemars(default)]
+    pub max_tokens: Option<usize>,
+}
+
+#[derive(Debug, serde::Deserialize, schemars::JsonSchema)]
+pub struct PinsParams {
+    /// Entry ID to pin or unpin
+    #[schemars(default)]
+    pub id: Option<String>,
+    /// Language variant
+    #[schemars(default)]
+    pub lang: Option<String>,
+    /// Version to lock
+    #[schemars(default)]
+    pub version: Option<String>,
+    /// Reason for pinning
+    #[schemars(default)]
+    pub reason: Option<String>,
+    /// Remove the pin (default false)
+    #[schemars(default)]
+    pub remove: Option<bool>,
+    /// List all pins (default false)
+    #[schemars(default)]
+    pub list: Option<bool>,
+}
+
 // --- MCP Server ---
 
 #[derive(Debug, Clone)]
@@ -208,7 +248,31 @@ impl ChubMcpServer {
         };
 
         let entry_type = entry.entry_type;
-        let resolved = resolve_doc_path(&entry, params.lang.as_deref(), params.version.as_deref());
+
+        // Apply pin overrides: if the entry is pinned, use pinned lang/version as defaults
+        let mut effective_lang = params.lang.clone();
+        let mut effective_version = params.version.clone();
+        let mut pin_notice = String::new();
+        if let Some(pin) = team::pins::get_pin(entry.id()) {
+            if effective_lang.is_none() {
+                effective_lang = pin.lang.clone();
+            }
+            if effective_version.is_none() {
+                effective_version = pin.version.clone();
+            }
+            pin_notice = team::team_annotations::get_pin_notice(
+                entry.id(),
+                pin.version.as_deref(),
+                pin.lang.as_deref(),
+                pin.reason.as_deref(),
+            );
+        }
+
+        let resolved = resolve_doc_path(
+            &entry,
+            effective_lang.as_deref(),
+            effective_version.as_deref(),
+        );
 
         let resolved = match resolved {
             Some(r) => r,
@@ -301,13 +365,23 @@ impl ChubMcpServer {
             }
         };
 
-        // Append annotation if present
-        if let Some(annotation) = read_annotation(entry.id()) {
+        // Append pin notice if this doc is pinned
+        if !pin_notice.is_empty() {
+            content.push_str(&pin_notice);
+        }
+
+        // Append merged annotations (team + personal)
+        if let Some(merged_ann) = team::team_annotations::get_merged_annotation(entry.id()) {
+            content.push_str(&format!("\n\n---\n{}\n", merged_ann));
+        } else if let Some(annotation) = read_annotation(entry.id()) {
             content.push_str(&format!(
                 "\n\n---\n[Agent note — {}]\n{}\n",
                 annotation.updated_at, annotation.note
             ));
         }
+
+        // Record analytics
+        team::analytics::record_fetch(entry.id(), Some("mcp-server"));
 
         content
     }
@@ -391,6 +465,102 @@ impl ChubMcpServer {
             text_result(serde_json::json!({ "annotation": annotation }))
         } else {
             text_result(serde_json::json!({ "status": "no_annotation", "id": id }))
+        }
+    }
+
+    #[tool(
+        name = "chub_context",
+        description = "Get optimal context for a task: returns relevant pinned docs, team annotations, project context, and profile rules in one call"
+    )]
+    async fn handle_context(&self, Parameters(params): Parameters<ContextParams>) -> String {
+        let mut result = serde_json::json!({});
+
+        // Pinned docs
+        let pins = team::pins::list_pins();
+        if !pins.is_empty() {
+            result["pins"] = serde_json::json!(pins);
+        }
+
+        // Active profile rules
+        if let Some(ref profile_name) = params.profile {
+            if let Ok(resolved) = team::profiles::resolve_profile(profile_name) {
+                result["profile"] = serde_json::json!({
+                    "name": resolved.name,
+                    "rules": resolved.rules,
+                    "context": resolved.context,
+                });
+            }
+        } else if let Some(profile_name) = team::profiles::get_active_profile() {
+            if let Ok(resolved) = team::profiles::resolve_profile(&profile_name) {
+                result["profile"] = serde_json::json!({
+                    "name": resolved.name,
+                    "rules": resolved.rules,
+                    "context": resolved.context,
+                });
+            }
+        }
+
+        // Project context docs
+        let context_docs = team::context::list_context_docs();
+        if !context_docs.is_empty() {
+            result["project_context"] = serde_json::json!(context_docs);
+        }
+
+        // Team annotations for pinned docs
+        let mut annotations = Vec::new();
+        for pin in &pins {
+            if let Some(merged_ann) = team::team_annotations::get_merged_annotation(&pin.id) {
+                annotations.push(serde_json::json!({
+                    "id": pin.id,
+                    "annotation": merged_ann,
+                }));
+            }
+        }
+        if !annotations.is_empty() {
+            result["annotations"] = serde_json::json!(annotations);
+        }
+
+        // Task relevance scoring (if task provided)
+        if let Some(ref task) = params.task {
+            result["task"] = serde_json::json!(task);
+        }
+
+        text_result(result)
+    }
+
+    #[tool(
+        name = "chub_pins",
+        description = "List, add, or remove pinned docs. Pinned docs have locked versions for the team."
+    )]
+    async fn handle_pins(&self, Parameters(params): Parameters<PinsParams>) -> String {
+        if params.list.unwrap_or(false) || (params.id.is_none() && params.remove.is_none()) {
+            let pins = team::pins::list_pins();
+            return text_result(serde_json::json!({
+                "pins": pins,
+                "total": pins.len(),
+            }));
+        }
+
+        let id = match params.id {
+            Some(id) => id,
+            None => {
+                return text_result(serde_json::json!({
+                    "error": "Missing required parameter: id",
+                }));
+            }
+        };
+
+        if params.remove.unwrap_or(false) {
+            match team::pins::remove_pin(&id) {
+                Ok(true) => text_result(serde_json::json!({"status": "unpinned", "id": id})),
+                Ok(false) => text_result(serde_json::json!({"status": "not_found", "id": id})),
+                Err(e) => text_result(serde_json::json!({"error": e.to_string()})),
+            }
+        } else {
+            match team::pins::add_pin(&id, params.lang, params.version, params.reason, None) {
+                Ok(()) => text_result(serde_json::json!({"status": "pinned", "id": id})),
+                Err(e) => text_result(serde_json::json!({"error": e.to_string()})),
+            }
         }
     }
 

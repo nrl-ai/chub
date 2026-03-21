@@ -38,6 +38,30 @@ enum Commands {
     Feedback(commands::feedback::FeedbackArgs),
     /// Start MCP stdio server for AI coding agents
     Mcp,
+
+    // --- Team features ---
+    /// Initialize .chub/ project directory
+    Init(commands::init::InitArgs),
+    /// Manage pinned docs
+    Pin(commands::pin::PinArgs),
+    /// Manage context profiles
+    Profile(commands::profile::ProfileArgs),
+    /// Detect dependencies and match to available docs
+    Detect(commands::detect::DetectArgs),
+    /// Generate/sync agent config files (CLAUDE.md, .cursorrules, etc.)
+    AgentConfig(commands::agent_config::AgentConfigArgs),
+    /// Check freshness of pinned doc versions vs installed deps
+    Check(commands::check::CheckArgs),
+    /// Browse and query project context docs
+    Context(commands::context_cmd::ContextArgs),
+    /// Show usage analytics
+    Stats(commands::stats::StatsArgs),
+    /// Serve a content directory as an HTTP registry
+    Serve(commands::serve::ServeArgs),
+    /// Manage doc bundles (shareable collections)
+    Bundle(commands::bundle::BundleArgs),
+    /// Manage doc snapshots for reproducible builds
+    Snapshot(commands::snapshot::SnapshotArgs),
 }
 
 #[tokio::main]
@@ -79,6 +103,49 @@ async fn main() {
             commands::annotate::run(args, cli.json);
             return;
         }
+        Commands::Init(args) => {
+            commands::init::run(args, cli.json);
+            return;
+        }
+        Commands::Pin(args) => {
+            commands::pin::run(args, cli.json);
+            return;
+        }
+        Commands::Profile(args) => {
+            commands::profile::run(args, cli.json);
+            return;
+        }
+        Commands::AgentConfig(args) => {
+            commands::agent_config::run(args, cli.json);
+            return;
+        }
+        Commands::Check(args) => {
+            commands::check::run(args, cli.json);
+            return;
+        }
+        Commands::Context(args) => {
+            commands::context_cmd::run(args, cli.json);
+            return;
+        }
+        Commands::Stats(args) => {
+            commands::stats::run(args, cli.json);
+            return;
+        }
+        Commands::Serve(args) => {
+            if let Err(e) = commands::serve::run(args, cli.json).await {
+                output::error(&e.to_string(), cli.json);
+                std::process::exit(1);
+            }
+            return;
+        }
+        Commands::Bundle(args) => {
+            commands::bundle::run(args, cli.json);
+            return;
+        }
+        Commands::Snapshot(args) => {
+            commands::snapshot::run(args, cli.json);
+            return;
+        }
         _ => {}
     }
 
@@ -109,11 +176,24 @@ async fn main() {
         Commands::Feedback(args) => {
             commands::feedback::run(args, cli.json, Some(&merged)).await;
         }
+        Commands::Detect(args) => {
+            commands::detect::run(args, cli.json, &merged);
+        }
         // Already handled above
         Commands::Build(_)
         | Commands::Update(_)
         | Commands::Cache(_)
         | Commands::Annotate(_)
+        | Commands::Init(_)
+        | Commands::Pin(_)
+        | Commands::Profile(_)
+        | Commands::AgentConfig(_)
+        | Commands::Check(_)
+        | Commands::Context(_)
+        | Commands::Stats(_)
+        | Commands::Serve(_)
+        | Commands::Bundle(_)
+        | Commands::Snapshot(_)
         | Commands::Mcp => unreachable!(),
     }
 }

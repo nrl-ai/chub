@@ -1,0 +1,10 @@
+name: Base
+description: "Shared rules for all contributors"
+rules:
+  - "Run cargo test --all before submitting changes"
+  - "Run cargo fmt --all and cargo clippy --all -- -D warnings"
+  - "Maintain format compatibility with the original JS Context Hub"
+  - "Use chub get project/<name> to read project context docs"
+context:
+  - architecture.md
+  - conventions.md

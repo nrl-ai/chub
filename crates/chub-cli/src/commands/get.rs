@@ -35,6 +35,10 @@ pub struct GetArgs {
     /// Fetch specific file(s) by path (comma-separated)
     #[arg(long)]
     file: Option<String>,
+
+    /// Fetch all pinned docs at once
+    #[arg(long)]
+    pinned: bool,
 }
 
 struct FetchedEntry {
@@ -47,6 +51,26 @@ struct FetchedEntry {
 }
 
 pub async fn run(args: GetArgs, json: bool, merged: &MergedRegistry) -> Result<()> {
+    // Handle --pinned: fetch all pinned docs
+    if args.pinned {
+        let pins = chub_core::team::pins::list_pins();
+        if pins.is_empty() {
+            output::error("No pinned docs. Use `chub pin add <id>` to pin docs.", json);
+            std::process::exit(1);
+        }
+        let pin_ids: Vec<String> = pins.iter().map(|p| p.id.clone()).collect();
+        let pinned_args = GetArgs {
+            ids: pin_ids,
+            lang: args.lang.clone(),
+            version: args.version.clone(),
+            output: args.output.clone(),
+            full: args.full,
+            file: args.file.clone(),
+            pinned: false,
+        };
+        return Box::pin(run(pinned_args, json, merged)).await;
+    }
+
     if args.ids.is_empty() {
         output::error("Missing required argument: <ids>", json);
         std::process::exit(1);
@@ -55,6 +79,29 @@ pub async fn run(args: GetArgs, json: bool, merged: &MergedRegistry) -> Result<(
     let mut results: Vec<FetchedEntry> = Vec::new();
 
     for id in &args.ids {
+        // Handle project context docs (project/<name>)
+        if let Some(ctx_name) = id.strip_prefix("project/") {
+            if let Some((_doc, content)) = chub_core::team::context::get_context_doc(ctx_name) {
+                results.push(FetchedEntry {
+                    id: id.clone(),
+                    entry_type: "context".to_string(),
+                    content: Some(content),
+                    files: None,
+                    path: format!(".chub/context/{}.md", ctx_name),
+                    additional_files: vec![],
+                });
+                continue;
+            } else {
+                output::error(
+                    &format!(
+                        "Project context doc \"{}\" not found in .chub/context/",
+                        ctx_name
+                    ),
+                    json,
+                );
+                std::process::exit(1);
+            }
+        }
         let result = get_entry(id, merged);
 
         if result.ambiguous {

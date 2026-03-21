@@ -8,15 +8,19 @@ edition = "2021"
 license = "MIT"
 description = "Chub: high-performance Rust implementation of Context Hub with team sharing"
 repository = "https://github.com/vietanhdev/chub"
+homepage = "https://github.com/vietanhdev/chub"
+authors = ["Viet-Anh Nguyen <vietanh.dev@gmail.com>"]
+keywords = ["ai", "documentation", "mcp", "context", "coding-agent"]
+categories = ["command-line-utilities", "development-tools"]
 
 [workspace.dependencies]
-chub-core = { path = "crates/chub-core" }
+chub-core = { path = "crates/chub-core", version = "0.1.0" }
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 serde_yaml = "0.9"
 bincode = "1"
 thiserror = "2"
-tokio = { version = "1", features = ["rt-multi-thread", "macros", "fs"] }
+tokio = { version = "1", features = ["rt-multi-thread", "macros", "fs", "net"] }
 reqwest = { version = "0.12", features = ["rustls-tls", "json"], default-features = false }
 clap = { version = "4", features = ["derive"] }
 walkdir = "2"
@@ -29,3 +33,7 @@ rayon = "1"
 indicatif = "0.17"
 rmcp = { version = "1", features = ["server", "transport-io"] }
 schemars = "0.8"
+globset = "0.4"
+toml = "0.8"
+axum = "0.7"
+tower-http = { version = "0.6", features = ["fs", "cors"] }

@@ -7,6 +7,7 @@ on:
 
 permissions:
   contents: write
+  id-token: write
 
 env:
   CARGO_TERM_COLOR: always
@@ -61,11 +62,17 @@ jobs:
         run: |
           cp target/${{ matrix.target }}/release/${{ matrix.binary }} npm/${{ matrix.npm_pkg }}/
 
-      - name: Upload artifact
+      - name: Upload npm artifact
         uses: actions/upload-artifact@v4
         with:
           name: ${{ matrix.npm_pkg }}
           path: npm/${{ matrix.npm_pkg }}/
+
+      - name: Upload binary artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: binary-${{ matrix.target }}
+          path: target/${{ matrix.target }}/release/${{ matrix.binary }}
 
   test:
     runs-on: ${{ matrix.os }}
@@ -77,9 +84,12 @@ jobs:
       - uses: dtolnay/rust-toolchain@stable
       - run: cargo test --all
 
-  publish:
+  publish-npm:
     needs: [build, test]
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
     steps:
       - uses: actions/checkout@v4
 
@@ -124,7 +134,7 @@ jobs:
         run: |
           for dir in npm/chub-linux-x64 npm/chub-linux-arm64 npm/chub-darwin-x64 npm/chub-darwin-arm64 npm/chub-win32-x64; do
             cd $dir
-            npm publish --access public || true
+            npm publish --access public --provenance || true
             cd $GITHUB_WORKSPACE
           done
 
@@ -133,7 +143,87 @@ jobs:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
         run: |
           cd npm/chub
-          npm publish --access public
+          npm publish --access public --provenance
+
+  publish-crates:
+    needs: [test]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: dtolnay/rust-toolchain@stable
+
+      - name: Publish chub-core to crates.io
+        env:
+          CARGO_REGISTRY_TOKEN: ${{ secrets.CARGO_REGISTRY_TOKEN }}
+        run: cargo publish -p chub-core
+
+      - name: Publish chub-cli to crates.io
+        env:
+          CARGO_REGISTRY_TOKEN: ${{ secrets.CARGO_REGISTRY_TOKEN }}
+        run: cargo publish -p chub-cli
+
+  publish-pypi:
+    needs: [build, test]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Download all binary artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+
+      - name: Extract version from tag
+        id: version
+        run: echo "VERSION=${GITHUB_REF_NAME#v}" >> $GITHUB_OUTPUT
+
+      - name: Update Python package version
+        run: |
+          VERSION=${{ steps.version.outputs.VERSION }}
+          sed -i "s/^version = .*/version = \"$VERSION\"/" python/pyproject.toml
+          sed -i "s/^__version__ = .*/__version__ = \"$VERSION\"/" python/chub/__init__.py
+
+      - name: Build platform wheels
+        run: |
+          targets=(
+            "x86_64-unknown-linux-gnu:chub"
+            "aarch64-unknown-linux-gnu:chub"
+            "x86_64-apple-darwin:chub"
+            "aarch64-apple-darwin:chub"
+            "x86_64-pc-windows-msvc:chub.exe"
+          )
+          for entry in "${targets[@]}"; do
+            target="${entry%%:*}"
+            bin_name="${entry##*:}"
+            binary="artifacts/binary-${target}/${bin_name}"
+            if [ -f "$binary" ]; then
+              chmod +x "$binary" 2>/dev/null || true
+              python python/build_wheel.py \
+                --binary "$binary" \
+                --target "$target" \
+                --version "${{ steps.version.outputs.VERSION }}" \
+                --output dist/
+            else
+              echo "WARNING: Binary not found for $target at $binary"
+            fi
+          done
+          ls -la dist/
+
+      - name: Publish to PyPI
+        uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          packages-dir: dist/
+
+  release:
+    needs: [publish-npm, publish-crates, publish-pypi]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2

@@ -9,5 +9,6 @@ pub mod identity;
 pub mod normalize;
 pub mod registry;
 pub mod search;
+pub mod team;
 pub mod telemetry;
 pub mod types;

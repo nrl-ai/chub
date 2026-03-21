@@ -1,0 +1,14 @@
+name: CLI Developer
+extends: base
+description: "Context for working on chub-cli (binary crate)"
+rules:
+  - "Each command in its own file under src/commands/"
+  - "Support --json flag on all commands"
+  - "Use owo-colors for terminal coloring"
+  - "MCP tools use schemars::JsonSchema for schema generation"
+context:
+  - architecture.md
+  - conventions.md
+pins:
+  - clap/derive
+  - axum/routing

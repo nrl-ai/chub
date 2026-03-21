@@ -1,0 +1,5 @@
+id: serde/derive
+notes:
+- author: vieta
+  date: 2026-03-21
+  note: 'Use #[serde(rename_all = "camelCase")] for JSON output structs'
