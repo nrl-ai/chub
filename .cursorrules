@@ -1,0 +1,37 @@
+# Project Rules
+
+- This is a Rust CLI + library project (workspace with chub-core and chub-cli crates)
+- Run `cargo fmt --all` and `cargo clippy --all -- -D warnings` before committing
+- All business logic goes in chub-core; CLI/output/MCP concerns go in chub-cli
+- Maintain byte-for-byte format compatibility with the original JS Context Hub
+- Use serde(rename) attributes to keep camelCase JSON field names
+- Tests are inline #[cfg(test)] blocks, not separate test files (except integration tests)
+- Do not add Co-Authored-By trailers to commits
+
+## Pinned Documentation
+Use `chub get <id>` to fetch these docs when working with these libraries:
+- serde/derive (rust) — Core serialization framework — used everywhere for JSON/YAML
+- clap/derive (rust) — CLI argument parsing with derive macros
+- tokio/runtime (rust) — Async runtime for MCP server and HTTP serving
+- axum/routing (rust) — HTTP framework for chub serve
+
+## Project Context
+Use `chub get project/<name>` or ask Chub for these:
+- project/architecture — Crate layout, data flow, and key design decisions
+- project/conventions — Rust coding standards and patterns used in this project
+- project/team-features — How team features work and how to extend them
+
+## Module: cli (crates/chub-cli/**)
+- Each command in its own file under src/commands/
+- Use owo-colors for terminal output, support --json flag on all commands
+- MCP tools use schemars::JsonSchema for parameter schema generation
+
+## Module: core (crates/chub-core/**)
+- No CLI concerns (no stdout/stderr, no clap, no owo-colors)
+- All public functions return Result<T> using crate::error::Error
+- Search pipeline: tokenizer -> BM25 -> inverted index -> lexical boost
+
+## Module: team (crates/chub-core/src/team/**)
+- Team features live in .chub/ directory (git-tracked)
+- Three-tier config: ~/.chub/ -> .chub/ -> .chub/profiles/
+- All team modules must work gracefully when .chub/ doesn't exist

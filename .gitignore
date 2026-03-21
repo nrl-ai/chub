@@ -11,6 +11,8 @@ Cargo.lock
 
 # Claude Code agent worktrees (temporary isolated workspaces)
 .claude/worktrees/
+# Claude Code local settings (personal permissions, not shared)
+.claude/settings.local.json
 
 # OS
 .DS_Store

@@ -17,6 +17,7 @@
 | Three-tier annotations | No | **Yes** (personal / team / org server) |
 | Project awareness | No | **Yes** (auto-detect deps) |
 | Agent config sync | No | **Yes** (CLAUDE.md, .cursorrules, AGENTS.md) |
+| Claude Code integration | No | **Yes** (MCP + skills + plugin + hooks) |
 | Git-tracked context | No | **Yes** (`.chub/` in repo) |
 | Context profiles | No | **Yes** (role-scoped, with inheritance) |
 | Self-hosted registry | Yes | Yes + `chub serve` |
@@ -52,6 +53,7 @@
 | P3 | CI/CD integration | **Planned** | GitHub Actions, freshness checks, pin validation |
 | P3 | Python/npm SDKs | **Partial** | npm wrapper done; Python CLI wrapper done; native Python API not started |
 | P3 | IDE extensions | **Planned** | VS Code, JetBrains, Neovim |
+| P2 | Claude Code integration | **Done** | MCP server + skills + plugin + hooks |
 
 ### Test coverage
 
@@ -86,6 +88,16 @@ Returns ranked docs relevant to the task description. Does NOT add to pins, does
     sync-agent-config: true    # regenerate CLAUDE.md if .chub/config.yaml changed
     fail-on-drift: true        # fail if generated files differ from committed
 ```
+
+### Claude Code integration (Done)
+
+Three-layer integration with Claude Code:
+
+1. **MCP server** (`.claude/settings.json`) — 7 tools: `chub_search`, `chub_get`, `chub_list`, `chub_context`, `chub_pins`, `chub_annotate`, `chub_feedback`
+2. **Skills** (`.claude/skills/`) — `/docs`, `/annotate`, `/setup` slash commands
+3. **Plugin** (`claude-plugin/`) — distributable package with MCP + skills + permissions
+
+See `docs/claude-code-integration.md` for full guide.
 
 ### IDE extensions
 

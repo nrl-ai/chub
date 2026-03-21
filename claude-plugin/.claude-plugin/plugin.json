@@ -1,0 +1,16 @@
+{
+  "name": "chub",
+  "description": "Context Hub (chub) integration — MCP-powered documentation lookup, team annotations, and project context for AI coding agents",
+  "version": "0.1.11",
+  "author": {
+    "name": "NRL AI",
+    "url": "https://github.com/nrl-ai/chub"
+  },
+  "homepage": "https://github.com/nrl-ai/chub",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/nrl-ai/chub.git"
+  },
+  "license": "MIT",
+  "keywords": ["documentation", "api", "mcp", "context", "team", "annotations"]
+}
