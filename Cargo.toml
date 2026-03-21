@@ -1,0 +1,31 @@
+[workspace]
+members = ["crates/chub-core", "crates/chub-cli"]
+resolver = "2"
+
+[workspace.package]
+version = "0.1.0"
+edition = "2021"
+license = "MIT"
+description = "Chub: high-performance Rust implementation of Context Hub with team sharing"
+repository = "https://github.com/vietanhdev/chub"
+
+[workspace.dependencies]
+chub-core = { path = "crates/chub-core" }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+serde_yaml = "0.9"
+bincode = "1"
+thiserror = "2"
+tokio = { version = "1", features = ["rt-multi-thread", "macros", "fs"] }
+reqwest = { version = "0.12", features = ["rustls-tls", "json"], default-features = false }
+clap = { version = "4", features = ["derive"] }
+walkdir = "2"
+dirs = "6"
+sha2 = "0.10"
+owo-colors = "4"
+flate2 = "1"
+tar = "0.4"
+rayon = "1"
+indicatif = "0.17"
+rmcp = { version = "1", features = ["server", "transport-io"] }
+schemars = "0.8"

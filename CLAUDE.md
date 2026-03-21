@@ -1,0 +1,128 @@
+# CLAUDE.md
+
+This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+
+## Commit style
+
+Do not add `Co-Authored-By` trailers to commits. Commit messages should be plain, without AI attribution lines.
+
+## What this repo is
+
+Chub is a high-performance Rust rewrite of [Context Hub](https://github.com/andrewyng/context-hub) — a CLI + MCP server that serves curated, versioned API documentation to AI coding agents. It is fully format-compatible with the original JS version and extends it with team features (planned; see `docs/plan.md`).
+
+## Commands
+
+### Build & run
+```sh
+cargo build                          # debug build
+cargo build --release                # optimised binary → target/release/chub
+cargo run -- search "stripe"         # run directly (debug)
+cargo run -- get openai/chat --lang python
+```
+
+### Test
+```sh
+cargo test --all                     # all tests in all crates
+cargo test -p chub-core              # core library only
+cargo test -p chub-core search       # tests whose name contains "search"
+cargo test -p chub-core bm25         # specific module
+```
+
+Tests are inline (`#[cfg(test)]` blocks) in: `search/tokenizer.rs`, `search/bm25.rs`, `search/index.rs`, `frontmatter.rs`, `normalize.rs`. Integration tests for the CLI (`build`, search parity) live in `crates/chub-cli/src/commands/build.rs` and related files.
+
+### Lint & format
+```sh
+cargo fmt --all                      # format all crates
+cargo fmt --all -- --check           # check only (CI mode)
+cargo clippy --all -- -D warnings    # lint; warnings are errors
+```
+
+### Pre-commit (installed)
+```sh
+pre-commit run --all-files           # run all hooks manually
+pre-commit run cargo-fmt             # run a single hook
+```
+
+### Build the content registry (content → dist/)
+```sh
+cargo run --release -- build ./content -o ./dist
+cargo run --release -- build ./content --validate-only
+cargo run --release -- build ./content --base-url https://cdn.aichub.org/v1
+```
+
+## Architecture
+
+### Crate layout
+
+```
+chub-core   — library: all business logic, no CLI concerns
+chub-cli    — binary: CLI commands, MCP server, output formatting
+```
+
+`chub-cli` depends on `chub-core`; nothing else crosses crate boundaries.
+
+### Data flow for `chub get` / `chub search`
+
+```
+Config (~/.chub/config.yaml + env vars)
+  └─ sources: Vec<SourceConfig>   (URL or local path per source)
+
+fetch::ensure_registry()          — fetches registry.json + search-index.json if stale
+                                     cached at ~/.chub/sources/<name>/
+registry::load_merged()           — loads all sources, merges into MergedRegistry
+  ├─ docs: Vec<TaggedEntry>
+  ├─ skills: Vec<TaggedEntry>
+  └─ search_index: Option<SearchIndex>  (merged, document IDs namespaced as source:id)
+
+registry::search_entries()        — BM25 via inverted index + lexical boost (Levenshtein)
+registry::get_entry()             — exact lookup; handles source:id disambiguation
+registry::resolve_doc_path()      — picks language/version, returns CDN path
+fetch::fetch_doc()                — cache → CDN fallback; gzip-compressed above 10 KB
+```
+
+### Content format (for `chub build`)
+
+```
+content/
+  <author>/
+    docs/<entry-name>/
+      <lang>/DOC.md            # YAML frontmatter + markdown
+      <lang>/<version>/DOC.md  # versioned variant
+    skills/<entry-name>/
+      SKILL.md
+```
+
+`chub build` runs `build::discovery::discover_author()` + `build::builder::build_registry()` to produce `registry.json` and `search-index.json` in the output directory. The build is incremental by default (SHA-256 manifest skips unchanged files).
+
+### Search pipeline
+
+`search/tokenizer.rs` — shared tokenizer (52 stop words, punctuation stripping, `compact_identifier` strips all non-alphanumeric for fuzzy matching).
+
+`search/bm25.rs` — BM25 scoring (k1=1.5, b=0.75). Fields: `id`, `name`, `description`, `tags`.
+
+`search/index.rs` — inverted index built at load time from `search-index.json`. On a search, only docs containing ≥1 query term are scored (vs. linear scan in the JS version).
+
+`registry::search_entries()` layers BM25 results with a lexical boost pass (Levenshtein distance, prefix/contains matching on compact identifiers). The lexical scan is global only when BM25 returns 0 results or a multi-word query has terms missing from the index.
+
+### MCP server
+
+`chub mcp` runs an stdio server via the `rmcp` crate. It does **not** go through the normal CLI flow — it has its own `mcp::server::run_mcp_server()` entry point and loads the registry independently.
+
+MCP tools: `chub_search`, `chub_get`, `chub_list`, `chub_annotate`, `chub_feedback`. Tool parameter structs use `schemars::JsonSchema` for schema generation. The registry is exposed as a resource at `chub://registry`.
+
+### Key env vars / config
+
+| Var | Purpose |
+|-----|---------|
+| `CHUB_DIR` | Override `~/.chub` data directory |
+| `CHUB_BUNDLE_URL` | Override the default CDN URL |
+
+Config file: `~/.chub/config.yaml`. Multiple sources supported via `sources:` list; each source caches independently under `~/.chub/sources/<name>/`.
+
+### npm distribution
+
+`npm/chub/` is a thin JS wrapper (`bin/chub.js`) that resolves the platform-specific binary from `optionalDependencies`. No logic lives in the JS layer. The five platform packages (`chub-linux-x64`, etc.) are populated with the compiled Rust binary by CI.
+
+### Format compatibility
+
+All on-disk formats (`registry.json`, `search-index.json`, annotation JSONs) are byte-for-byte identical with the original JS Context Hub. The `serde(rename)` attributes on `types.rs` structs enforce camelCase field names to maintain this parity.

@@ -1,0 +1,28 @@
+# Gitleaks configuration
+# Docs: https://github.com/gitleaks/gitleaks#configuration
+
+title = "Chub gitleaks config"
+
+[extend]
+# Extend the default gitleaks ruleset
+useDefault = true
+
+[allowlist]
+description = "Global allowlist"
+
+# Ignore test fixture files that may contain dummy keys
+paths = [
+  '''tests/fixtures/''',
+  '''target/''',
+  '''content/''',
+]
+
+# Ignore committed placeholder / example values in config examples
+regexes = [
+  # Placeholder tokens in documentation and config examples
+  '''CHUB_COMPANY_TOKEN''',
+  '''<your[-_]token>''',
+  '''example[-_]key''',
+  # cargo Cargo.lock checksums are not secrets
+  '''checksum = "[0-9a-f]{64}"''',
+]

@@ -1,0 +1,19 @@
+{
+  "name": "@nrl-ai/chub-darwin-x64",
+  "version": "0.1.0",
+  "description": "Chub native binary for macOS x64",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/vietanhdev/chub"
+  },
+  "os": [
+    "darwin"
+  ],
+  "cpu": [
+    "x64"
+  ],
+  "files": [
+    "chub"
+  ]
+}

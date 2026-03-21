@@ -1,0 +1,72 @@
+repos:
+  # ---------------------------------------------------------------------------
+  # General file hygiene
+  # ---------------------------------------------------------------------------
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v5.0.0
+    hooks:
+      - id: trailing-whitespace
+        exclude: ^(target|content)/
+      - id: end-of-file-fixer
+        exclude: ^(target|content)/
+      - id: mixed-line-ending
+        args: [--fix=lf]
+        exclude: ^(target|content)/
+      - id: check-merge-conflict
+        exclude: ^(target|content)/
+      - id: check-added-large-files
+        args: [--maxkb=500]
+        exclude: ^content/
+      - id: check-yaml
+        exclude: ^(target|content)/
+      - id: check-toml
+        exclude: ^(target|content)/
+      - id: check-json
+        exclude: ^(target|content)/
+
+  # ---------------------------------------------------------------------------
+  # Secret scanning — Gitleaks
+  # Blocks commits containing API keys, tokens, credentials, private keys, etc.
+  # ---------------------------------------------------------------------------
+  - repo: https://github.com/gitleaks/gitleaks
+    rev: v8.27.2
+    hooks:
+      - id: gitleaks
+
+  # ---------------------------------------------------------------------------
+  # Rust — formatting and linting
+  # Requires: rustfmt and clippy components (rustup component add rustfmt clippy)
+  # cargo fmt is fast (no compile). cargo clippy requires a build.
+  # ---------------------------------------------------------------------------
+  - repo: local
+    hooks:
+      - id: cargo-fmt
+        name: cargo fmt
+        description: Check Rust formatting with rustfmt
+        entry: cargo fmt --all --
+        language: system
+        types: [rust]
+        pass_filenames: false
+
+      - id: cargo-clippy
+        name: cargo clippy
+        description: Lint Rust code — treats warnings as errors
+        entry: cargo clippy --all -- -D warnings
+        language: system
+        types: [rust]
+        pass_filenames: false
+
+  # ---------------------------------------------------------------------------
+  # JavaScript / JSON — Prettier
+  # Scoped to npm/ packages only (thin JS wrappers + package.json files)
+  # Requires: npx (ships with Node.js)
+  # ---------------------------------------------------------------------------
+  - repo: local
+    hooks:
+      - id: prettier
+        name: prettier (npm/)
+        description: Format JS and JSON files in npm packages
+        entry: npx --yes prettier --write
+        language: system
+        files: ^npm/.*\.(js|json)$
+        pass_filenames: true

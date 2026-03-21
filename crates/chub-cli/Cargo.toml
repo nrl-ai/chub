@@ -1,0 +1,23 @@
+[package]
+name = "chub-cli"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[[bin]]
+name = "chub"
+path = "src/main.rs"
+
+[dependencies]
+chub-core = { workspace = true }
+clap = { workspace = true }
+serde_json = { workspace = true }
+serde = { workspace = true }
+owo-colors = { workspace = true }
+tokio = { workspace = true }
+rmcp = { workspace = true }
+schemars = { workspace = true }
+indicatif = { workspace = true }
+
+[dev-dependencies]
+tempfile = "3"

@@ -1,0 +1,24 @@
+# Rust
+/target/
+**/*.rs.bk
+Cargo.lock
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# npm platform binaries (built by CI)
+npm/chub-darwin-arm64/chub
+npm/chub-darwin-x64/chub
+npm/chub-linux-arm64/chub
+npm/chub-linux-x64/chub
+npm/chub-win32-x64/chub.exe
+
+# Test fixtures output
+**/dist/

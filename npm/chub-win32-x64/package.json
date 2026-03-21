@@ -1,0 +1,19 @@
+{
+  "name": "@nrl-ai/chub-win32-x64",
+  "version": "0.1.0",
+  "description": "Chub native binary for Windows x64",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/vietanhdev/chub"
+  },
+  "os": [
+    "win32"
+  ],
+  "cpu": [
+    "x64"
+  ],
+  "files": [
+    "chub.exe"
+  ]
+}
