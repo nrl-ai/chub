@@ -606,27 +606,36 @@ client.annotate("stripe/api", "Use idempotency keys for all charges", team=True)
 
 ---
 
-## Implementation Priority
+## Implementation Progress
 
-| Priority | Feature | Phase | Effort | Impact |
-|----------|---------|-------|--------|--------|
-| P0 | `chub init` + `.chub/` directory | 6.1 | 1 week | Foundation for all team features |
-| P0 | Doc pinning (`pins.yaml`) | 6.2 | 1 week | Core team value prop |
-| P0 | Team annotations (git-tracked) | 6.3 | 3 days | Immediate team utility |
-| P0 | Context profiles with inheritance | 6.5 | 1 week | Flexibility for every role |
-| P1 | Custom project context | 6.4 | 3 days | High value, low effort |
-| P1 | Dependency auto-detection | 6.6 | 1 week | Great onboarding UX |
-| P1 | AGENTS.md / CLAUDE.md generation | 7.1 | 1 week | Solves real fragmentation pain |
-| P1 | Private registry + `chub serve` | 8.1 | 1 week | Enterprise and air-gapped teams |
-| P2 | Doc freshness monitoring | 8.3 | 3 days | Maintenance hygiene |
-| P2 | Doc bundles | 8.2 | 1 week | Community sharing |
-| P2 | Smart context selection | 9.1 | 2 weeks | One-call context for agents |
-| P2 | Monorepo + path-scoped profiles | 9.2 | 1 week | Scales to large codebases |
-| P3 | Task-scoped ephemeral context | 9.3 | 3 days | Low friction exploration |
-| P3 | Local usage analytics | 9.4 | 3 days | Data-driven pin curation |
-| P3 | CI/CD integration | 10.3 | 1 week | Enterprise enforcement |
-| P3 | Python/npm SDKs | 10.1 | 2 weeks | Reach |
-| P3 | IDE extensions | 10.2 | 3 weeks | Polish |
+| Priority | Feature | Phase | Status | Notes |
+|----------|---------|-------|--------|-------|
+| P0 | `chub init` + `.chub/` directory | 6.1 | **Done** | `init_project()` with `--from-deps` and `--monorepo` |
+| P0 | Doc pinning (`pins.yaml`) | 6.2 | **Done** | CRUD + `--pinned` flag on `chub get` + MCP integration |
+| P0 | Team annotations (git-tracked) | 6.3 | **Done** | Write/read/append/merge + pin notices |
+| P0 | Context profiles with inheritance | 6.5 | **Done** | `extends:` inheritance, circular detection, active profile |
+| P1 | Custom project context | 6.4 | **Done** | Frontmatter parsing, `chub get project/<name>` |
+| P1 | Dependency auto-detection | 6.6 | **Done** | 9 file types (npm, Cargo, pip, pyproject, Pipfile, go.mod, Gemfile, pom.xml, Gradle) |
+| P1 | AGENTS.md / CLAUDE.md generation | 7.1 | **Done** | 5 targets: claude.md, cursorrules, windsurfrules, agents.md, copilot |
+| P1 | Private registry + `chub serve` | 8.1 | **Done** | HTTP server via axum |
+| P2 | Doc freshness monitoring | 8.3 | **Done** | `check_freshness()` + `auto_fix_freshness()` |
+| P2 | Doc bundles | 8.2 | Partial | Bundle struct defined, install/publish not wired |
+| P2 | Smart context selection | 9.1 | Planned | |
+| P2 | Monorepo + path-scoped profiles | 9.2 | **Done** | `auto_profile` config with path globs |
+| P3 | Task-scoped ephemeral context | 9.3 | Planned | |
+| P3 | Local usage analytics | 9.4 | **Done** | `record_fetch()` + `get_stats()` with JSONL storage |
+| P3 | Doc snapshots | 9.5 | **Done** | Create/restore/diff/list |
+| P3 | CI/CD integration | 10.3 | Planned | |
+| P3 | Python/npm SDKs | 10.1 | Partial | npm wrapper done, Python not started |
+| P3 | IDE extensions | 10.2 | Planned | |
+
+### Test coverage
+
+99 tests across 4 test suites, all passing:
+- 31 unit tests (tokenizer, BM25, frontmatter, normalize)
+- 15 build parity tests
+- 20 search parity tests
+- 33 team feature integration tests (isolated temp dirs, no repo pollution)
 
 ---
 

@@ -28,3 +28,6 @@ __pycache__/
 
 # Test fixtures output
 **/dist/
+
+# Website
+/website/node_modules

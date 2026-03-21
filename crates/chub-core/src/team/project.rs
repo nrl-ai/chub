@@ -7,7 +7,16 @@ use crate::config::SourceConfig;
 use crate::error::{Error, Result};
 
 /// Search upward from CWD (or a given path) for a `.chub/` directory.
+/// If `CHUB_PROJECT_DIR` env var is set, uses that directly (useful for testing).
 pub fn find_project_root(start: Option<&Path>) -> Option<PathBuf> {
+    // Allow override via env var (for testing and advanced use)
+    if let Ok(dir) = std::env::var("CHUB_PROJECT_DIR") {
+        let path = PathBuf::from(dir);
+        if path.join(".chub").is_dir() {
+            return Some(path);
+        }
+    }
+
     let start = start
         .map(|p| p.to_path_buf())
         .unwrap_or_else(|| std::env::current_dir().unwrap_or_default());

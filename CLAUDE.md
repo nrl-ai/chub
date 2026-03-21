@@ -43,6 +43,20 @@ pre-commit run --all-files           # run all hooks manually
 pre-commit run cargo-fmt             # run a single hook
 ```
 
+### Version bump
+```sh
+./scripts/set-version.sh 0.2.0      # set version across all packages
+```
+
+The version is defined in 9 files across Rust, npm, and Python. **Always use the script** — never edit version strings by hand. The files it updates:
+- `Cargo.toml` — workspace `version` and `chub-core` dependency version
+- `npm/chub/package.json` — package version + 5 `optionalDependencies` versions
+- `npm/chub-{linux-x64,linux-arm64,darwin-x64,darwin-arm64,win32-x64}/package.json` — package version
+- `python/pyproject.toml` — package version
+- `python/chub/__init__.py` — `__version__`
+
+After bumping, run `cargo check` to regenerate `Cargo.lock`.
+
 ### Build the content registry (content → dist/)
 ```sh
 cargo run --release -- build ./content -o ./dist
