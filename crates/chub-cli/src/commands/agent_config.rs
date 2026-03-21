@@ -62,6 +62,13 @@ fn run_sync(json: bool) {
                         agent_config::SyncAction::Created => "created".green().to_string(),
                         agent_config::SyncAction::Updated => "updated".yellow().to_string(),
                         agent_config::SyncAction::Unchanged => "unchanged".dimmed().to_string(),
+                        agent_config::SyncAction::Unknown => {
+                            format!(
+                                "{}  (known: {})",
+                                "unknown target".red(),
+                                agent_config::Target::all_target_names().join(", ")
+                            )
+                        }
                     };
                     eprintln!("  {} {}", r.filename.bold(), action);
                 }

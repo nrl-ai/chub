@@ -19,13 +19,10 @@ chub mcp
 
 ::: code-group
 
-```json [Claude Code (.mcp.json)]
+```json [Claude Code (.claude/settings.json)]
 {
   "mcpServers": {
-    "chub": {
-      "command": "chub",
-      "args": ["mcp"]
-    }
+    "chub": { "command": "chub", "args": ["mcp"] }
   }
 }
 ```
@@ -33,12 +30,67 @@ chub mcp
 ```json [Cursor (.cursor/mcp.json)]
 {
   "mcpServers": {
-    "chub": {
-      "command": "chub",
-      "args": ["mcp"]
-    }
+    "chub": { "command": "chub", "args": ["mcp"] }
   }
 }
+```
+
+```json [Windsurf (settings UI)]
+{
+  "mcpServers": {
+    "chub": { "command": "chub", "args": ["mcp"] }
+  }
+}
+```
+
+```json [Copilot (.vscode/mcp.json)]
+{
+  "servers": {
+    "chub": { "command": "chub", "args": ["mcp"] }
+  }
+}
+```
+
+```json [Gemini CLI (.gemini/settings.json)]
+{
+  "mcpServers": {
+    "chub": { "command": "chub", "args": ["mcp"] }
+  }
+}
+```
+
+```json [Kiro (.kiro/settings/mcp.json)]
+{
+  "mcpServers": {
+    "chub": { "command": "chub", "args": ["mcp"] }
+  }
+}
+```
+
+```toml [Codex (.codex/config.toml)]
+[[mcp_servers]]
+name = "chub"
+command = "chub"
+args = ["mcp"]
+```
+
+```json [Cline / Roo Code (extension UI)]
+{
+  "mcpServers": {
+    "chub": { "command": "chub", "args": ["mcp"] }
+  }
+}
+```
+
+```yaml [Continue.dev (.continue/config.yaml)]
+mcpServers:
+  - name: chub
+    command: chub
+    args: ["mcp"]
+```
+
+```sh [Aider]
+aider --mcp-server-command "chub mcp"
 ```
 
 :::

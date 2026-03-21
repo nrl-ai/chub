@@ -29,8 +29,13 @@ agent_rules:
     - claude.md            # → CLAUDE.md
     - cursorrules          # → .cursorrules
     - windsurfrules        # → .windsurfrules
-    - agents.md            # → AGENTS.md
+    - agents.md            # → AGENTS.md (Codex, Roo Code, Augment)
     - copilot              # → .github/copilot-instructions.md
+    - gemini.md            # → GEMINI.md
+    - clinerules           # → .clinerules
+    - roorules             # → .roo/rules/chub-rules.md
+    - augmentrules         # → .augment/rules/chub-rules.md
+    - kiro                 # → .kiro/steering/chub-rules.md
 ```
 
 ## Commands
@@ -81,6 +86,72 @@ Rules:
 ```
 
 The `include_annotation_policy: true` section is only emitted when that flag is set. It gives agents a standing order to annotate — without repeating it in every session prompt.
+
+## Writing effective rules
+
+Good agent rules are **specific, actionable, and scoped**. The agent reads them as instructions — vague guidance gets vague behavior.
+
+### Do
+
+```yaml
+global:
+  - "Use TypeScript strict mode in all .ts files"
+  - "Run `npm test` before committing"
+  - "API responses must include `requestId` for tracing"
+
+modules:
+  api:
+    path: "src/api/**"
+    rules:
+      - "Validate all request bodies with Zod schemas in src/api/schemas/"
+      - "Return 422 for validation errors, not 400"
+```
+
+### Don't
+
+```yaml
+global:
+  - "Write good code"              # too vague — what does "good" mean?
+  - "Follow best practices"        # which practices? be explicit
+  - "Be careful with errors"       # not actionable
+```
+
+### Tips
+
+1. **Lead with the verb**: "Use", "Run", "Return", "Validate" — not "You should consider..."
+2. **Include paths**: Module-scoped rules with `path:` globs keep rules relevant to what the agent is editing
+3. **One fact per rule**: "Use Zod for validation" not "Use Zod for validation and also make sure to..."
+4. **Reference tools**: Agents know how to run `chub get <id>` — tell them which docs to fetch
+5. **Pin + annotate**: Use `include_pins: true` so agents see which libraries are endorsed, and `include_annotation_policy: true` so they write back what they discover
+
+### Cross-agent compatibility
+
+Some files are read by multiple agents — generate these for the widest reach:
+
+| File | Read by |
+|------|---------|
+| `AGENTS.md` | Codex, Roo Code, Augment Code |
+| `CLAUDE.md` | Claude Code, Augment Code |
+| `GEMINI.md` | Gemini CLI |
+| `.cursorrules` | Cursor |
+| `.clinerules` | Cline, Roo Code (partial) |
+
+For polyglot teams, generate `agents.md` + your primary agent's target.
+
+### Supported targets (full list)
+
+| Config name | Output file | Agent |
+|-------------|------------|-------|
+| `claude.md` | `CLAUDE.md` | Claude Code |
+| `cursorrules` | `.cursorrules` | Cursor |
+| `windsurfrules` | `.windsurfrules` | Windsurf |
+| `agents.md` | `AGENTS.md` | Codex, Roo Code, Augment |
+| `copilot` | `.github/copilot-instructions.md` | GitHub Copilot |
+| `gemini.md` | `GEMINI.md` | Gemini CLI |
+| `clinerules` | `.clinerules` | Cline |
+| `roorules` | `.roo/rules/chub-rules.md` | Roo Code |
+| `augmentrules` | `.augment/rules/chub-rules.md` | Augment Code |
+| `kiro` | `.kiro/steering/chub-rules.md` | Kiro |
 
 ## Auto-sync with git hooks
 

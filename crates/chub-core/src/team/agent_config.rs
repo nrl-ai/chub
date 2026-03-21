@@ -14,7 +14,7 @@ pub enum Target {
     AgentsMd,
     Copilot,
     GeminiMd,
-    ClinerRules,
+    ClineRules,
     RooRules,
     AugmentRules,
     KiroSteering,
@@ -29,7 +29,7 @@ impl Target {
             "agents.md" | "agentsmd" => Some(Target::AgentsMd),
             "copilot" | "copilot-instructions" => Some(Target::Copilot),
             "gemini.md" | "geminimd" => Some(Target::GeminiMd),
-            "clinerules" | ".clinerules" => Some(Target::ClinerRules),
+            "clinerules" | ".clinerules" => Some(Target::ClineRules),
             "roorules" | "roo-rules" => Some(Target::RooRules),
             "augmentrules" | "augment-rules" => Some(Target::AugmentRules),
             "kiro" | "kiro-steering" => Some(Target::KiroSteering),
@@ -45,7 +45,7 @@ impl Target {
             Target::AgentsMd => "AGENTS.md",
             Target::Copilot => ".github/copilot-instructions.md",
             Target::GeminiMd => "GEMINI.md",
-            Target::ClinerRules => ".clinerules",
+            Target::ClineRules => ".clinerules",
             Target::RooRules => ".roo/rules/chub-rules.md",
             Target::AugmentRules => ".augment/rules/chub-rules.md",
             Target::KiroSteering => ".kiro/steering/chub-rules.md",
@@ -192,6 +192,7 @@ pub enum SyncAction {
     Created,
     Updated,
     Unchanged,
+    Unknown,
 }
 
 /// Generate and write all configured target files.
@@ -212,7 +213,14 @@ pub fn sync_configs() -> Result<Vec<SyncResult>> {
     for target_name in &rules.targets {
         let target = match Target::parse_target(target_name) {
             Some(t) => t,
-            None => continue,
+            None => {
+                results.push(SyncResult {
+                    target: target_name.clone(),
+                    filename: target_name.clone(),
+                    action: SyncAction::Unknown,
+                });
+                continue;
+            }
         };
 
         let path = project_root.join(target.filename());
@@ -273,4 +281,81 @@ pub fn diff_configs() -> Result<Vec<(String, String, Option<String>)>> {
     }
 
     Ok(diffs)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn parse_all_known_targets() {
+        for name in Target::all_target_names() {
+            assert!(
+                Target::parse_target(name).is_some(),
+                "all_target_names entry '{}' should parse",
+                name
+            );
+        }
+    }
+
+    #[test]
+    fn parse_target_aliases() {
+        let cases = [
+            ("claude.md", "CLAUDE.md"),
+            ("claudemd", "CLAUDE.md"),
+            (".cursorrules", ".cursorrules"),
+            ("cursorrules", ".cursorrules"),
+            (".windsurfrules", ".windsurfrules"),
+            ("agents.md", "AGENTS.md"),
+            ("agentsmd", "AGENTS.md"),
+            ("copilot", ".github/copilot-instructions.md"),
+            ("copilot-instructions", ".github/copilot-instructions.md"),
+            ("gemini.md", "GEMINI.md"),
+            ("geminimd", "GEMINI.md"),
+            (".clinerules", ".clinerules"),
+            ("clinerules", ".clinerules"),
+            ("roorules", ".roo/rules/chub-rules.md"),
+            ("roo-rules", ".roo/rules/chub-rules.md"),
+            ("augmentrules", ".augment/rules/chub-rules.md"),
+            ("augment-rules", ".augment/rules/chub-rules.md"),
+            ("kiro", ".kiro/steering/chub-rules.md"),
+            ("kiro-steering", ".kiro/steering/chub-rules.md"),
+        ];
+        for (input, expected_file) in cases {
+            let target =
+                Target::parse_target(input).unwrap_or_else(|| panic!("'{}' should parse", input));
+            assert_eq!(target.filename(), expected_file, "input: '{}'", input);
+        }
+    }
+
+    #[test]
+    fn parse_unknown_target_returns_none() {
+        assert!(Target::parse_target("vim").is_none());
+        assert!(Target::parse_target("").is_none());
+        assert!(Target::parse_target("zed").is_none());
+    }
+
+    #[test]
+    fn parse_is_case_insensitive() {
+        assert!(Target::parse_target("CLAUDE.MD").is_some());
+        assert!(Target::parse_target("CursorRules").is_some());
+        assert!(Target::parse_target("GEMINI.MD").is_some());
+        assert!(Target::parse_target("KIRO").is_some());
+    }
+
+    #[test]
+    fn generate_config_includes_global_rules() {
+        let rules = AgentRules {
+            global: vec!["Run tests".to_string(), "Format code".to_string()],
+            modules: Default::default(),
+            targets: vec![],
+            include_pins: false,
+            include_context: false,
+            include_annotation_policy: false,
+        };
+        let output = generate_config(&rules);
+        assert!(output.contains("- Run tests"));
+        assert!(output.contains("- Format code"));
+        assert!(output.starts_with("# Project Rules"));
+    }
 }
