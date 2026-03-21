@@ -74,6 +74,10 @@ pub struct AgentRules {
     pub include_pins: bool,
     #[serde(default)]
     pub include_context: bool,
+    /// Emit an Annotation Policy section instructing agents when and how to write back
+    /// structured annotations (issue / fix / practice) as they discover knowledge.
+    #[serde(default)]
+    pub include_annotation_policy: bool,
     #[serde(default)]
     pub targets: Vec<String>,
 }
@@ -136,6 +140,7 @@ pub fn init_project(from_deps: bool, monorepo: bool) -> Result<PathBuf> {
 #   modules: {}
 #   include_pins: true
 #   include_context: true
+#   include_annotation_policy: true
 #   targets:
 #     - claude.md
 "#;
@@ -188,6 +193,7 @@ agent_rules:
   modules: {}
   include_pins: true
   include_context: true
+  include_annotation_policy: true
   targets:
     - claude.md
 "#;

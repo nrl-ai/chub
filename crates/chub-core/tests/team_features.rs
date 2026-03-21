@@ -274,6 +274,8 @@ fn team_annotations_write_and_read() {
         "openai/chat",
         "test note",
         "alice",
+        chub_core::annotations::AnnotationKind::Note,
+        None,
     );
     assert!(result.is_some());
 
@@ -290,8 +292,20 @@ fn team_annotations_write_and_read() {
 fn team_annotations_append() {
     let (_tmp, _guard) = setup_isolated_project();
 
-    chub_core::team::team_annotations::write_team_annotation("openai/chat", "note 1", "alice");
-    chub_core::team::team_annotations::write_team_annotation("openai/chat", "note 2", "bob");
+    chub_core::team::team_annotations::write_team_annotation(
+        "openai/chat",
+        "note 1",
+        "alice",
+        chub_core::annotations::AnnotationKind::Note,
+        None,
+    );
+    chub_core::team::team_annotations::write_team_annotation(
+        "openai/chat",
+        "note 2",
+        "bob",
+        chub_core::annotations::AnnotationKind::Note,
+        None,
+    );
 
     let ann = chub_core::team::team_annotations::read_team_annotation("openai/chat").unwrap();
     assert_eq!(ann.notes.len(), 2);
@@ -303,7 +317,13 @@ fn team_annotations_append() {
 fn team_annotations_merged() {
     let (_tmp, _guard) = setup_isolated_project();
 
-    chub_core::team::team_annotations::write_team_annotation("openai/chat", "team note", "alice");
+    chub_core::team::team_annotations::write_team_annotation(
+        "openai/chat",
+        "team note",
+        "alice",
+        chub_core::annotations::AnnotationKind::Note,
+        None,
+    );
 
     let merged = chub_core::team::team_annotations::get_merged_annotation("openai/chat");
     assert!(merged.is_some());
@@ -322,6 +342,203 @@ fn team_annotations_pin_notice() {
     assert!(notice.contains("v4.0"));
     assert!(notice.contains("python"));
     assert!(notice.contains("use streaming API"));
+}
+
+// ==================== STRUCTURED ANNOTATION KINDS ====================
+
+#[test]
+fn structured_annotations_issue_kind() {
+    let (_tmp, _guard) = setup_isolated_project();
+
+    let result = chub_core::team::team_annotations::write_team_annotation(
+        "openai/chat",
+        "tool_choice='none' silently ignores tools",
+        "bob",
+        chub_core::annotations::AnnotationKind::Issue,
+        Some("high".to_string()),
+    );
+    assert!(result.is_some());
+
+    let ann = chub_core::team::team_annotations::read_team_annotation("openai/chat").unwrap();
+    assert_eq!(ann.issues.len(), 1);
+    assert_eq!(ann.notes.len(), 0);
+    assert_eq!(ann.fixes.len(), 0);
+    assert_eq!(ann.issues[0].author, "bob");
+    assert_eq!(ann.issues[0].severity.as_deref(), Some("high"));
+    assert!(ann.issues[0].note.contains("tool_choice"));
+}
+
+#[test]
+fn structured_annotations_fix_kind() {
+    let (_tmp, _guard) = setup_isolated_project();
+
+    chub_core::team::team_annotations::write_team_annotation(
+        "openai/chat",
+        "Pass tool_choice='auto' instead",
+        "bob",
+        chub_core::annotations::AnnotationKind::Fix,
+        None,
+    );
+
+    let ann = chub_core::team::team_annotations::read_team_annotation("openai/chat").unwrap();
+    assert_eq!(ann.fixes.len(), 1);
+    assert_eq!(ann.issues.len(), 0);
+    assert_eq!(ann.fixes[0].severity, None);
+}
+
+#[test]
+fn structured_annotations_practice_kind() {
+    let (_tmp, _guard) = setup_isolated_project();
+
+    chub_core::team::team_annotations::write_team_annotation(
+        "openai/chat",
+        "Always set max_tokens explicitly",
+        "alice",
+        chub_core::annotations::AnnotationKind::Practice,
+        None,
+    );
+
+    let ann = chub_core::team::team_annotations::read_team_annotation("openai/chat").unwrap();
+    assert_eq!(ann.practices.len(), 1);
+    assert_eq!(ann.practices[0].author, "alice");
+}
+
+#[test]
+fn structured_annotations_mixed_kinds() {
+    let (_tmp, _guard) = setup_isolated_project();
+
+    chub_core::team::team_annotations::write_team_annotation(
+        "stripe/api",
+        "idempotency_key ignored with confirm=true",
+        "alice",
+        chub_core::annotations::AnnotationKind::Issue,
+        Some("high".to_string()),
+    );
+    chub_core::team::team_annotations::write_team_annotation(
+        "stripe/api",
+        "Use separate create then confirm calls",
+        "alice",
+        chub_core::annotations::AnnotationKind::Fix,
+        None,
+    );
+    chub_core::team::team_annotations::write_team_annotation(
+        "stripe/api",
+        "Always use two-step create+confirm in production",
+        "alice",
+        chub_core::annotations::AnnotationKind::Practice,
+        None,
+    );
+    chub_core::team::team_annotations::write_team_annotation(
+        "stripe/api",
+        "Python SDK auto-retries on 429",
+        "bob",
+        chub_core::annotations::AnnotationKind::Note,
+        None,
+    );
+
+    let ann = chub_core::team::team_annotations::read_team_annotation("stripe/api").unwrap();
+    assert_eq!(ann.issues.len(), 1);
+    assert_eq!(ann.fixes.len(), 1);
+    assert_eq!(ann.practices.len(), 1);
+    assert_eq!(ann.notes.len(), 1);
+}
+
+#[test]
+fn structured_annotations_merged_format() {
+    let (_tmp, _guard) = setup_isolated_project();
+
+    chub_core::team::team_annotations::write_team_annotation(
+        "openai/chat",
+        "tool_choice='none' breaks tools",
+        "bob",
+        chub_core::annotations::AnnotationKind::Issue,
+        Some("high".to_string()),
+    );
+    chub_core::team::team_annotations::write_team_annotation(
+        "openai/chat",
+        "Use tool_choice='auto'",
+        "bob",
+        chub_core::annotations::AnnotationKind::Fix,
+        None,
+    );
+
+    let merged = chub_core::team::team_annotations::get_merged_annotation("openai/chat").unwrap();
+    assert!(merged.contains("[Team issue (high)"));
+    assert!(merged.contains("[Team fix"));
+    assert!(merged.contains("tool_choice='none' breaks tools"));
+    assert!(merged.contains("Use tool_choice='auto'"));
+}
+
+#[test]
+fn structured_annotations_severity_only_on_issues() {
+    let (_tmp, _guard) = setup_isolated_project();
+
+    // severity should be ignored for non-issue kinds
+    chub_core::team::team_annotations::write_team_annotation(
+        "openai/chat",
+        "a practice note",
+        "alice",
+        chub_core::annotations::AnnotationKind::Practice,
+        Some("high".to_string()),
+    );
+
+    let ann = chub_core::team::team_annotations::read_team_annotation("openai/chat").unwrap();
+    assert_eq!(ann.practices.len(), 1);
+    assert_eq!(ann.practices[0].severity, None); // severity stripped for non-issues
+}
+
+#[test]
+fn annotation_policy_in_agent_config() {
+    let (_tmp, _guard) = setup_isolated_project();
+    let chub_dir = _tmp.path().join(".chub");
+
+    std::fs::write(
+        chub_dir.join("config.yaml"),
+        r#"
+agent_rules:
+  global:
+    - "Use TypeScript strict mode"
+  modules: {}
+  include_pins: false
+  include_context: false
+  include_annotation_policy: true
+  targets:
+    - claude.md
+"#,
+    )
+    .unwrap();
+
+    let rules = chub_core::team::agent_config::load_agent_rules().unwrap();
+    let content = chub_core::team::agent_config::generate_config(&rules);
+
+    assert!(content.contains("Annotation Policy"));
+    assert!(content.contains("kind=\"issue\""));
+    assert!(content.contains("kind=\"fix\""));
+    assert!(content.contains("kind=\"practice\""));
+    assert!(content.contains("Annotate after confirming"));
+}
+
+#[test]
+fn annotation_policy_disabled_by_default() {
+    let (_tmp, _guard) = setup_isolated_project();
+    let chub_dir = _tmp.path().join(".chub");
+
+    std::fs::write(
+        chub_dir.join("config.yaml"),
+        r#"
+agent_rules:
+  global: []
+  modules: {}
+  targets:
+    - claude.md
+"#,
+    )
+    .unwrap();
+
+    let rules = chub_core::team::agent_config::load_agent_rules().unwrap();
+    let content = chub_core::team::agent_config::generate_config(&rules);
+
+    assert!(!content.contains("Annotation Policy"));
 }
 
 // ==================== SNAPSHOTS ====================

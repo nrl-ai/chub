@@ -55,17 +55,30 @@ List all available docs.
 
 ### chub_annotate
 
-Add an annotation to a doc.
+Write structured annotations back to the knowledge base. Agents should call this proactively after resolving non-obvious issues with a library.
+
+**Annotation kinds**: `note` (default), `issue` (bug/gotcha), `fix` (workaround), `practice` (team convention).
 
 ```json
-{
-  "name": "chub_annotate",
-  "arguments": {
-    "id": "openai/chat",
-    "note": "Use streaming API for chat completions"
-  }
-}
+{ "id": "openai/chat", "note": "Use streaming for all chat completions" }
 ```
+
+```json
+{ "id": "openai/chat", "kind": "issue", "severity": "high",
+  "note": "tool_choice='none' silently ignores tools — returns null" }
+```
+
+```json
+{ "id": "openai/chat", "kind": "fix",
+  "note": "Use tool_choice='auto' or remove tools from the array" }
+```
+
+```json
+{ "id": "openai/chat", "kind": "practice",
+  "note": "Always set max_tokens to avoid unbounded streaming cost" }
+```
+
+When a `.chub/` project dir exists, annotations are written to the team tier (git-tracked). Otherwise they go to the personal tier (`~/.chub/`).
 
 ### chub_feedback
 

@@ -2,7 +2,7 @@ import { defineConfig } from 'vitepress'
 
 export default defineConfig({
   title: 'Chub',
-  description: 'Fast curated docs for AI coding agents. Team-first. Git-tracked. Built in Rust.',
+  description: 'Curated docs for AI coding agents, with self-learning annotations. Team-first. Git-tracked. Built in Rust.',
   head: [
     ['link', { rel: 'icon', type: 'image/svg+xml', href: '/logo.svg' }],
   ],
@@ -43,7 +43,7 @@ export default defineConfig({
           items: [
             { text: 'Doc Pinning', link: '/guide/pinning' },
             { text: 'Context Profiles', link: '/guide/profiles' },
-            { text: 'Team Annotations', link: '/guide/annotations' },
+            { text: 'Annotations & Self-Learning', link: '/guide/annotations' },
             { text: 'Project Context', link: '/guide/project-context' },
             { text: 'Dep Auto-Detection', link: '/guide/detect' },
             { text: 'Agent Config Sync', link: '/guide/agent-config' },

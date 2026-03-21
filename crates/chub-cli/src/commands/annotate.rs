@@ -2,7 +2,7 @@ use clap::Args;
 use owo_colors::OwoColorize;
 
 use chub_core::annotations::{
-    clear_annotation, list_annotations, read_annotation, write_annotation,
+    clear_annotation, list_annotations, read_annotation, write_annotation, AnnotationKind,
 };
 
 use crate::output;
@@ -34,6 +34,19 @@ pub struct AnnotateArgs {
     /// Author name for team annotations
     #[arg(long)]
     author: Option<String>,
+
+    /// Annotation kind: note (default), issue, fix, practice
+    #[arg(long, value_name = "KIND")]
+    kind: Option<String>,
+
+    /// Severity for issue annotations: high, medium, low
+    #[arg(long, value_name = "LEVEL")]
+    severity: Option<String>,
+}
+
+fn parse_kind(s: Option<&str>) -> AnnotationKind {
+    s.and_then(AnnotationKind::parse)
+        .unwrap_or(AnnotationKind::Note)
 }
 
 pub fn run(args: AnnotateArgs, json: bool) {
@@ -53,13 +66,55 @@ pub fn run(args: AnnotateArgs, json: bool) {
                 }
                 for a in &annotations {
                     eprintln!("{}", a.id.bold());
-                    for note in &a.notes {
-                        eprintln!(
-                            "  {} {} {}",
-                            note.author.cyan(),
-                            format!("({})", note.date).dimmed(),
-                            note.note
-                        );
+                    if !a.issues.is_empty() {
+                        eprintln!("  {}", "Issues:".yellow());
+                        for note in &a.issues {
+                            let sev = note
+                                .severity
+                                .as_deref()
+                                .map(|s| format!(" [{}]", s))
+                                .unwrap_or_default();
+                            eprintln!(
+                                "    {} {}{} {}",
+                                note.author.cyan(),
+                                format!("({})", note.date).dimmed(),
+                                sev.yellow(),
+                                note.note
+                            );
+                        }
+                    }
+                    if !a.fixes.is_empty() {
+                        eprintln!("  {}", "Fixes:".green());
+                        for note in &a.fixes {
+                            eprintln!(
+                                "    {} {} {}",
+                                note.author.cyan(),
+                                format!("({})", note.date).dimmed(),
+                                note.note
+                            );
+                        }
+                    }
+                    if !a.practices.is_empty() {
+                        eprintln!("  {}", "Practices:".blue());
+                        for note in &a.practices {
+                            eprintln!(
+                                "    {} {} {}",
+                                note.author.cyan(),
+                                format!("({})", note.date).dimmed(),
+                                note.note
+                            );
+                        }
+                    }
+                    if !a.notes.is_empty() {
+                        eprintln!("  {}", "Notes:".dimmed());
+                        for note in &a.notes {
+                            eprintln!(
+                                "    {} {} {}",
+                                note.author.cyan(),
+                                format!("({})", note.date).dimmed(),
+                                note.note
+                            );
+                        }
                     }
                     eprintln!();
                 }
@@ -77,7 +132,12 @@ pub fn run(args: AnnotateArgs, json: bool) {
                     return;
                 }
                 for a in &annotations {
-                    eprintln!("{} {}", a.id.bold(), format!("({})", a.updated_at).dimmed());
+                    eprintln!(
+                        "{} {} [{}]",
+                        a.id.bold(),
+                        format!("({})", a.updated_at).dimmed(),
+                        a.kind.as_str().cyan()
+                    );
                     eprintln!("  {}", a.note);
                     eprintln!();
                 }
@@ -110,6 +170,8 @@ pub fn run(args: AnnotateArgs, json: bool) {
     }
 
     if let Some(note) = args.note {
+        let kind = parse_kind(args.kind.as_deref());
+
         if args.team {
             // Write team annotation
             let author = args.author.unwrap_or_else(|| {
@@ -117,16 +179,23 @@ pub fn run(args: AnnotateArgs, json: bool) {
                     .or_else(|_| std::env::var("USERNAME"))
                     .unwrap_or_else(|_| "unknown".to_string())
             });
-            match chub_core::team::team_annotations::write_team_annotation(&id, &note, &author) {
+            match chub_core::team::team_annotations::write_team_annotation(
+                &id,
+                &note,
+                &author,
+                kind.clone(),
+                args.severity.clone(),
+            ) {
                 Some(_ann) => {
                     if json {
                         println!(
                             "{}",
-                            serde_json::json!({"status": "saved", "id": id, "type": "team", "author": author})
+                            serde_json::json!({"status": "saved", "id": id, "type": "team", "kind": kind.as_str(), "author": author})
                         );
                     } else {
                         output::success(&format!(
-                            "Team annotation saved for {} (by {})",
+                            "Team {} saved for {} (by {})",
+                            kind.as_str(),
                             id.bold(),
                             author
                         ));
@@ -141,14 +210,14 @@ pub fn run(args: AnnotateArgs, json: bool) {
                 }
             }
         } else {
-            let data = write_annotation(&id, &note);
+            let data = write_annotation(&id, &note, kind.clone());
             if json {
                 println!(
                     "{}",
                     serde_json::to_string_pretty(&data).unwrap_or_default()
                 );
             } else {
-                eprintln!("Annotation saved for {}.", id.bold());
+                eprintln!("{} saved for {}.", kind.as_str().cyan(), id.bold());
             }
         }
         return;
@@ -161,6 +230,45 @@ pub fn run(args: AnnotateArgs, json: bool) {
                 println!("{}", serde_json::to_string_pretty(&ann).unwrap_or_default());
             } else {
                 eprintln!("{}", id.bold());
+                if !ann.issues.is_empty() {
+                    eprintln!("  {}", "Issues:".yellow());
+                    for note in &ann.issues {
+                        let sev = note
+                            .severity
+                            .as_deref()
+                            .map(|s| format!(" [{}]", s))
+                            .unwrap_or_default();
+                        eprintln!(
+                            "    {} {}{} {}",
+                            note.author.cyan(),
+                            format!("({})", note.date).dimmed(),
+                            sev.yellow(),
+                            note.note
+                        );
+                    }
+                }
+                if !ann.fixes.is_empty() {
+                    eprintln!("  {}", "Fixes:".green());
+                    for note in &ann.fixes {
+                        eprintln!(
+                            "    {} {} {}",
+                            note.author.cyan(),
+                            format!("({})", note.date).dimmed(),
+                            note.note
+                        );
+                    }
+                }
+                if !ann.practices.is_empty() {
+                    eprintln!("  {}", "Practices:".blue());
+                    for note in &ann.practices {
+                        eprintln!(
+                            "    {} {} {}",
+                            note.author.cyan(),
+                            format!("({})", note.date).dimmed(),
+                            note.note
+                        );
+                    }
+                }
                 for note in &ann.notes {
                     eprintln!(
                         "  {} {} {}",
@@ -182,9 +290,10 @@ pub fn run(args: AnnotateArgs, json: bool) {
                 println!("{}", serde_json::to_string_pretty(&ann).unwrap_or_default());
             } else {
                 eprintln!(
-                    "{} {}",
+                    "{} {} [{}]",
                     ann.id.bold(),
-                    format!("({})", ann.updated_at).dimmed()
+                    format!("({})", ann.updated_at).dimmed(),
+                    ann.kind.as_str().cyan()
                 );
                 eprintln!("{}", ann.note);
             }

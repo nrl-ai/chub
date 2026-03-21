@@ -3,8 +3,8 @@ layout: home
 
 hero:
   name: Chub
-  text: Fast curated docs for AI coding agents
-  tagline: Team-first. Git-tracked. Built in Rust.
+  text: Curated docs for AI coding agents — that get smarter over time
+  tagline: Self-learning knowledge base. Team-first. Git-tracked. Built in Rust.
   image:
     src: /logo.svg
     alt: Chub
@@ -23,6 +23,9 @@ features:
   - icon: ⚡
     title: Lightning Fast
     details: ~44ms cold start. 10 MB single binary. 19x faster search, 5x faster validation. Zero runtime dependencies.
+  - icon: 🧠
+    title: Self-Learning Agents
+    details: Agents write back what they discover — bugs, fixes, and best practices. Structured by kind (issue/fix/practice). Every session makes the knowledge base smarter.
   - icon: 📌
     title: Doc Pinning
     details: Lock specific doc versions for your team. Every developer and every AI agent uses the same reference material.
@@ -31,13 +34,10 @@ features:
     details: Role-scoped context with inheritance. Backend devs get API docs, frontend gets UI docs — automatically.
   - icon: 🔄
     title: Agent Config Sync
-    details: Generate CLAUDE.md, .cursorrules, AGENTS.md, and more from a single source of truth in .chub/config.yaml.
+    details: Generate CLAUDE.md, .cursorrules, AGENTS.md, and more from a single source of truth. Add annotation policy to instruct agents automatically.
   - icon: 📄
     title: Project Context
     details: Custom markdown docs in .chub/context/ — architecture decisions, conventions, runbooks — served via CLI and MCP.
-  - icon: 🔍
-    title: Dep Auto-Detection
-    details: Scan package.json, Cargo.toml, requirements.txt and 6 more file types. Auto-pin matching docs with one command.
 ---
 
 <div class="stats-bar">
@@ -133,21 +133,21 @@ Measured on the production corpus (1,553 docs, 7 skills). Median of 5 runs. Repr
 | Runtime dependency | Node.js 20+ | **None** |
 | Peak memory (build) | ~122 MB | **~23 MB** |
 
-## vs Context Hub
+## vs Context Hub & Context7
 
-| Capability | Context Hub | Chub |
-|---|---|---|
-| Curated docs | 1,600+ | 1,553+ |
-| MCP server | 5 tools | **7 tools** |
-| CLI commands | 7 | **20** |
-| Format compatible | — | **Identical** |
-| Cold start | ~131 ms | **~44 ms** |
-| Package size | ~22 MB (node_modules) | **10 MB** |
-| Doc pinning | No | **Yes** |
-| Team annotations | No | **Git-tracked** |
-| Context profiles | No | **With inheritance** |
-| Agent config sync | No | **5 targets** |
-| Dep auto-detection | No | **9 file types** |
-| Doc snapshots | No | **Yes** |
+| Capability | Context Hub | Context7 | Chub |
+|---|---|---|---|
+| Curated docs | 1,600+ | hosted | 1,553+ |
+| MCP server | 5 tools | 2 tools | **7 tools** |
+| CLI commands | 7 | — | **20** |
+| Self-learning agents | No | **No** | **Yes** |
+| Structured annotations (issue/fix/practice) | No | **No** | **Yes** |
+| Annotation policy in CLAUDE.md | No | **No** | **Yes** |
+| Doc pinning | No | No | **Yes** |
+| Team annotations | No | No | **Git-tracked** |
+| Context profiles | No | No | **With inheritance** |
+| Agent config sync | No | No | **5 targets** |
+| Self-hosted registry | Yes | No | **Yes** |
+| Format compatible | — | — | **Identical to Context Hub** |
 
-Built on [Context Hub](https://github.com/andrewyng/context-hub) by Andrew Ng. Fully format-compatible.
+Built on [Context Hub](https://github.com/andrewyng/context-hub) by Andrew Ng. Fully format-compatible. The key differentiator from Context7: Chub's knowledge base grows smarter with every agent session.

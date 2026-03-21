@@ -8,10 +8,48 @@ use crate::config::chub_dir;
 /// Maximum annotation length in characters. Notes exceeding this are truncated.
 const MAX_ANNOTATION_LENGTH: usize = 4000;
 
+/// The kind of annotation — classifies what the agent learned.
+#[derive(Debug, Clone, Serialize, Deserialize, Default, PartialEq)]
+#[serde(rename_all = "lowercase")]
+pub enum AnnotationKind {
+    /// General observation (default).
+    #[default]
+    Note,
+    /// Undocumented bug, broken param, or misleading example.
+    Issue,
+    /// Workaround that resolved an issue.
+    Fix,
+    /// Team convention or validated pattern.
+    Practice,
+}
+
+impl AnnotationKind {
+    pub fn as_str(&self) -> &'static str {
+        match self {
+            AnnotationKind::Note => "note",
+            AnnotationKind::Issue => "issue",
+            AnnotationKind::Fix => "fix",
+            AnnotationKind::Practice => "practice",
+        }
+    }
+
+    pub fn parse(s: &str) -> Option<Self> {
+        match s.to_lowercase().as_str() {
+            "note" => Some(AnnotationKind::Note),
+            "issue" => Some(AnnotationKind::Issue),
+            "fix" => Some(AnnotationKind::Fix),
+            "practice" => Some(AnnotationKind::Practice),
+            _ => None,
+        }
+    }
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Annotation {
     pub id: String,
     pub note: String,
+    #[serde(default)]
+    pub kind: AnnotationKind,
     #[serde(rename = "updatedAt")]
     pub updated_at: String,
 }
@@ -44,7 +82,7 @@ pub fn sanitize_note(note: &str) -> String {
     }
 }
 
-pub fn write_annotation(entry_id: &str, note: &str) -> Annotation {
+pub fn write_annotation(entry_id: &str, note: &str, kind: AnnotationKind) -> Annotation {
     let dir = annotations_dir();
     let _ = fs::create_dir_all(&dir);
 
@@ -76,6 +114,7 @@ pub fn write_annotation(entry_id: &str, note: &str) -> Annotation {
     let data = Annotation {
         id: entry_id.to_string(),
         note,
+        kind,
         updated_at,
     };
 

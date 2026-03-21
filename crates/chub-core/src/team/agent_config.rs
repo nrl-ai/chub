@@ -104,6 +104,26 @@ pub fn generate_config(rules: &AgentRules) -> String {
         }
     }
 
+    // Annotation policy
+    if rules.include_annotation_policy {
+        output.push_str("## Annotation Policy\n\n");
+        output.push_str(
+            "When you encounter something non-obvious while using a library, record it:\n\n",
+        );
+        output.push_str("- `chub_annotate id=\"<id>\" kind=\"issue\" note=\"...\"` — undocumented bugs, broken params, misleading examples\n");
+        output.push_str("- `chub_annotate id=\"<id>\" kind=\"fix\" note=\"...\"` — workarounds that resolved an issue\n");
+        output.push_str("- `chub_annotate id=\"<id>\" kind=\"practice\" note=\"...\"` — patterns the team prefers or has validated\n\n");
+        output.push_str("Rules:\n");
+        output.push_str("- Annotate after confirming, not speculatively — only write what you have verified works or fails\n");
+        output
+            .push_str("- One fact per annotation — do not bundle multiple issues into one note\n");
+        output.push_str(
+            "- Be reproducible — include the exact call, param, or value, not vague descriptions\n",
+        );
+        output.push_str("- Check first — read existing annotations (`chub_annotate id=<id>`) before writing to avoid duplicates\n");
+        output.push_str("- Do not annotate what is already in the official docs — only capture what the docs missed or got wrong\n\n");
+    }
+
     // Module rules
     for (module_name, module_rules) in &rules.modules {
         output.push_str(&format!(

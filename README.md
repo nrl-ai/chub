@@ -32,9 +32,10 @@ Chub is a CLI + MCP server that serves curated, versioned API documentation dire
 ```
 You type:   chub get openai/chat --lang python
 Agent sees: The complete, accurate OpenAI Chat API reference for Python
+           + any bugs, fixes, and best practices your team has discovered
 ```
 
-Built on [Context Hub](https://github.com/andrewyng/context-hub) by Andrew Ng — Chub is a high-performance Rust rewrite that extends the original with team features: shared doc pinning, git-tracked annotations, context profiles, agent config sync, and content integrity verification.
+Built on [Context Hub](https://github.com/andrewyng/context-hub) by Andrew Ng — Chub is a high-performance Rust rewrite that extends the original with team features: shared doc pinning, git-tracked annotations, context profiles, agent config sync, content integrity verification, and **self-learning agents** that write back what they discover.
 
 ---
 
@@ -125,14 +126,30 @@ chub pin stripe/api --lang javascript
 chub get --pinned                # fetch all pinned docs at once
 ```
 
-### Add team knowledge that follows the docs
+### Build a self-learning knowledge base
+
+Agents can write back what they discover — structured by kind so the knowledge is findable, not just buried in a notes field:
 
 ```sh
+# Human adds a note
 chub annotate openai/chat "Always use streaming for chat completions" --team
-chub annotate stripe/api "We use Stripe Connect, not standard Checkout" --team
+
+# Agent discovers a bug and records it (kind=issue + kind=fix)
+chub annotate openai/chat "tool_choice='none' silently ignores tools" --kind issue --severity high --team
+chub annotate openai/chat "use tool_choice='auto' or remove tools from array" --kind fix --team
+
+# Agent validates a best practice
+chub annotate openai/chat "Always set max_tokens to avoid unbounded cost" --kind practice --team
 ```
 
-When any agent fetches these docs, your annotations appear alongside the official content — clearly marked as team-contributed.
+When any agent fetches these docs, all annotations appear alongside the official content — grouped by kind, clearly marked as team-contributed. Every debugging session becomes permanent team knowledge.
+
+Add to `.chub/config.yaml` to automatically instruct agents to annotate:
+
+```yaml
+agent_rules:
+  include_annotation_policy: true   # adds Annotation Policy section to CLAUDE.md / AGENTS.md
+```
 
 ### Scope context by role
 
@@ -297,14 +314,17 @@ Measured on the production corpus (1,553 docs, 7 skills). Median of 5 runs on Wi
 
 ### Feature comparison
 
-| | Context Hub (JS) | Chub (Rust) |
-|---|---|---|
-| CLI commands | 7 | **20** |
-| MCP tools | 5 | **7** |
-| Team features (pins, profiles, snapshots, etc.) | — | **Yes** |
-| Content integrity verification | — | **Yes** |
-| Auto version detection (`--match-env`) | — | **Yes** |
-| Registry format compatibility | — | **Identical** |
+| | Context Hub (JS) | Context7 | Chub (Rust) |
+|---|---|---|---|
+| CLI commands | 7 | — | **20** |
+| MCP tools | 5 | 2 | **7** |
+| Team features (pins, profiles, snapshots) | — | — | **Yes** |
+| Self-learning agents (structured annotations) | — | — | **Yes** |
+| Annotation policy in CLAUDE.md / AGENTS.md | — | — | **Yes** |
+| Content integrity verification | — | — | **Yes** |
+| Auto version detection (`--match-env`) | — | — | **Yes** |
+| Self-hosted registry | Yes | — | **Yes** |
+| Registry format compatibility | — | — | **Identical to Context Hub** |
 
 ---
 

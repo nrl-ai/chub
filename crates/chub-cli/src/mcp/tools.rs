@@ -1,7 +1,7 @@
 use std::sync::Arc;
 
 use chub_core::annotations::{
-    clear_annotation, list_annotations, read_annotation, write_annotation,
+    clear_annotation, list_annotations, read_annotation, write_annotation, AnnotationKind,
 };
 use chub_core::fetch::{fetch_doc, fetch_doc_full, verify_content_hash};
 use chub_core::registry::{
@@ -88,12 +88,21 @@ pub struct ListParams {
 
 #[derive(Debug, serde::Deserialize, schemars::JsonSchema)]
 pub struct AnnotateParams {
-    /// Entry ID to annotate. Required unless using list mode.
+    /// Entry ID to annotate (e.g. "openai/chat"). Required unless using list mode.
     #[schemars(default)]
     pub id: Option<String>,
     /// Annotation text to save. Omit to read existing annotation.
     #[schemars(default)]
     pub note: Option<String>,
+    /// Annotation kind: "note" (default), "issue" (bug/gotcha), "fix" (workaround), "practice" (team convention).
+    /// Use "issue" when you discover an undocumented bug or broken param.
+    /// Use "fix" when you find a workaround for an issue.
+    /// Use "practice" when you validate a pattern the team should follow.
+    #[schemars(default)]
+    pub kind: Option<String>,
+    /// Severity for issue annotations: "high", "medium", or "low". Only used when kind="issue".
+    #[schemars(default)]
+    pub severity: Option<String>,
     /// Remove the annotation for this entry (default false)
     #[schemars(default)]
     pub clear: Option<bool>,
@@ -446,7 +455,14 @@ impl ChubMcpServer {
 
     #[tool(
         name = "chub_annotate",
-        description = "Read, write, clear, or list agent annotations. Modes: (1) list=true to list all, (2) id+note to write, (3) id+clear=true to delete, (4) id alone to read."
+        description = "Read, write, clear, or list agent annotations for a doc entry. \
+        USE THIS TOOL proactively after resolving something non-obvious with a library: \
+        (1) Discovered an undocumented bug or broken param? Write kind=issue. \
+        (2) Found a workaround? Write kind=fix. \
+        (3) Validated a useful pattern? Write kind=practice. \
+        Always read existing annotations first (id alone) to avoid duplicates. \
+        Be concise and reproducible — include the exact call, param, or value. \
+        Modes: (a) list=true to list all, (b) id+note+kind to write, (c) id+clear=true to delete, (d) id alone to read."
     )]
     async fn handle_annotate(&self, Parameters(params): Parameters<AnnotateParams>) -> String {
         if params.list.unwrap_or(false) {
@@ -490,9 +506,39 @@ impl ChubMcpServer {
         }
 
         if let Some(note) = params.note {
-            let saved = write_annotation(&id, &note);
+            let kind = params
+                .kind
+                .as_deref()
+                .and_then(AnnotationKind::parse)
+                .unwrap_or(AnnotationKind::Note);
+
+            // Prefer team annotations when the project .chub/ dir is available.
+            // This makes MCP agents in team projects automatically contribute to shared knowledge.
+            if chub_core::team::project::project_chub_dir().is_some() {
+                let author = std::env::var("USER")
+                    .or_else(|_| std::env::var("USERNAME"))
+                    .unwrap_or_else(|_| "agent".to_string());
+                if let Some(saved) = chub_core::team::team_annotations::write_team_annotation(
+                    &id,
+                    &note,
+                    &author,
+                    kind.clone(),
+                    params.severity.clone(),
+                ) {
+                    return text_result(serde_json::json!({
+                        "status": "saved",
+                        "scope": "team",
+                        "kind": kind.as_str(),
+                        "annotation": saved,
+                    }));
+                }
+            }
+
+            let saved = write_annotation(&id, &note, kind.clone());
             return text_result(serde_json::json!({
                 "status": "saved",
+                "scope": "personal",
+                "kind": kind.as_str(),
                 "annotation": saved,
             }));
         }

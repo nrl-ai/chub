@@ -41,6 +41,7 @@ agent_rules:
         - "Use Zod for validation"
   include_pins: true
   include_context: true
+  include_annotation_policy: true  # inject annotation instructions for agents
   targets:
     - claude.md
     - cursorrules

@@ -24,6 +24,7 @@
 | Custom/private docs | Yes (build cmd) | Yes (build cmd) |
 | Offline mode | Yes (bundle) | Yes (bundle) |
 | Team collaboration | No | **Yes** (pins, profiles, annotations) |
+| Self-learning agents | No | **Yes** (structured annotation kinds, policy in CLAUDE.md) |
 | Project awareness | No | **Yes** (auto-detect deps) |
 | Agent config sync | No | **Yes** (CLAUDE.md, .cursorrules, AGENTS.md) |
 | Git-tracked context | No | **Yes** (`.chub/` in repo) |
@@ -152,6 +153,137 @@ notes:
 1. Public doc content (from registry)
 2. Team annotations (`.chub/annotations/`)
 3. Personal annotations (`~/.chub/annotations/`)
+
+### 6.7 — Structured Annotations & Self-Learning Agents
+
+The missing link between AI agents and institutional knowledge. Standard annotations are free-form notes. Structured annotations give agents a vocabulary to classify what they've learned, making the knowledge base searchable, filterable, and machine-readable.
+
+**Annotation kinds**:
+
+| Kind | Purpose | Example |
+|---|---|---|
+| `note` | General observation (default) | "Use streaming for all chat requests" |
+| `issue` | Undocumented bug or API gotcha | "`tool_choice='none'` silently ignores tools" |
+| `fix` | Workaround that resolves an issue | "Pass `tool_choice='auto'` instead" |
+| `practice` | Team convention or validated pattern | "Always set `max_tokens` to avoid unbounded cost" |
+
+**`.chub/annotations/openai--chat.yaml`** (extended):
+```yaml
+id: openai/chat
+notes:
+  - author: alice
+    date: 2026-03-15
+    note: "Rate limits hit at 500 RPM on our plan. Use exponential backoff with jitter."
+issues:
+  - author: bob
+    date: 2026-03-20
+    severity: high
+    note: "tool_choice='none' silently ignores tools and returns null — not documented"
+fixes:
+  - author: bob
+    date: 2026-03-20
+    note: "Pass tool_choice='auto' instead of 'none'; bug confirmed in gpt-4o-mini"
+practices:
+  - author: alice
+    date: 2026-03-18
+    note: "Always set max_tokens; omitting it causes unbounded cost on streaming responses"
+```
+
+**CLI**:
+```bash
+chub annotate openai/chat "tool_choice='none' is broken" --kind issue --severity high --team
+chub annotate openai/chat "use tool_choice='auto' instead" --kind fix --team
+chub annotate openai/chat "always set max_tokens" --kind practice --team
+chub annotate openai/chat --list --team     # shows all sections grouped by kind
+```
+
+**MCP tool** (`chub_annotate`) — agents can write structured annotations directly:
+```json
+{ "id": "openai/chat", "kind": "issue", "severity": "high", "note": "tool_choice='none' silently ignores tools" }
+```
+
+**When an agent fetches the doc**, all structured annotations appear inline, clearly labelled:
+```
+---
+[Team issue (high) — bob (2026-03-20)] tool_choice='none' silently ignores tools and returns null
+[Team fix — bob (2026-03-20)] Pass tool_choice='auto' instead of 'none'; bug confirmed in gpt-4o-mini
+[Team practice — alice (2026-03-18)] Always set max_tokens; omitting it causes unbounded cost on streaming
+```
+
+**Annotation policy in CLAUDE.md / AGENTS.md**:
+
+When `include_annotation_policy: true` is set in `agent_rules`, the generated agent config files include standing instructions for the annotation workflow — so agents know to write back what they discover, without being told in every session:
+
+```markdown
+## Annotation Policy
+
+When you encounter something non-obvious while using a library, record it with chub_annotate:
+- kind=issue — undocumented bugs, broken params, misleading examples
+- kind=fix — workarounds that resolved an issue
+- kind=practice — patterns the team prefers or has validated
+
+Rules: annotate after confirming (not speculatively). One fact per note.
+Include the exact call, param, or value — not vague descriptions.
+Check existing annotations first (chub_annotate id=<id>) to avoid duplicates.
+```
+
+**Chub workflow skill** — `chub/skills/chub-workflow` in the registry combines doc querying and annotation into one efficient reference. It teaches agents the complete workflow: how to fetch docs, when to annotate, which kind to use, how to write actionable notes, and how to avoid duplicates. One skill, complete workflow.
+
+**Why this matters**: Every time an agent discovers a workaround, it's institutional knowledge that currently evaporates. Structured annotations make that knowledge permanent, classified, and automatically surfaced to every future agent that fetches the same doc. Over time, the registry evolves from a static doc mirror into a living knowledge base built by the team's own agents.
+
+### 6.8 — Three-Tier Annotation Storage
+
+Annotations follow the same layered ownership model as config: personal notes stay on the developer's machine, team notes live in the repo, and org-wide notes live on a server accessible to all agents across all machines and repos.
+
+| Tier | Storage location | Visibility | Survival |
+|------|-----------------|------------|---------|
+| 1 — Personal | `~/.chub/annotations/` | Local machine only | Lost with the machine; not shared |
+| 2 — Team / repo | `.chub/annotations/` | Everyone who has the repo | Survives developer turnover; survives machine replacement |
+| 3 — Hosted / org | REST API endpoint (configured in `.chub/config.yaml`) | All agents across all machines and repos | Persistent, centralised; scales to org-wide knowledge base |
+
+**Resolution and merge order** (later tiers take precedence; all tiers are merged):
+
+```
+Hosted annotations (Tier 3 — org-wide baseline)
+    ↓ overlaid by
+Team / repo annotations (Tier 2 — project-specific)
+    ↓ overlaid by
+Personal annotations (Tier 1 — individual machine)
+```
+
+Personal annotations always win. This means a developer can locally override or refine a team or org note without touching shared state. When an agent fetches a doc, it receives the merged view from all tiers that are configured and reachable.
+
+**Merge semantics**: annotations are additive per kind (`notes`, `issues`, `fixes`, `practices`). If the same note appears in multiple tiers it is deduplicated by content hash. There is no destructive override — a personal annotation does not delete a team annotation, it appends alongside it (or replaces if the content hash matches).
+
+**Configuring the hosted tier** in `.chub/config.yaml`:
+
+```yaml
+annotations:
+  hosted:
+    url: https://annotations.internal.company.com/chub
+    auth: bearer
+    token_env: CHUB_ANNOTATIONS_TOKEN   # secret from env, never committed
+    push: agents                         # who may write: agents | humans | all | none
+    cache_ttl: 300                        # seconds; annotations cached locally for offline use
+```
+
+The `push` field controls write access to the hosted tier. Setting it to `agents` allows MCP tools (`chub_annotate`) to write back what they discover. Setting it to `none` makes the hosted tier read-only for this project.
+
+**CLI flags** (extending the existing `--personal` / `--team` flags):
+
+```bash
+chub annotate openai/chat "..." --org        # Write to hosted tier
+chub annotate openai/chat --list --all-tiers # Show annotations from all tiers, labelled
+```
+
+**Tradeoffs and constraints**:
+
+- *Offline behaviour*: Tiers 1 and 2 are always available. Tier 3 requires network access; if the endpoint is unreachable, Chub falls back to the local cache (`cache_ttl`) and proceeds without org annotations. This preserves the offline-first guarantee for tiers 1 and 2.
+- *Security*: Agents writing to a hosted endpoint means annotation content crosses a network boundary. The `push` setting gives teams explicit control. Credentials must never be committed; use `token_env` to reference an environment variable.
+- *Consistency*: Because tier 3 is a shared mutable store, concurrent writes from multiple agents are possible. The server is responsible for last-write-wins or merge semantics; the Chub client treats the API as authoritative for tier 3 content.
+- *Scope*: A hosted tier is most useful for annotations that apply across multiple repos — e.g., company-wide gotchas for a shared internal API. Project-specific knowledge belongs in tier 2 (git-tracked) so it travels with the code.
+
+**Implementation status**: Tiers 1 (personal) and 2 (team/repo) are implemented and shipped. Tier 3 (hosted) is planned for Phase 8.
 
 **Commands**:
 ```bash
@@ -614,6 +746,8 @@ client.annotate("stripe/api", "Use idempotency keys for all charges", team=True)
 | P0 | `chub init` + `.chub/` directory | 6.1 | **Done** | `init_project()` with `--from-deps` and `--monorepo` |
 | P0 | Doc pinning (`pins.yaml`) | 6.2 | **Done** | CRUD + `--pinned` flag on `chub get` + MCP integration |
 | P0 | Team annotations (git-tracked) | 6.3 | **Done** | Write/read/append/merge + pin notices |
+| P1 | Structured annotation kinds + self-learning agents | 6.7 | **Done** | issue/fix/practice kinds, severity, annotation policy in agent configs, chub-workflow skill |
+| P2 | Hosted annotation server (Tier 3) | 6.8 | Planned | REST endpoint, bearer auth, cache_ttl, push policy; tiers 1 & 2 already implemented |
 | P0 | Context profiles with inheritance | 6.5 | **Done** | `extends:` inheritance, circular detection, active profile |
 | P1 | Custom project context | 6.4 | **Done** | Frontmatter parsing, `chub get project/<name>` |
 | P1 | Dependency auto-detection | 6.6 | **Done** | 9 file types (npm, Cargo, pip, pyproject, Pipfile, go.mod, Gemfile, pom.xml, Gradle) |

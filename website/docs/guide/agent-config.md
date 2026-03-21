@@ -21,8 +21,9 @@ agent_rules:
       rules:
         - "Use Tailwind CSS, no inline styles"
 
-  include_pins: true       # Include pinned doc references
-  include_context: true    # Include project context doc names
+  include_pins: true              # Include pinned doc references
+  include_context: true           # Include project context doc names
+  include_annotation_policy: true # Instruct agents to write back what they discover
 
   targets:
     - claude.md            # → CLAUDE.md
@@ -57,12 +58,29 @@ Use `chub get <id>` to fetch these docs:
 Use `chub get project/<name>` for these:
 - project/architecture — High-level system architecture
 
+## Annotation Policy
+
+When you encounter something non-obvious while using a library, record it:
+
+- `chub_annotate id="<id>" kind="issue" note="..."` — undocumented bugs, broken params, misleading examples
+- `chub_annotate id="<id>" kind="fix" note="..."` — workarounds that resolved an issue
+- `chub_annotate id="<id>" kind="practice" note="..."` — patterns the team prefers or has validated
+
+Rules:
+- Annotate after confirming, not speculatively — only write what you have verified works or fails
+- One fact per annotation — do not bundle multiple issues into one note
+- Be reproducible — include the exact call, param, or value, not vague descriptions
+- Check first — read existing annotations (`chub_annotate id=<id>`) before writing to avoid duplicates
+- Do not annotate what is already in the official docs — only capture what the docs missed or got wrong
+
 ## Module: backend (src/api/**)
 - Use Zod for all request validation
 
 ## Module: frontend (src/components/**)
 - Use Tailwind CSS, no inline styles
 ```
+
+The `include_annotation_policy: true` section is only emitted when that flag is set. It gives agents a standing order to annotate — without repeating it in every session prompt.
 
 ## Auto-sync with git hooks
 
