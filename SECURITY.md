@@ -2,7 +2,7 @@
 
 ## Reporting a Vulnerability
 
-If you discover a security vulnerability, please report it by [opening a GitHub issue](https://github.com/vietanhdev/chub/issues/new) with the label `security`.
+If you discover a security vulnerability, please report it by [opening a GitHub issue](https://github.com/nrl-ai/chub/issues/new) with the label `security`.
 
 Include:
 

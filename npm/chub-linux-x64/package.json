@@ -5,7 +5,7 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/vietanhdev/chub"
+    "url": "https://github.com/nrl-ai/chub"
   },
   "os": [
     "linux"

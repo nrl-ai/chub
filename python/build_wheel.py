@@ -77,7 +77,7 @@ def build_wheel(binary: str, target: str, version: str, output: str) -> str:
             f"Name: chub\n"
             f"Version: {version}\n"
             f"Summary: Chub: high-performance curated docs for AI coding agents\n"
-            f"Home-page: https://github.com/vietanhdev/chub\n"
+            f"Home-page: https://github.com/nrl-ai/chub\n"
             f"License: MIT\n"
             f"Requires-Python: >=3.8\n"
             f"Author-email: Viet-Anh Nguyen <vietanh.dev@gmail.com>\n"

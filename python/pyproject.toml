@@ -21,9 +21,9 @@ classifiers = [
 ]
 
 [project.urls]
-Homepage = "https://github.com/vietanhdev/chub"
-Repository = "https://github.com/vietanhdev/chub"
-Issues = "https://github.com/vietanhdev/chub/issues"
+Homepage = "https://github.com/nrl-ai/chub"
+Repository = "https://github.com/nrl-ai/chub"
+Issues = "https://github.com/nrl-ai/chub/issues"
 
 [project.scripts]
 chub = "chub:main"

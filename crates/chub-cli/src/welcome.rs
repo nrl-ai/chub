@@ -36,7 +36,7 @@ community. If you wish to disable this feedback, add {} to {}. See \
         "https://www.aichub.org/tos.html".underline(),
         "\"feedback: false\"".bold(),
         config_path.display().to_string().bold(),
-        "https://github.com/vietanhdev/chub".underline(),
+        "https://github.com/nrl-ai/chub".underline(),
     );
 
     // Best-effort marker write

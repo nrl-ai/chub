@@ -18,7 +18,7 @@
 set -euo pipefail
 
 VERSION="${1:?Usage: $0 <version>}"
-REPO="vietanhdev/chub"
+REPO="nrl-ai/chub"
 FORMULA="homebrew/chub.rb"
 TAP_REPO="../homebrew-tap"
 

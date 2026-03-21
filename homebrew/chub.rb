@@ -6,20 +6,20 @@ class Chub < Formula
 
   on_macos do
     if Hardware::CPU.arm?
-      url "https://github.com/vietanhdev/chub/releases/download/v#{version}/chub-darwin-arm64"
+      url "https://github.com/nrl-ai/chub/releases/download/v#{version}/chub-darwin-arm64"
       sha256 "PLACEHOLDER_DARWIN_ARM64"
     else
-      url "https://github.com/vietanhdev/chub/releases/download/v#{version}/chub-darwin-x64"
+      url "https://github.com/nrl-ai/chub/releases/download/v#{version}/chub-darwin-x64"
       sha256 "PLACEHOLDER_DARWIN_X64"
     end
   end
 
   on_linux do
     if Hardware::CPU.arm?
-      url "https://github.com/vietanhdev/chub/releases/download/v#{version}/chub-linux-arm64"
+      url "https://github.com/nrl-ai/chub/releases/download/v#{version}/chub-linux-arm64"
       sha256 "PLACEHOLDER_LINUX_ARM64"
     else
-      url "https://github.com/vietanhdev/chub/releases/download/v#{version}/chub-linux-x64"
+      url "https://github.com/nrl-ai/chub/releases/download/v#{version}/chub-linux-x64"
       sha256 "PLACEHOLDER_LINUX_X64"
     end
   end

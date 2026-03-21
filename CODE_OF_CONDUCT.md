@@ -42,7 +42,7 @@ an individual is officially representing the community in public spaces.
 ## Enforcement
 
 Instances of abusive, harassing, or otherwise unacceptable behavior may be
-reported by [opening a GitHub issue](https://github.com/vietanhdev/chub/issues/new).
+reported by [opening a GitHub issue](https://github.com/nrl-ai/chub/issues/new).
 
 All complaints will be reviewed and investigated promptly and fairly.
 

@@ -12,7 +12,7 @@ Thank you for your interest in contributing to Chub! This guide covers both code
 ### Getting Started
 
 ```bash
-git clone https://github.com/vietanhdev/chub.git
+git clone https://github.com/nrl-ai/chub.git
 cd chub
 cargo build
 ```
@@ -124,8 +124,8 @@ metadata:
 
 ## Reporting Issues
 
-- **Bugs**: [Open an issue](https://github.com/vietanhdev/chub/issues/new?template=bug_report.md)
-- **Features**: [Request a feature](https://github.com/vietanhdev/chub/issues/new?template=feature_request.md)
+- **Bugs**: [Open an issue](https://github.com/nrl-ai/chub/issues/new?template=bug_report.md)
+- **Features**: [Request a feature](https://github.com/nrl-ai/chub/issues/new?template=feature_request.md)
 - **Security**: See [SECURITY.md](SECURITY.md)
 
 ## License
