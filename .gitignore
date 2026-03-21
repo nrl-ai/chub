@@ -34,3 +34,6 @@ __pycache__/
 
 # References code/docs
 /references
+
+# Ignore marketing content
+/marketing
