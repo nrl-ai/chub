@@ -755,6 +755,8 @@ pub enum ResolvedPath {
         source: SourceConfig,
         path: String,
         files: Vec<String>,
+        /// SHA-256 hash of the entry-point file for integrity verification.
+        content_hash: Option<String>,
     },
     NeedsLanguage {
         available: Vec<String>,
@@ -779,6 +781,7 @@ pub fn resolve_doc_path(
                 source: entry.source_obj.clone(),
                 path: s.path.clone(),
                 files: s.files.clone(),
+                content_hash: s.content_hash.clone(),
             })
         }
         EntryKind::Doc(d) => {
@@ -827,6 +830,7 @@ pub fn resolve_doc_path(
                 source: entry.source_obj.clone(),
                 path: ver_obj.path.clone(),
                 files: ver_obj.files.clone(),
+                content_hash: ver_obj.content_hash.clone(),
             })
         }
     }

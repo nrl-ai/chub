@@ -63,7 +63,7 @@ pub fn write_team_annotation(entry_id: &str, note: &str, author: &str) -> Option
     ann.notes.push(TeamAnnotationNote {
         author: author.to_string(),
         date,
-        note: note.to_string(),
+        note: crate::annotations::sanitize_note(note),
     });
 
     let path = team_annotation_path(entry_id)?;

@@ -3,9 +3,16 @@ use std::fs;
 use std::path::{Path, PathBuf};
 use walkdir::WalkDir;
 
+use sha2::{Digest, Sha256};
+
 use crate::error::Result;
 use crate::frontmatter::parse_frontmatter;
 use crate::types::{DocEntry, LanguageEntry, SkillEntry, VersionEntry};
+
+/// Compute SHA-256 hex digest of file contents.
+fn sha256_content(data: &[u8]) -> String {
+    format!("{:x}", Sha256::digest(data))
+}
 
 /// Result of discovering entries in an author directory.
 #[derive(Debug, Default)]
@@ -140,6 +147,7 @@ pub fn discover_author(
                     .push(format!("{}: duplicate skill name '{}'", ef.rel_path, name));
                 continue;
             }
+            let content_hash = Some(sha256_content(content.as_bytes()));
             skills.insert(
                 name.clone(),
                 SkillEntry {
@@ -152,6 +160,7 @@ pub fn discover_author(
                     files,
                     size,
                     last_updated: updated_on,
+                    content_hash,
                 },
             );
         } else {
@@ -193,6 +202,7 @@ pub fn discover_author(
                 languages: HashMap::new(),
             });
 
+            let content_hash = Some(sha256_content(content.as_bytes()));
             for lang in &languages {
                 let lang_versions = doc.languages.entry(lang.clone()).or_default();
                 for ver in &versions {
@@ -202,6 +212,7 @@ pub fn discover_author(
                         files: files.clone(),
                         size,
                         last_updated: updated_on.clone(),
+                        content_hash: content_hash.clone(),
                     });
                 }
             }
@@ -373,6 +384,7 @@ pub fn load_author_registry(
             files: skill.files.unwrap_or_default(),
             size: skill.size.unwrap_or(0),
             last_updated: skill.last_updated.unwrap_or_default(),
+            content_hash: None,
         });
     }
 

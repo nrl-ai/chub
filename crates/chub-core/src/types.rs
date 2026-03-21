@@ -9,6 +9,13 @@ pub struct VersionEntry {
     pub size: u64,
     #[serde(rename = "lastUpdated")]
     pub last_updated: String,
+    /// SHA-256 hash of the entry-point file content for integrity verification.
+    #[serde(
+        rename = "contentHash",
+        default,
+        skip_serializing_if = "Option::is_none"
+    )]
+    pub content_hash: Option<String>,
 }
 
 /// A language variant containing versions for a doc.
@@ -44,6 +51,13 @@ pub struct SkillEntry {
     pub size: u64,
     #[serde(rename = "lastUpdated")]
     pub last_updated: String,
+    /// SHA-256 hash of the skill file content for integrity verification.
+    #[serde(
+        rename = "contentHash",
+        default,
+        skip_serializing_if = "Option::is_none"
+    )]
+    pub content_hash: Option<String>,
 }
 
 /// The top-level registry.json structure.

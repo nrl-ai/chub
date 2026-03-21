@@ -236,7 +236,7 @@ pub fn write_build_output_with_opts(
         }
 
         let rel = entry.path().strip_prefix(content_dir).unwrap();
-        let rel_str = rel.to_string_lossy().to_string();
+        let rel_str = rel.to_string_lossy().replace('\\', "/");
         let dest = output_dir.join(rel);
 
         if entry.file_type().is_dir() {

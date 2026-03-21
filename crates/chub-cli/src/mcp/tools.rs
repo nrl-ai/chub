@@ -3,7 +3,7 @@ use std::sync::Arc;
 use chub_core::annotations::{
     clear_annotation, list_annotations, read_annotation, write_annotation,
 };
-use chub_core::fetch::{fetch_doc, fetch_doc_full};
+use chub_core::fetch::{fetch_doc, fetch_doc_full, verify_content_hash};
 use chub_core::registry::{
     get_entry, list_entries, resolve_doc_path, resolve_entry_file, search_entries, MergedRegistry,
     ResolvedPath, SearchFilters, TaggedEntry,
@@ -68,6 +68,9 @@ pub struct GetParams {
     /// Fetch a specific file by path (e.g. "references/streaming.md")
     #[schemars(default)]
     pub file: Option<String>,
+    /// Auto-detect version from project dependencies (default false)
+    #[schemars(default)]
+    pub match_env: Option<bool>,
 }
 
 #[derive(Debug, serde::Deserialize, schemars::JsonSchema)]
@@ -269,6 +272,22 @@ impl ChubMcpServer {
             );
         }
 
+        // Auto-detect version from project dependencies if match_env is set
+        if params.match_env.unwrap_or(false) && effective_version.is_none() {
+            let cwd = std::env::current_dir().unwrap_or_default();
+            let deps = chub_core::team::detect::detect_dependencies(&cwd);
+            if let Some(dep) = find_matching_dep_for_entry(entry.id(), &deps) {
+                if let Some(ref ver) = dep.version {
+                    let clean = ver.trim_start_matches(|c: char| {
+                        c == '^' || c == '~' || c == '=' || c == '>' || c == '<' || c == 'v'
+                    });
+                    if !clean.is_empty() {
+                        effective_version = Some(clean.to_string());
+                    }
+                }
+            }
+        }
+
         let resolved = resolve_doc_path(
             &entry,
             effective_lang.as_deref(),
@@ -312,8 +331,12 @@ impl ChubMcpServer {
             }
         };
 
-        let source = match &resolved {
-            ResolvedPath::Ok { source, .. } => source.clone(),
+        let (source, content_hash) = match &resolved {
+            ResolvedPath::Ok {
+                source,
+                content_hash,
+                ..
+            } => (source.clone(), content_hash.clone()),
             _ => unreachable!(),
         };
 
@@ -357,7 +380,16 @@ impl ChubMcpServer {
             }
         } else {
             match fetch_doc(&source, &file_path).await {
-                Ok(c) => c,
+                Ok(c) => {
+                    // Verify content integrity if hash is available
+                    if let Err(e) = verify_content_hash(&c, content_hash.as_deref(), &file_path) {
+                        return text_result(serde_json::json!({
+                            "error": format!("{}", e),
+                            "warning": "Content may have been tampered with.",
+                        }));
+                    }
+                    c
+                }
                 Err(e) => {
                     return text_result(serde_json::json!({
                         "error": format!("Failed to fetch \"{}\": {}", params.id, e),
@@ -371,12 +403,15 @@ impl ChubMcpServer {
             content.push_str(&pin_notice);
         }
 
-        // Append merged annotations (team + personal)
+        // Append merged annotations (team + personal) with trust framing
         if let Some(merged_ann) = team::team_annotations::get_merged_annotation(entry.id()) {
-            content.push_str(&format!("\n\n---\n{}\n", merged_ann));
+            content.push_str(&format!(
+                "\n\n---\n⚠ USER-CONTRIBUTED ANNOTATIONS (not part of official documentation):\n{}\n",
+                merged_ann
+            ));
         } else if let Some(annotation) = read_annotation(entry.id()) {
             content.push_str(&format!(
-                "\n\n---\n[Agent note — {}]\n{}\n",
+                "\n\n---\n⚠ USER-CONTRIBUTED ANNOTATION (not part of official documentation):\n[Agent note — {}]\n{}\n",
                 annotation.updated_at, annotation.note
             ));
         }
@@ -615,4 +650,18 @@ impl ChubMcpServer {
 
         text_result(result)
     }
+}
+
+/// Find a matching dependency for a registry entry ID.
+fn find_matching_dep_for_entry<'a>(
+    entry_id: &str,
+    deps: &'a [chub_core::team::detect::DetectedDep],
+) -> Option<&'a chub_core::team::detect::DetectedDep> {
+    let id_parts: Vec<&str> = entry_id.split('/').collect();
+    let search_name = if !id_parts.is_empty() {
+        id_parts[0].to_lowercase()
+    } else {
+        entry_id.to_lowercase()
+    };
+    deps.iter().find(|d| d.name.to_lowercase() == search_name)
 }

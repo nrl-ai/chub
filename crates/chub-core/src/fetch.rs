@@ -1,6 +1,8 @@
 use std::fs;
 use std::path::PathBuf;
 
+use sha2::{Digest, Sha256};
+
 use crate::cache::{
     get_source_data_dir, get_source_dir, get_source_registry_path, get_source_search_index_path,
     read_cached_doc, read_meta, save_cached_doc, save_source_registry,
@@ -242,6 +244,26 @@ pub async fn fetch_doc_full(
         results.push((file.clone(), content));
     }
     Ok(results)
+}
+
+/// Verify fetched content against an expected SHA-256 hash.
+/// Returns Ok(content) if hash matches or no hash was provided.
+/// Returns Err if hash mismatch (content tampering detected).
+pub fn verify_content_hash(
+    content: &str,
+    expected_hash: Option<&str>,
+    doc_path: &str,
+) -> Result<()> {
+    if let Some(expected) = expected_hash {
+        let actual = format!("{:x}", Sha256::digest(content.as_bytes()));
+        if actual != expected {
+            return Err(Error::Config(format!(
+                "Content integrity check failed for \"{}\": expected hash {}, got {}",
+                doc_path, expected, actual
+            )));
+        }
+    }
+    Ok(())
 }
 
 /// Ensure at least one registry is available.

@@ -39,6 +39,10 @@ pub struct GetArgs {
     /// Fetch all pinned docs at once
     #[arg(long)]
     pinned: bool,
+
+    /// Auto-detect version from project dependencies (package.json, requirements.txt, etc.)
+    #[arg(long)]
+    match_env: bool,
 }
 
 struct FetchedEntry {
@@ -67,6 +71,7 @@ pub async fn run(args: GetArgs, json: bool, merged: &MergedRegistry) -> Result<(
             full: args.full,
             file: args.file.clone(),
             pinned: false,
+            match_env: args.match_env,
         };
         return Box::pin(run(pinned_args, json, merged)).await;
     }
@@ -135,6 +140,22 @@ pub async fn run(args: GetArgs, json: bool, merged: &MergedRegistry) -> Result<(
             }
             if effective_version.is_none() {
                 effective_version = pin.version.clone();
+            }
+        }
+
+        // Auto-detect version from project dependencies if --match-env is set
+        if args.match_env && effective_version.is_none() {
+            let cwd = std::env::current_dir().unwrap_or_default();
+            let deps = chub_core::team::detect::detect_dependencies(&cwd);
+            if let Some(dep) = find_matching_dep_for_entry(entry.id(), &deps) {
+                if let Some(ref ver) = dep.version {
+                    let clean = ver.trim_start_matches(|c: char| {
+                        c == '^' || c == '~' || c == '=' || c == '>' || c == '<' || c == 'v'
+                    });
+                    if !clean.is_empty() {
+                        effective_version = Some(clean.to_string());
+                    }
+                }
             }
         }
 
@@ -404,7 +425,10 @@ fn print_output(results: &[FetchedEntry], args: &GetArgs, json: bool) {
         } else {
             print!("{}", content);
             if let Some(ref ann) = annotation {
-                print!("\n\n---\n[Agent note — {}]\n{}\n", ann.updated_at, ann.note);
+                print!(
+                    "\n\n---\n⚠ USER-CONTRIBUTED ANNOTATION (not part of official documentation):\n[Agent note — {}]\n{}\n",
+                    ann.updated_at, ann.note
+                );
             }
             let lang_flag = args
                 .lang
@@ -465,4 +489,20 @@ fn print_output(results: &[FetchedEntry], args: &GetArgs, json: bool) {
             print!("{}", combined);
         }
     }
+}
+
+/// Find a matching dependency for a registry entry ID.
+/// Matches the first segment of the entry ID (e.g., "openai" from "openai/chat")
+/// against detected dependency names.
+fn find_matching_dep_for_entry<'a>(
+    entry_id: &str,
+    deps: &'a [chub_core::team::detect::DetectedDep],
+) -> Option<&'a chub_core::team::detect::DetectedDep> {
+    let id_parts: Vec<&str> = entry_id.split('/').collect();
+    let search_name = if !id_parts.is_empty() {
+        id_parts[0].to_lowercase()
+    } else {
+        entry_id.to_lowercase()
+    };
+    deps.iter().find(|d| d.name.to_lowercase() == search_name)
 }

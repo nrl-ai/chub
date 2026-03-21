@@ -5,6 +5,9 @@ use serde::{Deserialize, Serialize};
 
 use crate::config::chub_dir;
 
+/// Maximum annotation length in characters. Notes exceeding this are truncated.
+const MAX_ANNOTATION_LENGTH: usize = 4000;
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Annotation {
     pub id: String,
@@ -29,9 +32,23 @@ pub fn read_annotation(entry_id: &str) -> Option<Annotation> {
         .and_then(|s| serde_json::from_str(&s).ok())
 }
 
+/// Sanitize annotation text: truncate to max length.
+pub fn sanitize_note(note: &str) -> String {
+    let trimmed = note.trim();
+    if trimmed.len() <= MAX_ANNOTATION_LENGTH {
+        trimmed.to_string()
+    } else {
+        let mut s = trimmed[..MAX_ANNOTATION_LENGTH].to_string();
+        s.push_str(" [truncated]");
+        s
+    }
+}
+
 pub fn write_annotation(entry_id: &str, note: &str) -> Annotation {
     let dir = annotations_dir();
     let _ = fs::create_dir_all(&dir);
+
+    let note = sanitize_note(note);
 
     let now = crate::build::builder::days_to_date(
         std::time::SystemTime::now()
@@ -58,7 +75,7 @@ pub fn write_annotation(entry_id: &str, note: &str) -> Annotation {
 
     let data = Annotation {
         id: entry_id.to_string(),
-        note: note.to_string(),
+        note,
         updated_at,
     };
 

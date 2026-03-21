@@ -21,6 +21,7 @@ fn make_doc(id: &str, name: &str, desc: &str, tags: &[&str]) -> DocEntry {
                 files: vec!["DOC.md".to_string()],
                 size: 100,
                 last_updated: "2025-01-01".to_string(),
+                content_hash: None,
             }],
             recommended_version: "1.0.0".to_string(),
         }],
@@ -38,6 +39,7 @@ fn make_skill(id: &str, name: &str, desc: &str, tags: &[&str]) -> SkillEntry {
         files: vec!["SKILL.md".to_string()],
         size: 100,
         last_updated: "2025-01-01".to_string(),
+        content_hash: None,
     }
 }
 

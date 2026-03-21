@@ -105,7 +105,19 @@ pub async fn run_mcp_server() -> Result<(), Box<dyn std::error::Error>> {
 
     let transport = stdio();
     let running = server.serve(transport).await?;
-    running.waiting().await?;
+
+    // Wait for either: the MCP server to finish, or a shutdown signal.
+    // This prevents orphan processes when the parent MCP host terminates.
+    // When the parent closes stdin, rmcp's transport should detect EOF and
+    // cause `waiting()` to return. The ctrl_c handler catches explicit signals.
+    tokio::select! {
+        result = running.waiting() => {
+            result?;
+        }
+        _ = tokio::signal::ctrl_c() => {
+            eprintln!("[chub-mcp] received interrupt, shutting down.");
+        }
+    }
 
     Ok(())
 }
