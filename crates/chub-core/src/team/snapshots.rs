@@ -7,20 +7,8 @@ use crate::error::{Error, Result};
 use crate::team::pins::{load_pins, save_pins, PinEntry, PinsFile};
 use crate::team::project::project_chub_dir;
 
-/// Validate that a name is safe for use as a filename (no path traversal).
 fn validate_name(name: &str) -> Result<()> {
-    if name.is_empty()
-        || name.contains('/')
-        || name.contains('\\')
-        || name.contains("..")
-        || name.starts_with('.')
-    {
-        return Err(Error::Config(format!(
-            "Invalid snapshot name \"{}\": must not contain path separators or \"..\"",
-            name
-        )));
-    }
-    Ok(())
+    crate::util::validate_filename(name, "snapshot")
 }
 
 /// A point-in-time snapshot of all pins.
@@ -58,22 +46,7 @@ fn snapshots_dir() -> Option<PathBuf> {
 }
 
 fn now_iso() -> String {
-    let secs = std::time::SystemTime::now()
-        .duration_since(std::time::UNIX_EPOCH)
-        .unwrap_or_default()
-        .as_secs();
-    let days = secs / 86400;
-    let tod = secs % 86400;
-    let (y, m, d) = crate::build::builder::days_to_date(days);
-    format!(
-        "{:04}-{:02}-{:02}T{:02}:{:02}:{:02}Z",
-        y,
-        m,
-        d,
-        tod / 3600,
-        (tod % 3600) / 60,
-        tod % 60
-    )
+    crate::util::now_iso8601()
 }
 
 /// Create a snapshot of the current pins.

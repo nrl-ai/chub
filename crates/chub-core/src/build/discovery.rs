@@ -312,13 +312,7 @@ fn segmentize(s: &str) -> Vec<Segment> {
 
 /// Fallback date for missing updated-on.
 fn today_fallback() -> String {
-    let now = std::time::SystemTime::now()
-        .duration_since(std::time::UNIX_EPOCH)
-        .unwrap_or_default()
-        .as_secs();
-    let days = now / 86400;
-    let (year, month, day) = crate::build::builder::days_to_date(days);
-    format!("{:04}-{:02}-{:02}", year, month, day)
+    crate::util::today_date()
 }
 
 /// Load an author's registry.json and prefix paths with author name.

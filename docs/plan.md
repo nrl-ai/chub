@@ -55,11 +55,11 @@
 
 ### Test coverage
 
-117 tests across 4 test suites, all passing:
-- 31 unit tests (tokenizer, BM25, frontmatter, normalize)
+143 tests across 4 test suites, all passing:
+- 42 unit tests (tokenizer, BM25, frontmatter, normalize, annotations)
 - 15 build parity tests
 - 20 search parity tests
-- 51 team feature integration tests (isolated temp dirs, no repo pollution)
+- 66 team feature integration tests (isolated temp dirs, no repo pollution)
 
 ---
 

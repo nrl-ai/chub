@@ -68,7 +68,7 @@ fn annotations_dir() -> PathBuf {
 }
 
 fn annotation_path(entry_id: &str) -> PathBuf {
-    let safe = entry_id.replace('/', "--");
+    let safe = crate::util::sanitize_entry_id(entry_id);
     annotations_dir().join(format!("{}.json", safe))
 }
 
@@ -103,29 +103,7 @@ pub fn write_annotation(
     let _ = fs::create_dir_all(&dir);
 
     let note = sanitize_note(note);
-
-    let now = crate::build::builder::days_to_date(
-        std::time::SystemTime::now()
-            .duration_since(std::time::UNIX_EPOCH)
-            .unwrap_or_default()
-            .as_secs()
-            / 86400,
-    );
-    let secs = std::time::SystemTime::now()
-        .duration_since(std::time::UNIX_EPOCH)
-        .unwrap_or_default()
-        .as_secs();
-    let tod = secs % 86400;
-
-    let updated_at = format!(
-        "{:04}-{:02}-{:02}T{:02}:{:02}:{:02}.000Z",
-        now.0,
-        now.1,
-        now.2,
-        tod / 3600,
-        (tod % 3600) / 60,
-        tod % 60
-    );
+    let updated_at = crate::util::now_iso8601();
 
     let data = Annotation {
         id: entry_id.to_string(),
@@ -172,4 +150,113 @@ pub fn list_annotations() -> Vec<Annotation> {
                 .and_then(|s| serde_json::from_str::<Annotation>(&s).ok())
         })
         .collect()
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn sanitize_note_trims_whitespace() {
+        assert_eq!(sanitize_note("  hello  "), "hello");
+    }
+
+    #[test]
+    fn sanitize_note_short_ascii_unchanged() {
+        let note = "This is a short note.";
+        assert_eq!(sanitize_note(note), note);
+    }
+
+    #[test]
+    fn sanitize_note_truncates_long_ascii() {
+        let long = "a".repeat(5000);
+        let result = sanitize_note(&long);
+        // 4000 chars + " [truncated]"
+        assert_eq!(result.chars().count(), 4000 + " [truncated]".len());
+        assert!(result.ends_with(" [truncated]"));
+    }
+
+    #[test]
+    fn sanitize_note_multi_byte_no_panic() {
+        // 2000 emoji characters (each 4 bytes) — exceeds 4000 byte limit
+        // but should not panic since we count chars, not bytes
+        let emoji_note: String = "🦀".repeat(5000);
+        let result = sanitize_note(&emoji_note);
+        assert!(result.ends_with(" [truncated]"));
+        // The first 4000 chars should all be 🦀
+        let crab_part: String = result.chars().take(4000).collect();
+        assert_eq!(crab_part, "🦀".repeat(4000));
+    }
+
+    #[test]
+    fn sanitize_note_cjk_no_panic() {
+        // CJK characters are 3 bytes each in UTF-8
+        let cjk_note: String = "漢".repeat(5000);
+        let result = sanitize_note(&cjk_note);
+        assert!(result.ends_with(" [truncated]"));
+        let cjk_part: String = result.chars().take(4000).collect();
+        assert_eq!(cjk_part, "漢".repeat(4000));
+    }
+
+    #[test]
+    fn sanitize_note_exact_limit_not_truncated() {
+        let exact = "a".repeat(MAX_ANNOTATION_LENGTH);
+        let result = sanitize_note(&exact);
+        assert_eq!(result.len(), MAX_ANNOTATION_LENGTH);
+        assert!(!result.contains("[truncated]"));
+    }
+
+    #[test]
+    fn sanitize_note_one_over_limit_truncated() {
+        let over = "a".repeat(MAX_ANNOTATION_LENGTH + 1);
+        let result = sanitize_note(&over);
+        assert!(result.ends_with(" [truncated]"));
+        assert_eq!(
+            result.chars().count(),
+            MAX_ANNOTATION_LENGTH + " [truncated]".len()
+        );
+    }
+
+    #[test]
+    fn sanitize_note_mixed_multibyte_and_ascii() {
+        // Mix of 1-byte ASCII and 4-byte emoji
+        let mut note = String::new();
+        for _ in 0..2500 {
+            note.push('a');
+            note.push('🎉');
+        }
+        // 5000 chars total > 4000 limit, should truncate safely
+        let result = sanitize_note(&note);
+        assert!(result.ends_with(" [truncated]"));
+        // Verify no panic and correct char count
+        let content_chars = result.chars().count() - " [truncated]".len();
+        assert_eq!(content_chars, MAX_ANNOTATION_LENGTH);
+    }
+
+    #[test]
+    fn annotation_kind_parse_roundtrip() {
+        for kind in [
+            AnnotationKind::Note,
+            AnnotationKind::Issue,
+            AnnotationKind::Fix,
+            AnnotationKind::Practice,
+        ] {
+            let s = kind.as_str();
+            let parsed = AnnotationKind::parse(s).unwrap();
+            assert_eq!(parsed, kind);
+        }
+    }
+
+    #[test]
+    fn annotation_kind_parse_case_insensitive() {
+        assert_eq!(AnnotationKind::parse("NOTE"), Some(AnnotationKind::Note));
+        assert_eq!(AnnotationKind::parse("Issue"), Some(AnnotationKind::Issue));
+        assert_eq!(AnnotationKind::parse("FIX"), Some(AnnotationKind::Fix));
+    }
+
+    #[test]
+    fn annotation_kind_parse_invalid() {
+        assert_eq!(AnnotationKind::parse("unknown"), None);
+        assert_eq!(AnnotationKind::parse(""), None);
+    }
 }

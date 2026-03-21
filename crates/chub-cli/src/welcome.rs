@@ -41,24 +41,5 @@ community. If you wish to disable this feedback, add {} to {}. See \
 
     // Best-effort marker write
     let _ = fs::create_dir_all(&chub);
-    let _ = fs::write(&marker_path, chrono_like_now());
-}
-
-fn chrono_like_now() -> String {
-    let secs = std::time::SystemTime::now()
-        .duration_since(std::time::UNIX_EPOCH)
-        .unwrap_or_default()
-        .as_secs();
-    let days = secs / 86400;
-    let tod = secs % 86400;
-    let (y, m, d) = chub_core::build::builder::days_to_date(days);
-    format!(
-        "{:04}-{:02}-{:02}T{:02}:{:02}:{:02}.000Z",
-        y,
-        m,
-        d,
-        tod / 3600,
-        (tod % 3600) / 60,
-        tod % 60
-    )
+    let _ = fs::write(&marker_path, chub_core::util::now_iso8601());
 }

@@ -28,7 +28,7 @@ cargo test -p chub-core search       # tests whose name contains "search"
 cargo test -p chub-core bm25         # specific module
 ```
 
-Tests are inline (`#[cfg(test)]` blocks) in: `search/tokenizer.rs`, `search/bm25.rs`, `search/index.rs`, `frontmatter.rs`, `normalize.rs`. Integration tests for the CLI (`build`, search parity) live in `crates/chub-cli/src/commands/build.rs` and related files.
+Tests are inline (`#[cfg(test)]` blocks) in: `search/tokenizer.rs`, `search/bm25.rs`, `search/index.rs`, `frontmatter.rs`, `normalize.rs`, `annotations.rs`. Integration tests for the CLI (`build`, search parity) live in `crates/chub-cli/src/commands/build.rs` and related files. Team feature integration tests (pins, profiles, snapshots, bundles, org annotations) are in `crates/chub-core/tests/team_features.rs`.
 
 ### Lint & format
 ```sh
@@ -123,6 +123,10 @@ content/
 `chub mcp` runs an stdio server via the `rmcp` crate. It does **not** go through the normal CLI flow — it has its own `mcp::server::run_mcp_server()` entry point and loads the registry independently.
 
 MCP tools: `chub_search`, `chub_get`, `chub_list`, `chub_annotate`, `chub_feedback`. Tool parameter structs use `schemars::JsonSchema` for schema generation. The registry is exposed as a resource at `chub://registry`.
+
+### Shared utilities (`util.rs`)
+
+`util.rs` contains shared helpers to avoid duplication: `days_to_date()`, `now_iso8601()`, `today_date()`, `sanitize_entry_id()` (replaces `/` with `--` for filenames), and `validate_filename()` (path traversal guard for snapshot/bundle names).
 
 ### Key env vars / config
 

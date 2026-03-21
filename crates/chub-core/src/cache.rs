@@ -183,7 +183,7 @@ pub fn get_cache_stats() -> CacheStats {
             let secs = ts / 1000;
             let days = secs / 86400;
             let tod = secs % 86400;
-            let (y, m, d) = crate::build::builder::days_to_date(days);
+            let (y, m, d) = crate::util::days_to_date(days);
             format!(
                 "{:04}-{:02}-{:02}T{:02}:{:02}:{:02}.000Z",
                 y,

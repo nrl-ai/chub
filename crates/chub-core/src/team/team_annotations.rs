@@ -45,7 +45,7 @@ fn team_annotations_dir() -> Option<PathBuf> {
 }
 
 fn team_annotation_path(entry_id: &str) -> Option<PathBuf> {
-    let safe = entry_id.replace('/', "--");
+    let safe = crate::util::sanitize_entry_id(entry_id);
     team_annotations_dir().map(|d| d.join(format!("{}.yaml", safe)))
 }
 
@@ -80,14 +80,7 @@ pub fn write_team_annotation(
         practices: vec![],
     });
 
-    let now = crate::build::builder::days_to_date(
-        std::time::SystemTime::now()
-            .duration_since(std::time::UNIX_EPOCH)
-            .unwrap_or_default()
-            .as_secs()
-            / 86400,
-    );
-    let date = format!("{:04}-{:02}-{:02}", now.0, now.1, now.2);
+    let date = crate::util::today_date();
 
     let entry = TeamAnnotationNote {
         author: author.to_string(),

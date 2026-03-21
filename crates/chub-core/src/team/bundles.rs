@@ -7,20 +7,8 @@ use crate::error::{Error, Result};
 use crate::team::pins;
 use crate::team::project::project_chub_dir;
 
-/// Validate that a name is safe for use as a filename (no path traversal).
 fn validate_name(name: &str) -> Result<()> {
-    if name.is_empty()
-        || name.contains('/')
-        || name.contains('\\')
-        || name.contains("..")
-        || name.starts_with('.')
-    {
-        return Err(Error::Config(format!(
-            "Invalid bundle name \"{}\": must not contain path separators or \"..\"",
-            name
-        )));
-    }
-    Ok(())
+    crate::util::validate_filename(name, "bundle")
 }
 
 /// A doc bundle — a curated, shareable collection of docs.

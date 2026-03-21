@@ -48,7 +48,7 @@ fn org_cache_dir() -> PathBuf {
 }
 
 fn org_cache_path(entry_id: &str) -> PathBuf {
-    let safe = entry_id.replace('/', "--");
+    let safe = crate::util::sanitize_entry_id(entry_id);
     org_cache_dir().join(format!("{}.json", safe))
 }
 
@@ -80,7 +80,7 @@ fn invalidate_cache(entry_id: &str) {
 }
 
 fn entry_id_to_path(entry_id: &str) -> String {
-    entry_id.replace('/', "--")
+    crate::util::sanitize_entry_id(entry_id)
 }
 
 fn make_client() -> Option<reqwest::Client> {
