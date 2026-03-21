@@ -17,22 +17,43 @@ Four kinds, each with a specific meaning:
 
 Pair `fix` with `issue` — they are most useful together.
 
-## Two storage tiers
+## Three storage tiers
 
-Annotations have two tiers with different semantics:
+Annotations have three tiers with different semantics:
 
 | Tier | Location | Semantics | Sharing |
 |------|----------|-----------|---------|
-| Personal | `~/.chub/annotations/<id>.json` | **Overwrite** — one note per entry, replaces previous | Local only |
-| Team | `.chub/annotations/<id>.yaml` | **Append** — adds to history, preserves author + date | Git-tracked |
+| 1 — Personal | `~/.chub/annotations/<id>.json` | **Overwrite** — one note per entry, replaces previous | Local only |
+| 2 — Team | `.chub/annotations/<id>.yaml` | **Append** — adds to history, preserves author + date | Git-tracked |
+| 3 — Org | Remote HTTP API | **Append** — org-wide baseline, locally cached | All teams |
 
-The team tier requires a `.chub/` project directory (created by `chub init`). When both tiers have notes for the same entry, both are shown — team notes first.
+Resolution order: Org annotations shown first (baseline), Team second (project overlay), Personal last (most specific, wins if conflict).
+
+The team tier requires a `.chub/` project directory (created by `chub init`). The org tier requires an `annotation_server` configured in `.chub/config.yaml` or the `CHUB_ANNOTATION_SERVER` env var.
+
+### Enabling Tier 3 (org)
+
+```yaml
+# .chub/config.yaml (URL is not sensitive — safe to commit)
+annotation_server:
+  url: https://annotations.internal.company.com
+  auto_push: false     # set true to mirror every team write to org tier
+  cache_ttl_secs: 3600 # local cache TTL (default: 1 hour)
+```
+
+```yaml
+# ~/.chub/config.yaml or CHUB_ANNOTATION_TOKEN env var (token is sensitive — personal only!)
+annotation_token: "your-secret-token"
+```
 
 ## Writing annotations
 
 ### CLI
 
 ```sh
+# Org annotation — write to org server (Tier 3)
+chub annotate openai/chat "Always set max_tokens" --kind practice --org
+
 # Team annotation — append to shared history
 chub annotate openai/chat "Use v4 streaming, not completions" --team
 
@@ -54,7 +75,7 @@ chub annotate openai/chat "My local WIP note"
 
 ### MCP (via agent)
 
-Agents write annotations using the `chub_annotate` MCP tool. In a project with `.chub/`, the tool automatically routes to the team tier:
+Agents write annotations using the `chub_annotate` MCP tool. In a project with `.chub/`, the tool automatically routes to the team tier. Use `scope` to target a specific tier:
 
 ```json
 { "id": "openai/chat", "kind": "issue", "severity": "high",
@@ -69,6 +90,11 @@ Agents write annotations using the `chub_annotate` MCP tool. In a project with `
 ```json
 { "id": "openai/chat", "kind": "practice",
   "note": "Always set max_tokens explicitly. Omitting it causes unbounded output on streaming requests." }
+```
+
+```json
+{ "id": "openai/chat", "kind": "practice",
+  "note": "Always set max_tokens explicitly.", "scope": "org" }
 ```
 
 ## Team annotation file format
@@ -175,24 +201,49 @@ Or via MCP:
 
 ```sh
 # Read annotations for a specific entry
+chub annotate openai/chat --org         # org annotations
 chub annotate openai/chat --team        # team annotations
 chub annotate openai/chat               # personal annotation
 
 # List all annotations
+chub annotate --list --org              # list all org annotations
 chub annotate --list --team             # all team annotations, grouped by kind
 chub annotate --list                    # all personal annotations
 
 # Remove annotations
+chub annotate openai/chat --clear --org
 chub annotate openai/chat --clear --team
 chub annotate openai/chat --clear
 ```
 
 Via MCP:
 ```json
-{ "id": "openai/chat" }          // read merged (team + personal)
-{ "list": true }                 // list all (auto-routes to team tier in projects)
-{ "id": "openai/chat", "clear": true }  // remove
+{ "id": "openai/chat" }                       // read merged (org + team + personal)
+{ "id": "openai/chat", "scope": "org" }       // read org annotation
+{ "list": true }                              // list all (auto-routes to team tier in projects)
+{ "list": true, "scope": "org" }              // list all org annotations
+{ "id": "openai/chat", "clear": true }        // remove (auto-routes)
+{ "id": "openai/chat", "clear": true, "scope": "org" }  // remove org annotation
 ```
+
+## Server API contract
+
+Teams who want to implement a compatible org annotation server must provide these endpoints:
+
+```text
+GET    /api/v1/annotations              → 200 [{TeamAnnotation}, ...]
+GET    /api/v1/annotations/:id          → 200 TeamAnnotation | 404
+POST   /api/v1/annotations/:id          → 200 TeamAnnotation
+       Body: {"note":"..","kind":"..","severity":"..","author":".."}
+DELETE /api/v1/annotations/:id          → 200 | 404
+
+Auth: Authorization: Bearer <token>   (optional if server doesn't require it)
+Content-Type: application/json
+Entry ID encoding: replace "/" with "--" in URL path segment
+                   e.g. "openai/chat" → "/api/v1/annotations/openai--chat"
+```
+
+The `TeamAnnotation` response shape is the same as team annotation YAML files, serialized as JSON.
 
 ## Pin notices
 

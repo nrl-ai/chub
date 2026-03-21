@@ -4,6 +4,7 @@ pub mod bundles;
 pub mod context;
 pub mod detect;
 pub mod freshness;
+pub mod org_annotations;
 pub mod pins;
 pub mod profiles;
 pub mod project;

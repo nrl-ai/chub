@@ -6,6 +6,19 @@ use serde::{Deserialize, Serialize};
 use crate::config::SourceConfig;
 use crate::error::{Error, Result};
 
+/// Configuration for the Tier 3 hosted annotation server.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct AnnotationServerConfig {
+    /// Base URL of the annotation server (e.g. "https://annotations.company.com").
+    pub url: String,
+    /// When true, every Tier 2 (team) write is also pushed to the org server.
+    #[serde(default)]
+    pub auto_push: bool,
+    /// How long (seconds) to cache org annotations locally. Default 3600 (1 hour).
+    #[serde(default)]
+    pub cache_ttl_secs: Option<u64>,
+}
+
 /// Search upward from CWD (or a given path) for a `.chub/` directory.
 /// If `CHUB_PROJECT_DIR` env var is set, uses that directly (useful for testing).
 pub fn find_project_root(start: Option<&Path>) -> Option<PathBuf> {
@@ -61,6 +74,8 @@ pub struct ProjectFileConfig {
     pub agent_rules: Option<AgentRules>,
     #[serde(default)]
     pub auto_profile: Option<Vec<AutoProfileEntry>>,
+    #[serde(default)]
+    pub annotation_server: Option<AnnotationServerConfig>,
 }
 
 /// Agent rules configuration for generating CLAUDE.md, .cursorrules, etc.
@@ -143,6 +158,11 @@ pub fn init_project(from_deps: bool, monorepo: bool) -> Result<PathBuf> {
 #   include_annotation_policy: true  # add standing instructions for agents to write annotations
 #   targets:
 #     - claude.md
+
+# annotation_server:
+#   url: https://annotations.internal.company.com
+#   auto_push: false  # set true to mirror team writes to org tier
+#   cache_ttl_secs: 3600
 "#;
     fs::write(chub_dir.join("config.yaml"), config_content)?;
 

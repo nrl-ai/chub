@@ -30,6 +30,12 @@ refresh_interval: 86400       # cache TTL in seconds
 telemetry: false
 feedback: false
 
+# Tier 3 org annotation server (URL is not sensitive — safe to commit)
+annotation_server:
+  url: https://annotations.internal.company.com
+  auto_push: false     # set true to mirror every team write to org tier
+  cache_ttl_secs: 3600 # local cache TTL in seconds (default: 3600)
+
 # Agent rules
 agent_rules:
   global:
@@ -61,6 +67,18 @@ auto_profile:
 | `CHUB_DIR` | Override `~/.chub` data directory |
 | `CHUB_BUNDLE_URL` | Override the default CDN URL |
 | `CHUB_PROJECT_DIR` | Override project root (for testing) |
+| `CHUB_ANNOTATION_SERVER` | Override org annotation server URL |
+| `CHUB_ANNOTATION_TOKEN` | Auth token for org annotation server (personal only, never commit) |
+
+## annotation_server config fields
+
+The `annotation_server` key is part of `.chub/config.yaml` (project config, safe to commit). The token is **not** stored here — use `~/.chub/config.yaml` `annotation_token` or the `CHUB_ANNOTATION_TOKEN` env var.
+
+| Field | Type | Default | Description |
+|---|---|---|---|
+| `url` | string | — | Base URL of the annotation server (required) |
+| `auto_push` | bool | `false` | Mirror every team (Tier 2) write to the org server |
+| `cache_ttl_secs` | integer | `3600` | How long to cache org annotations locally (seconds) |
 
 ## pins.yaml
 

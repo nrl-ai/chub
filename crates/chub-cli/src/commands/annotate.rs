@@ -15,7 +15,7 @@ pub struct AnnotateArgs {
     /// Annotation text
     note: Option<String>,
 
-    /// Remove annotation (respects --team flag: removes team annotation when --team is set)
+    /// Remove annotation (respects --team/--org flag)
     #[arg(long)]
     clear: bool,
 
@@ -31,7 +31,11 @@ pub struct AnnotateArgs {
     #[arg(long)]
     personal: bool,
 
-    /// Author name for team annotations
+    /// Write to org annotation server (Tier 3 — requires annotation_server in config)
+    #[arg(long)]
+    org: bool,
+
+    /// Author name for team/org annotations
     #[arg(long)]
     author: Option<String>,
 
@@ -49,9 +53,139 @@ fn parse_kind(s: Option<&str>) -> AnnotationKind {
         .unwrap_or(AnnotationKind::Note)
 }
 
-pub fn run(args: AnnotateArgs, json: bool) {
+fn get_author(explicit: Option<&str>) -> String {
+    explicit.map(|s| s.to_string()).unwrap_or_else(|| {
+        std::env::var("USER")
+            .or_else(|_| std::env::var("USERNAME"))
+            .unwrap_or_else(|_| "unknown".to_string())
+    })
+}
+
+fn print_team_annotation_list(annotations: &[chub_core::team::team_annotations::TeamAnnotation]) {
+    for a in annotations {
+        eprintln!("{}", a.id.bold());
+        if !a.issues.is_empty() {
+            eprintln!("  {}", "Issues:".yellow());
+            for note in &a.issues {
+                let sev = note
+                    .severity
+                    .as_deref()
+                    .map(|s| format!(" [{}]", s))
+                    .unwrap_or_default();
+                eprintln!(
+                    "    {} {}{} {}",
+                    note.author.cyan(),
+                    format!("({})", note.date).dimmed(),
+                    sev.yellow(),
+                    note.note
+                );
+            }
+        }
+        if !a.fixes.is_empty() {
+            eprintln!("  {}", "Fixes:".green());
+            for note in &a.fixes {
+                eprintln!(
+                    "    {} {} {}",
+                    note.author.cyan(),
+                    format!("({})", note.date).dimmed(),
+                    note.note
+                );
+            }
+        }
+        if !a.practices.is_empty() {
+            eprintln!("  {}", "Practices:".blue());
+            for note in &a.practices {
+                eprintln!(
+                    "    {} {} {}",
+                    note.author.cyan(),
+                    format!("({})", note.date).dimmed(),
+                    note.note
+                );
+            }
+        }
+        if !a.notes.is_empty() {
+            eprintln!("  {}", "Notes:".dimmed());
+            for note in &a.notes {
+                eprintln!(
+                    "    {} {} {}",
+                    note.author.cyan(),
+                    format!("({})", note.date).dimmed(),
+                    note.note
+                );
+            }
+        }
+        eprintln!();
+    }
+}
+
+fn print_team_annotation_single(id: &str, ann: &chub_core::team::team_annotations::TeamAnnotation) {
+    eprintln!("{}", id.bold());
+    if !ann.issues.is_empty() {
+        eprintln!("  {}", "Issues:".yellow());
+        for note in &ann.issues {
+            let sev = note
+                .severity
+                .as_deref()
+                .map(|s| format!(" [{}]", s))
+                .unwrap_or_default();
+            eprintln!(
+                "    {} {}{} {}",
+                note.author.cyan(),
+                format!("({})", note.date).dimmed(),
+                sev.yellow(),
+                note.note
+            );
+        }
+    }
+    if !ann.fixes.is_empty() {
+        eprintln!("  {}", "Fixes:".green());
+        for note in &ann.fixes {
+            eprintln!(
+                "    {} {} {}",
+                note.author.cyan(),
+                format!("({})", note.date).dimmed(),
+                note.note
+            );
+        }
+    }
+    if !ann.practices.is_empty() {
+        eprintln!("  {}", "Practices:".blue());
+        for note in &ann.practices {
+            eprintln!(
+                "    {} {} {}",
+                note.author.cyan(),
+                format!("({})", note.date).dimmed(),
+                note.note
+            );
+        }
+    }
+    for note in &ann.notes {
+        eprintln!(
+            "  {} {} {}",
+            note.author.cyan(),
+            format!("({})", note.date).dimmed(),
+            note.note
+        );
+    }
+}
+
+pub async fn run(args: AnnotateArgs, json: bool) {
     if args.list {
-        if args.team {
+        if args.org {
+            let annotations = chub_core::team::org_annotations::list_org_annotations().await;
+            if json {
+                println!(
+                    "{}",
+                    serde_json::to_string_pretty(&annotations).unwrap_or_default()
+                );
+            } else {
+                if annotations.is_empty() {
+                    eprintln!("No org annotations.");
+                    return;
+                }
+                print_team_annotation_list(&annotations);
+            }
+        } else if args.team {
             // List team annotations
             let annotations = chub_core::team::team_annotations::list_team_annotations();
             if json {
@@ -64,60 +198,7 @@ pub fn run(args: AnnotateArgs, json: bool) {
                     eprintln!("No team annotations.");
                     return;
                 }
-                for a in &annotations {
-                    eprintln!("{}", a.id.bold());
-                    if !a.issues.is_empty() {
-                        eprintln!("  {}", "Issues:".yellow());
-                        for note in &a.issues {
-                            let sev = note
-                                .severity
-                                .as_deref()
-                                .map(|s| format!(" [{}]", s))
-                                .unwrap_or_default();
-                            eprintln!(
-                                "    {} {}{} {}",
-                                note.author.cyan(),
-                                format!("({})", note.date).dimmed(),
-                                sev.yellow(),
-                                note.note
-                            );
-                        }
-                    }
-                    if !a.fixes.is_empty() {
-                        eprintln!("  {}", "Fixes:".green());
-                        for note in &a.fixes {
-                            eprintln!(
-                                "    {} {} {}",
-                                note.author.cyan(),
-                                format!("({})", note.date).dimmed(),
-                                note.note
-                            );
-                        }
-                    }
-                    if !a.practices.is_empty() {
-                        eprintln!("  {}", "Practices:".blue());
-                        for note in &a.practices {
-                            eprintln!(
-                                "    {} {} {}",
-                                note.author.cyan(),
-                                format!("({})", note.date).dimmed(),
-                                note.note
-                            );
-                        }
-                    }
-                    if !a.notes.is_empty() {
-                        eprintln!("  {}", "Notes:".dimmed());
-                        for note in &a.notes {
-                            eprintln!(
-                                "    {} {} {}",
-                                note.author.cyan(),
-                                format!("({})", note.date).dimmed(),
-                                note.note
-                            );
-                        }
-                    }
-                    eprintln!();
-                }
+                print_team_annotation_list(&annotations);
             }
         } else {
             let annotations = list_annotations();
@@ -158,33 +239,36 @@ pub fn run(args: AnnotateArgs, json: bool) {
     };
 
     if args.clear {
-        // --clear respects --team: removes team annotation when --team is set
-        let removed = if args.team {
-            chub_core::team::team_annotations::clear_team_annotation(&id)
+        let (scope, removed) = if args.org {
+            match chub_core::team::org_annotations::clear_org_annotation(&id).await {
+                Ok(r) => ("org", r),
+                Err(e) => {
+                    output::error(&format!("Failed to clear org annotation: {}", e), json);
+                    std::process::exit(1);
+                }
+            }
+        } else if args.team {
+            (
+                "team",
+                chub_core::team::team_annotations::clear_team_annotation(&id),
+            )
         } else {
-            clear_annotation(&id)
+            ("personal", clear_annotation(&id))
         };
+
         if json {
             println!(
                 "{}",
                 serde_json::json!({
                     "id": id,
                     "cleared": removed,
-                    "scope": if args.team { "team" } else { "personal" },
+                    "scope": scope,
                 })
             );
         } else if removed {
-            eprintln!(
-                "{} annotation cleared for {}.",
-                if args.team { "Team" } else { "Personal" },
-                id.bold()
-            );
+            eprintln!("{} annotation cleared for {}.", scope, id.bold());
         } else {
-            eprintln!(
-                "No {} annotation found for {}.",
-                if args.team { "team" } else { "personal" },
-                id.bold()
-            );
+            eprintln!("No {} annotation found for {}.", scope, id.bold());
         }
         return;
     }
@@ -192,13 +276,46 @@ pub fn run(args: AnnotateArgs, json: bool) {
     if let Some(note) = args.note {
         let kind = parse_kind(args.kind.as_deref());
 
-        if args.team {
+        if args.org {
+            let author = get_author(args.author.as_deref());
+            match chub_core::team::org_annotations::write_org_annotation(
+                &id,
+                &note,
+                &author,
+                kind.clone(),
+                args.severity.clone(),
+            )
+            .await
+            {
+                Ok(_) => {
+                    if json {
+                        println!(
+                            "{}",
+                            serde_json::json!({
+                                "status": "saved",
+                                "id": id,
+                                "scope": "org",
+                                "kind": kind.as_str(),
+                                "author": author,
+                            })
+                        );
+                    } else {
+                        output::success(&format!(
+                            "Org {} saved for {} (by {})",
+                            kind.as_str(),
+                            id.bold(),
+                            author
+                        ));
+                    }
+                }
+                Err(e) => {
+                    output::error(&format!("Failed to write org annotation: {}", e), json);
+                    std::process::exit(1);
+                }
+            }
+        } else if args.team {
             // Write team annotation (append semantics — adds to the appropriate section)
-            let author = args.author.unwrap_or_else(|| {
-                std::env::var("USER")
-                    .or_else(|_| std::env::var("USERNAME"))
-                    .unwrap_or_else(|_| "unknown".to_string())
-            });
+            let author = get_author(args.author.as_deref());
             match chub_core::team::team_annotations::write_team_annotation(
                 &id,
                 &note,
@@ -226,6 +343,21 @@ pub fn run(args: AnnotateArgs, json: bool) {
                             author
                         ));
                     }
+                    // After successful team write, check auto_push
+                    let auto_push =
+                        chub_core::team::org_annotations::get_annotation_server_config()
+                            .map(|c| c.auto_push)
+                            .unwrap_or(false);
+                    if auto_push {
+                        let _ = chub_core::team::org_annotations::write_org_annotation(
+                            &id,
+                            &note,
+                            &author,
+                            kind.clone(),
+                            args.severity.clone(),
+                        )
+                        .await;
+                    }
                 }
                 None => {
                     output::error(
@@ -251,59 +383,24 @@ pub fn run(args: AnnotateArgs, json: bool) {
     }
 
     // Read mode: show existing annotation
-    if args.team {
+    if args.org {
+        if let Some(ann) = chub_core::team::org_annotations::read_org_annotation(&id).await {
+            if json {
+                println!("{}", serde_json::to_string_pretty(&ann).unwrap_or_default());
+            } else {
+                print_team_annotation_single(&id, &ann);
+            }
+        } else if json {
+            println!("{}", serde_json::json!({ "id": id, "notes": [] }));
+        } else {
+            eprintln!("No org annotation for {}.", id.bold());
+        }
+    } else if args.team {
         if let Some(ann) = chub_core::team::team_annotations::read_team_annotation(&id) {
             if json {
                 println!("{}", serde_json::to_string_pretty(&ann).unwrap_or_default());
             } else {
-                eprintln!("{}", id.bold());
-                if !ann.issues.is_empty() {
-                    eprintln!("  {}", "Issues:".yellow());
-                    for note in &ann.issues {
-                        let sev = note
-                            .severity
-                            .as_deref()
-                            .map(|s| format!(" [{}]", s))
-                            .unwrap_or_default();
-                        eprintln!(
-                            "    {} {}{} {}",
-                            note.author.cyan(),
-                            format!("({})", note.date).dimmed(),
-                            sev.yellow(),
-                            note.note
-                        );
-                    }
-                }
-                if !ann.fixes.is_empty() {
-                    eprintln!("  {}", "Fixes:".green());
-                    for note in &ann.fixes {
-                        eprintln!(
-                            "    {} {} {}",
-                            note.author.cyan(),
-                            format!("({})", note.date).dimmed(),
-                            note.note
-                        );
-                    }
-                }
-                if !ann.practices.is_empty() {
-                    eprintln!("  {}", "Practices:".blue());
-                    for note in &ann.practices {
-                        eprintln!(
-                            "    {} {} {}",
-                            note.author.cyan(),
-                            format!("({})", note.date).dimmed(),
-                            note.note
-                        );
-                    }
-                }
-                for note in &ann.notes {
-                    eprintln!(
-                        "  {} {} {}",
-                        note.author.cyan(),
-                        format!("({})", note.date).dimmed(),
-                        note.note
-                    );
-                }
+                print_team_annotation_single(&id, &ann);
             }
         } else if json {
             println!("{}", serde_json::json!({ "id": id, "notes": [] }));

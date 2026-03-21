@@ -102,7 +102,7 @@ async fn main() {
             return;
         }
         Commands::Annotate(args) => {
-            commands::annotate::run(args, cli.json);
+            commands::annotate::run(args, cli.json).await;
             return;
         }
         Commands::Init(args) => {

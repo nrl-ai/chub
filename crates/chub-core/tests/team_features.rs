@@ -906,3 +906,101 @@ fn project_init_creates_structure() {
     let config = chub_core::team::project::load_project_config();
     assert!(config.is_some());
 }
+
+// ==================== ORG ANNOTATIONS (TIER 3) ====================
+
+#[test]
+fn org_annotation_server_config_from_env() {
+    let _guard = ENV_MUTEX.lock().unwrap_or_else(|e| e.into_inner());
+    unsafe {
+        std::env::set_var("CHUB_ANNOTATION_SERVER", "https://example.com");
+    }
+    let config = chub_core::team::org_annotations::get_annotation_server_config();
+    assert!(config.is_some());
+    assert_eq!(config.unwrap().url, "https://example.com");
+    unsafe {
+        std::env::remove_var("CHUB_ANNOTATION_SERVER");
+    }
+}
+
+#[test]
+fn org_annotation_server_config_missing() {
+    let _guard = ENV_MUTEX.lock().unwrap_or_else(|e| e.into_inner());
+    unsafe {
+        std::env::remove_var("CHUB_ANNOTATION_SERVER");
+    }
+    // Without .chub/config.yaml having annotation_server set, should return None
+    // (project_chub_dir() will look upward from test CWD — in CI there's no .chub)
+    // Just test that it doesn't panic
+    let _ = chub_core::team::org_annotations::get_annotation_server_config();
+}
+
+#[test]
+fn get_annotation_token_from_env() {
+    let _guard = ENV_MUTEX.lock().unwrap_or_else(|e| e.into_inner());
+    unsafe {
+        std::env::set_var("CHUB_ANNOTATION_TOKEN", "test-token-123");
+    }
+    let token = chub_core::config::get_annotation_token();
+    assert_eq!(token, Some("test-token-123".to_string()));
+    unsafe {
+        std::env::remove_var("CHUB_ANNOTATION_TOKEN");
+    }
+}
+
+#[test]
+fn org_cache_operations() {
+    let dir = tempfile::tempdir().unwrap();
+    let _guard = ENV_MUTEX.lock().unwrap_or_else(|e| e.into_inner());
+    unsafe {
+        std::env::set_var("CHUB_DIR", dir.path().to_str().unwrap());
+    }
+
+    // Clearing a nonexistent cache entry should not panic
+    chub_core::team::org_annotations::invalidate_org_cache("openai/chat");
+    chub_core::team::org_annotations::clear_org_cache();
+
+    unsafe {
+        std::env::remove_var("CHUB_DIR");
+    }
+}
+
+#[test]
+fn merged_annotation_without_org_tier() {
+    let rt = tokio::runtime::Runtime::new().unwrap();
+    rt.block_on(async {
+        let dir = tempfile::tempdir().unwrap();
+        let _guard = ENV_MUTEX.lock().unwrap_or_else(|e| e.into_inner());
+        unsafe {
+            std::env::remove_var("CHUB_ANNOTATION_SERVER");
+            std::env::set_var("CHUB_DIR", dir.path().to_str().unwrap());
+            std::env::set_var("CHUB_PROJECT_DIR", dir.path().to_str().unwrap());
+        }
+
+        // Create .chub/annotations dir
+        let chub_dir = dir.path().join(".chub");
+        std::fs::create_dir_all(chub_dir.join("annotations")).unwrap();
+
+        // Write a personal annotation
+        chub_core::annotations::write_annotation(
+            "openai/chat",
+            "personal note",
+            chub_core::annotations::AnnotationKind::Note,
+            None,
+        );
+
+        let merged =
+            chub_core::team::team_annotations::get_merged_annotation_async("openai/chat").await;
+        assert!(merged.is_some());
+        let text = merged.unwrap();
+        assert!(text.contains("personal note"));
+        assert!(text.contains("[Personal note"));
+        // No "[Org" prefix since no server configured
+        assert!(!text.contains("[Org"));
+
+        unsafe {
+            std::env::remove_var("CHUB_DIR");
+            std::env::remove_var("CHUB_PROJECT_DIR");
+        }
+    });
+}

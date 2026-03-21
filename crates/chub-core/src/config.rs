@@ -23,6 +23,7 @@ pub struct Config {
     pub telemetry: bool,
     pub feedback: bool,
     pub telemetry_url: String,
+    pub annotation_token: Option<String>,
 }
 
 impl Default for Config {
@@ -40,6 +41,7 @@ impl Default for Config {
             telemetry: true,
             feedback: true,
             telemetry_url: DEFAULT_TELEMETRY_URL.to_string(),
+            annotation_token: None,
         }
     }
 }
@@ -65,6 +67,8 @@ struct FileConfig {
     feedback: Option<bool>,
     #[serde(default)]
     telemetry_url: Option<String>,
+    #[serde(default)]
+    annotation_token: Option<String>,
 }
 
 /// Get the chub data directory (~/.chub or CHUB_DIR env var).
@@ -146,7 +150,19 @@ pub fn load_config() -> Config {
             .telemetry_url
             .or(file_config.telemetry_url)
             .unwrap_or(defaults.telemetry_url),
+        // annotation_token intentionally comes from personal config only —
+        // never from project config to avoid accidental token commits.
+        annotation_token: file_config.annotation_token,
     }
+}
+
+/// Get the annotation server auth token.
+/// Priority: CHUB_ANNOTATION_TOKEN env var > ~/.chub/config.yaml annotation_token.
+/// Token is intentionally NOT read from .chub/config.yaml to prevent accidental commits.
+pub fn get_annotation_token() -> Option<String> {
+    std::env::var("CHUB_ANNOTATION_TOKEN")
+        .ok()
+        .or_else(|| load_config().annotation_token)
 }
 
 /// Search upward from CWD for a `.chub/` directory (project-level).

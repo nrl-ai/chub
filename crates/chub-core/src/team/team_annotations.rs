@@ -150,6 +150,41 @@ pub fn list_team_annotations() -> Vec<TeamAnnotation> {
         .collect()
 }
 
+/// Format a TeamAnnotation's entries as display strings with a given tier label prefix.
+fn format_tier_parts(ann: &TeamAnnotation, tier_label: &str) -> Vec<String> {
+    let mut parts = Vec::new();
+    for note in &ann.issues {
+        let sev = note
+            .severity
+            .as_deref()
+            .map(|s| format!(" ({})", s))
+            .unwrap_or_default();
+        parts.push(format!(
+            "[{} issue{} — {} ({})] {}",
+            tier_label, sev, note.author, note.date, note.note
+        ));
+    }
+    for note in &ann.fixes {
+        parts.push(format!(
+            "[{} fix — {} ({})] {}",
+            tier_label, note.author, note.date, note.note
+        ));
+    }
+    for note in &ann.practices {
+        parts.push(format!(
+            "[{} practice — {} ({})] {}",
+            tier_label, note.author, note.date, note.note
+        ));
+    }
+    for note in &ann.notes {
+        parts.push(format!(
+            "[{} — {} ({})] {}",
+            tier_label, note.author, note.date, note.note
+        ));
+    }
+    parts
+}
+
 /// Merge team + personal annotations into a display string, grouped by kind.
 /// Team annotations are shown first (issues → fixes → practices → notes),
 /// followed by any personal annotation.
@@ -159,48 +194,55 @@ pub fn get_merged_annotation(entry_id: &str) -> Option<String> {
 
     let mut parts = Vec::new();
 
-    if let Some(ref team_ann) = team {
-        for note in &team_ann.issues {
-            let severity_tag = note
-                .severity
-                .as_deref()
-                .map(|s| format!(" ({})", s))
-                .unwrap_or_default();
-            parts.push(format!(
-                "[Team issue{} — {} ({})] {}",
-                severity_tag, note.author, note.date, note.note
-            ));
-        }
-        for note in &team_ann.fixes {
-            parts.push(format!(
-                "[Team fix — {} ({})] {}",
-                note.author, note.date, note.note
-            ));
-        }
-        for note in &team_ann.practices {
-            parts.push(format!(
-                "[Team practice — {} ({})] {}",
-                note.author, note.date, note.note
-            ));
-        }
-        for note in &team_ann.notes {
-            parts.push(format!(
-                "[Team — {} ({})] {}",
-                note.author, note.date, note.note
-            ));
-        }
+    if let Some(ref ann) = team {
+        parts.extend(format_tier_parts(ann, "Team"));
     }
 
-    if let Some(ref personal_ann) = personal {
-        let kind_tag = personal_ann.kind.as_str();
-        let severity_tag = personal_ann
+    if let Some(ref p) = personal {
+        let kind_tag = p.kind.as_str();
+        let sev = p
             .severity
             .as_deref()
             .map(|s| format!(" ({})", s))
             .unwrap_or_default();
         parts.push(format!(
             "[Personal {}{} — {}] {}",
-            kind_tag, severity_tag, personal_ann.updated_at, personal_ann.note
+            kind_tag, sev, p.updated_at, p.note
+        ));
+    }
+
+    if parts.is_empty() {
+        None
+    } else {
+        Some(parts.join("\n"))
+    }
+}
+
+/// Merge all three tiers: Org baseline → Team overlay → Personal wins.
+/// Falls back gracefully if Tier 3 is not configured or unreachable.
+pub async fn get_merged_annotation_async(entry_id: &str) -> Option<String> {
+    let org = crate::team::org_annotations::read_org_annotation(entry_id).await;
+    let team = read_team_annotation(entry_id);
+    let personal = crate::annotations::read_annotation(entry_id);
+
+    let mut parts = Vec::new();
+
+    if let Some(ref ann) = org {
+        parts.extend(format_tier_parts(ann, "Org"));
+    }
+    if let Some(ref ann) = team {
+        parts.extend(format_tier_parts(ann, "Team"));
+    }
+    if let Some(ref p) = personal {
+        let kind_tag = p.kind.as_str();
+        let sev = p
+            .severity
+            .as_deref()
+            .map(|s| format!(" ({})", s))
+            .unwrap_or_default();
+        parts.push(format!(
+            "[Personal {}{} — {}] {}",
+            kind_tag, sev, p.updated_at, p.note
         ));
     }
 
