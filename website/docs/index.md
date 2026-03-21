@@ -3,8 +3,8 @@ layout: home
 
 hero:
   name: Chub
-  text: Curated docs for AI coding agents — that get smarter over time
-  tagline: Self-learning knowledge base. Team-first. Git-tracked. Built in Rust.
+  text: Give your AI agents the context to get it right the first time
+  tagline: Curated docs that learn from every session. Team knowledge that compounds. Built in Rust.
   image:
     src: /logo.svg
     alt: Chub
@@ -24,8 +24,8 @@ features:
     title: Lightning Fast
     details: ~44ms cold start. 10 MB single binary. 19x faster search, 5x faster validation. Zero runtime dependencies.
   - icon: 🧠
-    title: Self-Learning Agents
-    details: Agents write back what they discover — bugs, fixes, and best practices. Structured by kind (issue/fix/practice). Every session makes the knowledge base smarter.
+    title: Agents That Learn
+    details: Agents write back what they discover — bugs, fixes, and validated practices. The knowledge compounds. Your team's AI never hits the same gotcha twice.
   - icon: 📌
     title: Doc Pinning
     details: Lock specific doc versions for your team. Every developer and every AI agent uses the same reference material.
@@ -150,4 +150,4 @@ Measured on the production corpus (1,553 docs, 7 skills). Median of 5 runs. Repr
 | Self-hosted registry | Yes | No | **Yes** |
 | Format compatible | — | — | **Identical to Context Hub** |
 
-Built on [Context Hub](https://github.com/andrewyng/context-hub) by Andrew Ng. Fully format-compatible. The key differentiator from Context7: Chub's knowledge base grows smarter with every agent session.
+Built on [Context Hub](https://github.com/andrewyng/context-hub) by Andrew Ng. Fully format-compatible. Complementary to Context7. The difference: Chub's knowledge base grows smarter with every session — because learning is a natural skill for coding agents. [Read the full story.](/guide/why-chub)

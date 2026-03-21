@@ -1,49 +1,84 @@
 # Why Chub
 
-[Context Hub](https://github.com/andrewyng/context-hub) by Andrew Ng solves a real problem: coding agents hallucinate APIs and forget what they learn between sessions. Its solution — curated, versioned markdown docs served via CLI and MCP — works.
+## The problem we lived with
 
-Chub is built on that foundation and adds four things:
+We've all been there. You ask your AI coding agent to integrate Stripe webhooks. It writes confident, clean code — using an API that was deprecated two versions ago. You correct it. It apologizes, rewrites. This time it uses `express.json()` before the webhook signature check, which silently breaks verification. You fix it again. Next week, a teammate hits the exact same issue. The agent has no memory. It learned nothing.
 
-## 1. Performance
+This is not a model problem. This is a context problem.
 
-A native Rust binary replaces the Node.js runtime:
+AI coding agents are powerful reasoners, but they operate in a knowledge vacuum. They don't know which API version your team uses. They don't know about the gotcha your senior dev discovered last Tuesday. They apply general rules to specific codebases — and when those general rules are wrong, the whole team pays for it in wasted cycles, reverted PRs, and eroded trust.
 
-| Metric | Context Hub (JS) | Chub (Rust) | Improvement |
+We've watched agents go in circles on problems that a single line of context would have prevented.
+
+## Why we were excited about Context Hub
+
+When Andrew Ng's team released [Context Hub](https://github.com/andrewyng/context-hub), we saw someone finally framing the problem correctly. Instead of hoping models would know every API, Context Hub gave agents a curated library of versioned documentation — accurate, maintained, and retrievable on demand.
+
+The idea was right. Give agents the docs they need, when they need them. Stop relying on training data that's months out of date.
+
+We started using it. It helped. Agents stopped hallucinating API signatures as often. But the more we used it, the more we noticed what was missing.
+
+## What was still missing
+
+Serving docs is necessary but not sufficient. The most valuable knowledge on any team isn't in public documentation — it's in the hard-won lessons that developers accumulate through debugging, shipping, and reviewing each other's code:
+
+- *"That endpoint requires raw body parsing — don't use JSON middleware before it."*
+- *"We're locked to v15.0.0 until the migration is done."*
+- *"The batch endpoint is 10x cheaper than individual calls for our use case."*
+
+None of that is on the public internet. No doc server will ever have it. And without it, agents keep rediscovering the same pitfalls — burning time, introducing bugs, and requiring human intervention for problems that were already solved.
+
+We also noticed that Context7 — which had gained significant traction — was solving a related but different problem. Context7 crawls public library docs and serves them fresh. That's valuable. But it's a read-only pipe. The agent consumes docs, uses them, and whatever it learns in the process evaporates when the session ends.
+
+We wanted something more. We wanted agents that **learn**.
+
+## The insight: learning is a natural skill for coding agents
+
+Think about how a good developer grows. They don't just read documentation — they build, hit problems, figure out workarounds, and share what they learned with the team. Over time, the team's collective knowledge compounds. New hires ramp up faster because the hard lessons are already captured.
+
+Why shouldn't AI agents work the same way?
+
+Learning — recording what worked, what broke, what to avoid — should be a natural capability of any coding agent. Not a nice-to-have. A core skill. An agent that uses a library, discovers a gotcha, and writes it down for the next agent is fundamentally more valuable than one that just follows generic rules.
+
+This is the thesis behind Chub: **the knowledge base should get smarter every time an agent touches it.**
+
+## So we built Chub
+
+We took the foundation Context Hub laid down — curated docs, versioned entries, CLI + MCP serving — and rebuilt it in Rust with three goals:
+
+### Make it fast enough to disappear
+
+An MCP tool that takes a full second to respond breaks the agent's flow. We rewrote the search pipeline with BM25 inverted indexing instead of linear scan, compiled to a native binary, and got search down from 1,060ms to 56ms. Cold start: 44ms. The tool should feel instant — like it was always part of the agent's mind.
+
+| Operation | Context Hub (JS) | Chub (Rust) | Improvement |
 |---|---|---|---|
 | Search | 1,060 ms | **56 ms** | **19x faster** |
 | Validate only | 1,920 ms | **380 ms** | **5x faster** |
 | Build (1,560 entries) | 3,460 ms | **1,770 ms** | **2x faster** |
 | Get (cached doc) | 148 ms | **63 ms** | **2.3x faster** |
-| Cold start (`--help`) | 131 ms | **44 ms** | **3x faster** |
-| Package size | ~22 MB | **10 MB** | **2.2x smaller** |
+| Cold start | 131 ms | **44 ms** | **3x faster** |
 | Peak memory (build) | ~122 MB | **~23 MB** | **5.3x less** |
-| Runtime dependency | Node.js 20+ | **None** | Single binary |
+| Package size | ~22 MB | **10 MB** | Single binary, no runtime deps |
 
-Measured on Windows 11 with the production corpus (1,553 docs, 7 skills). Median of 5 runs. Reproduce with `./scripts/benchmark.sh`.
+### Make agents that learn from every session
 
-## 2. Self-Learning Agents
-
-This is the key differentiator from both Context Hub and Context7.
-
-Context7 and Context Hub serve docs. Chub also collects knowledge back from agents.
-
-Every time an agent resolves something non-obvious — a broken parameter, an undocumented gotcha, a workaround that actually works — it writes a structured annotation. Future agents that fetch the same doc see it automatically. The knowledge base improves with every session.
+When an agent resolves something non-obvious, it should write that knowledge back — structured, categorized, and automatically surfaced to future agents. We built a three-tier annotation system:
 
 **Structured annotation kinds:**
 
 | Kind | What it captures |
 |------|-----------------|
 | `issue` | Confirmed bug, broken param, misleading example |
-| `fix` | Workaround that resolves the issue |
+| `fix` | Workaround that actually resolves the issue |
 | `practice` | Convention or pattern the team has validated |
 | `note` | General observation |
 
-**What Context7 shows an agent:**
+**What a generic doc server shows an agent:**
 ```
 [openai/chat docs — official content only]
 ```
 
-**What Chub shows an agent:**
+**What Chub shows the same agent:**
 ```
 [openai/chat docs — official content]
 ---
@@ -52,60 +87,60 @@ Every time an agent resolves something non-obvious — a broken parameter, an un
 [Team practice — alice] Always set max_tokens; omitting it causes unbounded streaming cost
 ```
 
-The second agent never has to discover any of this the hard way.
+The second agent never has to discover any of this the hard way. Every session makes the next one better.
 
-**Annotation policy in CLAUDE.md:** set `include_annotation_policy: true` in your agent config to give every agent standing instructions to write back what it discovers — without repeating yourself in every session.
+**Three storage tiers** scale from solo developer to enterprise:
+- **Personal** (`~/.chub/`) — your own notes, your machine
+- **Team** (`.chub/` in repo) — git-tracked, shared via version control
+- **Org** (annotation server) — company-wide knowledge, cached locally
 
-**Three storage tiers:** personal (`~/.chub/`), team/repo (`.chub/`), and org-wide via a hosted annotation server. Each tier is additive; personal annotations always win.
+### Make teams work as one
 
-## 3. Team Features
+Individual developers can get by with ad-hoc context. Teams cannot. When five developers and their AI agents are working on the same codebase, you need:
 
-Things an individual tool doesn't need but a team does:
-
-- **Doc pinning** — lock versions so agents can't use outdated APIs
-- **Shared annotations** — structured by kind (issue/fix/practice), committed to git, surfaced automatically
-- **Context profiles** — backend devs get API docs, frontend gets UI docs, inherited from a shared base
-- **Agent config sync** — one source of truth for CLAUDE.md, .cursorrules, AGENTS.md, and more
-- **Project context** — architecture docs, conventions, runbooks served alongside public docs
-- **Dep auto-detection** — scan 9 file types and auto-pin matching docs
-- **Doc snapshots** — point-in-time pin captures for reproducible builds
+- **Doc pinning** — lock specific versions so every agent references the same API
+- **Context profiles** — backend devs get API docs, frontend gets UI docs, with shared base rules inherited automatically
+- **Agent config sync** — one source of truth that generates CLAUDE.md, .cursorrules, AGENTS.md, and 7 more targets
+- **Project context** — architecture decisions, conventions, runbooks — served alongside public docs via MCP
+- **Dep auto-detection** — scan your package.json, Cargo.toml, requirements.txt (9 file types) and auto-pin matching docs
+- **Doc snapshots** — point-in-time captures for reproducible builds
 - **Freshness checks** — detect when pinned doc versions lag behind installed packages
 
-## 4. Full Compatibility
+All of this lives in `.chub/` inside your repo. If it's not in git, it doesn't exist for the team.
 
-Identical registry format, search index, and config schema. Content authored for Context Hub works in Chub without changes. The switch is a drop-in replacement.
+## Respecting what came before
 
-## Chub vs Context7
+We want to be clear about where we stand.
 
-Context7 (~50K GitHub stars) validates strong market demand for up-to-date docs in AI coding tools. It solves the same core problem: agents hallucinating APIs.
+Context Hub created this category. Andrew Ng's team saw that agents need curated documentation and built the infrastructure to serve it. Chub is fully format-compatible with Context Hub — same registry format, same search index, same config schema. Content works in both directions without modification. We didn't reinvent the format. We built on it.
 
-The key differences:
+Context7 validated the demand. Fifty thousand GitHub stars prove that developers want their AI agents to have accurate, up-to-date documentation. Context7 does public library freshness better than anyone — it crawls, it's always current, and it just works. We recommend running both. They're complementary:
 
-| | Context7 | Chub |
-|---|---|---|
-| Doc serving | Yes | Yes |
-| Self-hosted | No | **Yes** |
-| Team sharing | No | **Yes** |
-| Self-learning agents | **No** | **Yes** |
-| Annotation kinds (issue/fix/practice) | **No** | **Yes** |
-| Agent config sync (CLAUDE.md etc.) | No | **Yes** |
-| Git-tracked knowledge | No | **Yes** |
-| Custom/private docs | No | **Yes** |
+```
+Context7  →  "What does the Stripe API do?"     (public, crawled, always fresh)
+Chub      →  "How does our team use Stripe?"     (private, annotated, version-pinned)
+```
 
-Context7 is a hosted service you call. Chub is infrastructure you own — with the knowledge base growing smarter over time as your own agents use it.
+## Where we're going
 
-## Who is it for
+We believe the best developer tools are the ones that compound. Every annotation an agent writes, every practice a team validates, every issue someone flags — it all adds up. A team that's been using Chub for six months has a knowledge base that a new team member (human or AI) can tap into on day one.
 
-- **Teams** where multiple developers and AI agents need consistent context
-- **Projects** that want git-tracked, reviewable doc configuration
-- **Monorepos** that need path-scoped context profiles
-- **Anyone** who wants a faster alternative to Context Hub
+Our goal is simple: make Chub the best tool for giving AI coding agents the context they need to write correct code on the first try. Not by replacing human judgment, but by making sure the lessons humans have already learned are never lost.
+
+The knowledge base should grow with you. That's what we're building.
 
 ## Design Principles
 
 1. **Git-first** — team config lives in the repo. If it's not in git, it doesn't exist for the team.
 2. **Gradual adoption** — works for a solo developer today; adds team value when `.chub/` is committed.
-3. **Three-tier inheritance** — personal -> project -> profile. No tier is required.
+3. **Three-tier inheritance** — personal, project, profile. No tier is required.
 4. **Agent-native** — every feature is accessible via MCP. CLI is for humans, MCP is for agents.
-5. **Zero cloud dependency** — everything works offline and locally.
-6. **Fast** — search in ~56ms, cold start in ~44ms.
+5. **Zero cloud dependency** — everything works offline and self-hosted.
+6. **Fast** — search in ~56ms, cold start in ~44ms. The tool should feel like it doesn't exist.
+
+## Who is it for
+
+- **Teams** where multiple developers and AI agents need consistent, accurate context
+- **Projects** that are tired of agents applying wrong code practices and going in circles
+- **Organizations** that want git-tracked, reviewable, compounding knowledge
+- **Anyone** who believes coding agents should get smarter over time, not start from zero every session
