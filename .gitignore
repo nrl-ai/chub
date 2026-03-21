@@ -9,6 +9,9 @@ Cargo.lock
 *.swp
 *.swo
 
+# Claude Code agent worktrees (temporary isolated workspaces)
+.claude/worktrees/
+
 # OS
 .DS_Store
 Thumbs.db
