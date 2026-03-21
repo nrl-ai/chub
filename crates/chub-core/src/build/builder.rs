@@ -404,12 +404,26 @@ fn generate_index_html(result: &BuildResult) -> String {
   --code-bg: #161618;
 }}
 * {{ margin:0; padding:0; box-sizing:border-box }}
+html {{ scroll-behavior: smooth }}
 body {{
   font-family: Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Fira Sans', 'Droid Sans', 'Helvetica Neue', sans-serif;
   background: var(--bg);
   color: var(--text);
   line-height: 1.6;
   -webkit-font-smoothing: antialiased;
+}}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {{ width: 8px; height: 8px }}
+::-webkit-scrollbar-track {{ background: transparent }}
+::-webkit-scrollbar-thumb {{ background: var(--border); border-radius: 4px }}
+::-webkit-scrollbar-thumb:hover {{ background: var(--dim) }}
+::-webkit-scrollbar-corner {{ background: transparent }}
+
+/* Firefox scrollbar */
+* {{
+  scrollbar-width: thin;
+  scrollbar-color: var(--border) transparent;
 }}
 a {{ color: var(--accent); text-decoration: none; transition: color .15s }}
 a:hover {{ color: var(--accent-hover) }}
@@ -510,18 +524,25 @@ footer .links a:hover {{ color: var(--accent) }}
 
 /* Doc viewer modal */
 .modal-overlay {{
-  display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.7);
+  display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.65);
   z-index: 100; justify-content: center; align-items: flex-start;
-  padding: 2rem; overflow-y: auto; backdrop-filter: blur(4px);
+  padding: 2rem 1rem; overflow-y: auto; overscroll-behavior: contain;
+  backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px);
 }}
 .modal-overlay.open {{ display: flex }}
 .modal {{
   background: var(--bg); border: 1px solid var(--border); border-radius: 16px;
-  max-width: 900px; width: 100%; max-height: 90vh; overflow-y: auto;
-  box-shadow: 0 8px 32px rgba(0,0,0,0.5);
+  max-width: 900px; width: 100%; max-height: 90vh;
+  display: flex; flex-direction: column;
+  box-shadow: 0 8px 40px rgba(0,0,0,0.6), 0 0 0 1px rgba(255,255,255,0.03);
+  animation: modalIn .2s ease-out;
+}}
+@keyframes modalIn {{
+  from {{ opacity: 0; transform: translateY(12px) scale(0.98) }}
+  to {{ opacity: 1; transform: translateY(0) scale(1) }}
 }}
 .modal-header {{
-  position: sticky; top: 0; background: var(--bg); border-bottom: 1px solid var(--border);
+  flex-shrink: 0; background: var(--bg); border-bottom: 1px solid var(--border);
   padding: 1rem 1.5rem; display: flex; align-items: center; gap: 0.75rem; z-index: 1;
   border-radius: 16px 16px 0 0;
 }}
@@ -529,15 +550,25 @@ footer .links a:hover {{ color: var(--accent) }}
 .modal-header select {{
   background: var(--card); border: 1px solid var(--border); border-radius: 8px;
   padding: 0.3rem 0.6rem; color: var(--text); font-size: 0.8rem; font-family: inherit;
-  outline: none; cursor: pointer;
+  outline: none; cursor: pointer; transition: border-color .15s;
 }}
+.modal-header select:hover {{ border-color: var(--accent) }}
+.modal-header select:focus {{ border-color: var(--accent); box-shadow: 0 0 0 2px var(--vp-c-brand-soft) }}
 .modal-close {{
   background: none; border: 1px solid var(--border); border-radius: 8px;
   width: 36px; height: 36px; color: var(--muted); cursor: pointer; font-size: 1.2rem;
   display: flex; align-items: center; justify-content: center; transition: all .15s;
+  flex-shrink: 0;
 }}
-.modal-close:hover {{ border-color: var(--accent); color: var(--text) }}
-.modal-body {{ padding: 1.5rem }}
+.modal-close:hover {{ border-color: var(--accent); color: var(--text); background: var(--vp-c-brand-soft) }}
+.modal-body {{
+  padding: 1.5rem 2rem; overflow-y: auto; overscroll-behavior: contain;
+  scroll-padding-top: 1rem;
+}}
+.modal-body::-webkit-scrollbar {{ width: 6px }}
+.modal-body::-webkit-scrollbar-track {{ background: transparent; margin: 8px 0 }}
+.modal-body::-webkit-scrollbar-thumb {{ background: var(--border); border-radius: 3px }}
+.modal-body::-webkit-scrollbar-thumb:hover {{ background: var(--dim) }}
 .modal-body.loading {{ display: flex; align-items: center; justify-content: center; min-height: 200px; color: var(--muted) }}
 
 /* Rendered markdown in modal */
@@ -555,7 +586,7 @@ footer .links a:hover {{ color: var(--accent) }}
 }}
 .md pre {{
   background: var(--code-bg); border: 1px solid var(--border); border-radius: 8px;
-  padding: 1rem; overflow-x: auto; margin: 0.75rem 0;
+  padding: 1rem; overflow-x: auto; overscroll-behavior-x: contain; margin: 0.75rem 0;
   font-family: 'SF Mono', 'Fira Code', Consolas, monospace; font-size: 0.85rem;
   line-height: 1.5;
 }}
@@ -571,6 +602,18 @@ footer .links a:hover {{ color: var(--accent) }}
 .md th {{ background: var(--bg-alt); font-weight: 600 }}
 .md hr {{ border: none; border-top: 1px solid var(--border); margin: 1.5rem 0 }}
 .md img {{ max-width: 100%; border-radius: 8px }}
+
+/* Smooth scroll for code blocks inside modal */
+.md pre::-webkit-scrollbar {{ height: 5px }}
+.md pre::-webkit-scrollbar-track {{ background: transparent; margin: 0 8px }}
+.md pre::-webkit-scrollbar-thumb {{ background: var(--border); border-radius: 3px }}
+.md pre::-webkit-scrollbar-thumb:hover {{ background: var(--dim) }}
+
+/* Table horizontal scroll */
+.md table {{ display: block; overflow-x: auto; overscroll-behavior-x: contain; white-space: nowrap }}
+.md table::-webkit-scrollbar {{ height: 5px }}
+.md table::-webkit-scrollbar-track {{ background: transparent }}
+.md table::-webkit-scrollbar-thumb {{ background: var(--border); border-radius: 3px }}
 </style>
 </head>
 <body>
