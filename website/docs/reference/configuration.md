@@ -70,6 +70,17 @@ auto_profile:
 | `CHUB_ANNOTATION_SERVER` | Override org annotation server URL |
 | `CHUB_ANNOTATION_TOKEN` | Auth token for org annotation server (personal only, never commit) |
 
+## annotation_token (personal config)
+
+The auth token for the org annotation server is **personal** — never stored in project config. Set it in `~/.chub/config.yaml` or via env var:
+
+```yaml
+# ~/.chub/config.yaml  (personal only — do not commit)
+annotation_token: "your-secret-token"
+```
+
+Priority: `CHUB_ANNOTATION_TOKEN` env var > `~/.chub/config.yaml` `annotation_token`.
+
 ## annotation_server config fields
 
 The `annotation_server` key is part of `.chub/config.yaml` (project config, safe to commit). The token is **not** stored here — use `~/.chub/config.yaml` `annotation_token` or the `CHUB_ANNOTATION_TOKEN` env var.
@@ -134,7 +145,7 @@ notes:
     note: "v4 SDK required — v3 patterns will not work with our setup"
 ```
 
-Annotation kinds: `issues` (known problems), `fixes` (workarounds), `practices` (team conventions), `notes` (general observations). All annotations are appended to the doc when fetched via `chub get` or MCP.
+Annotation kinds: `issues` (known problems), `fixes` (workarounds), `practices` (team conventions), `notes` (general observations). All three tiers (org + team + personal) are merged and appended to the doc when fetched via `chub get` or MCP.
 
 ## Context doc frontmatter
 

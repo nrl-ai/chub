@@ -101,7 +101,7 @@ Fetch the content of a doc or skill by ID. Returns the full markdown, with any t
 
 **Automatic behaviors:**
 - If the entry is pinned, the pinned `lang`/`version` is applied as a default.
-- Team annotations (issues, fixes, practices, notes) for the entry are appended to the response under a `⚠ USER-CONTRIBUTED ANNOTATIONS` separator.
+- Merged annotations (org → team → personal) are appended under a `⚠ USER-CONTRIBUTED ANNOTATIONS` separator.
 - A `[Team pin]` notice is appended when the doc is pinned.
 
 ---
@@ -138,6 +138,7 @@ Read, write, clear, or list structured annotations. Agents should use this proac
 | `note` | string? | Annotation text. Omit to read existing. |
 | `kind` | string? | `"note"` (default), `"issue"`, `"fix"`, or `"practice"` |
 | `severity` | string? | `"high"`, `"medium"`, or `"low"` — only applies when `kind="issue"` |
+| `scope` | string? | `"auto"` (default), `"personal"`, `"team"`, or `"org"` |
 | `clear` | boolean? | Remove the annotation for this entry |
 | `list` | boolean? | List all annotations. `id` is not needed. |
 
@@ -145,10 +146,12 @@ Read, write, clear, or list structured annotations. Agents should use this proac
 
 | Call | Effect |
 |---|---|
-| `{ "id": "openai/chat" }` | Read merged annotations (team + personal) |
-| `{ "id": "openai/chat", "note": "...", "kind": "issue" }` | Write annotation |
-| `{ "id": "openai/chat", "clear": true }` | Remove annotation |
-| `{ "list": true }` | List all annotations |
+| `{ "id": "openai/chat" }` | Read merged annotations (org + team + personal) |
+| `{ "id": "openai/chat", "note": "...", "kind": "issue" }` | Write annotation (auto-routed) |
+| `{ "id": "openai/chat", "note": "...", "scope": "org" }` | Write to org server specifically |
+| `{ "id": "openai/chat", "clear": true }` | Remove annotation (auto-routed) |
+| `{ "list": true }` | List all annotations (auto-routed) |
+| `{ "list": true, "scope": "org" }` | List all org annotations |
 
 **Write examples:**
 
@@ -165,12 +168,21 @@ Read, write, clear, or list structured annotations. Agents should use this proac
 { "id": "openai/chat", "kind": "practice",
   "note": "Always set max_tokens explicitly. Omitting it causes unbounded output on streaming requests." }
 
-// General observation
-{ "id": "openai/chat", "kind": "note",
-  "note": "Python SDK openai>=1.0 auto-retries 429 and 500 with backoff. Do not wrap in a retry loop." }
+// Write directly to org tier
+{ "id": "openai/chat", "kind": "practice",
+  "note": "Always set max_tokens explicitly.", "scope": "org" }
 ```
 
-**Auto-routing:** When a `.chub/` project directory is present, writes go to the **team tier** (`.chub/annotations/`, git-tracked, append semantics). Otherwise, writes go to the **personal tier** (`~/.chub/annotations/`, overwrite semantics). If the team write fails, an explicit error is returned — there is no silent fallback. The `list=true` mode follows the same routing.
+**Auto-routing:** By default (`scope="auto"`), writes go to the **team tier** when a `.chub/` project directory is present, and to the **personal tier** otherwise. Use `scope` to target a tier explicitly:
+
+| `scope` | Target | Semantics |
+|---|---|---|
+| `"auto"` | Team (if `.chub/` exists), else personal | — |
+| `"personal"` | `~/.chub/annotations/` | Overwrite — one note per entry |
+| `"team"` | `.chub/annotations/` | Append — full history with author + date |
+| `"org"` | Remote annotation server | Append — requires `annotation_server` config |
+
+Reads (no `note`) always return all three tiers merged. If the team write fails (e.g., no `.chub/` when `scope="team"`), an explicit error is returned — there is no silent fallback.
 
 **Recommended workflow:**
 
@@ -182,7 +194,7 @@ Read, write, clear, or list structured annotations. Agents should use this proac
 
 ### chub_context
 
-Get a combined context bundle for a task in one call: pinned docs, team annotations, active profile rules, and project context docs. Use at session start or when switching to a new area of the codebase.
+Get a combined context bundle for a task in one call: pinned docs, merged annotations (org + team + personal), active profile rules, and project context docs. Use at session start or when switching to a new area of the codebase.
 
 **Parameters:**
 
@@ -281,7 +293,7 @@ When running as an MCP server, Chub automatically:
 
 - Applies pinned versions and languages when fetching docs
 - Serves project context docs (via `project/<name>`)
-- Appends team annotations (issues, fixes, practices) to doc content
+- Appends merged annotations (org + team + personal) to doc content
 - Appends pin notices to pinned docs
 - Scopes results to the active profile (if set via `--profile`)
-- Routes annotation writes to the team tier when `.chub/` exists
+- Routes annotation writes to the team tier when `.chub/` exists (or org tier when `scope="org"`)

@@ -56,7 +56,7 @@ chub get openai/chat --match-env             # version matched from project deps
 ```
 
 The fetched doc automatically includes:
-- Team annotations (issues, fixes, practices) appended at the end
+- Merged annotations from all three tiers (org → team → personal) appended at the end
 - A pin notice if the doc is pinned by the team
 
 ### chub list
@@ -156,10 +156,13 @@ chub annotate [<id>] [<note>] [OPTIONS]
 | `chub annotate <id>` | Read existing annotation(s) for entry |
 | `chub annotate <id> "<note>"` | Write personal annotation (overwrites previous) |
 | `chub annotate <id> "<note>" --team` | Append team annotation (add to history) |
+| `chub annotate <id> "<note>" --org` | Append to org annotation server (Tier 3) |
 | `chub annotate <id> --clear` | Remove personal annotation |
-| `chub annotate <id> --clear --team` | Remove team annotation |
+| `chub annotate <id> --clear --team` | Remove team annotation file |
+| `chub annotate <id> --clear --org` | Remove org annotation from server |
 | `chub annotate --list` | List all personal annotations |
 | `chub annotate --list --team` | List all team annotations |
+| `chub annotate --list --org` | List all org annotations |
 
 **Options:**
 
@@ -167,9 +170,10 @@ chub annotate [<id>] [<note>] [OPTIONS]
 |---|---|---|
 | `--kind <KIND>` | `note`, `issue`, `fix`, `practice` | `note` |
 | `--severity <LEVEL>` | `high`, `medium`, `low` (issue kind only) | none |
-| `--team` | Write to `.chub/annotations/` (git-tracked, append semantics) | off |
 | `--personal` | Write to `~/.chub/annotations/` (local, overwrite semantics) | default |
-| `--author <name>` | Author name for team annotations | `$USER` |
+| `--team` | Write to `.chub/annotations/` (git-tracked, append semantics) | off |
+| `--org` | Write to org annotation server (requires `annotation_server` in config) | off |
+| `--author <name>` | Author name for team/org annotations | `$USER` |
 | `--clear` | Remove the annotation |  |
 | `--list` | List all annotations |  |
 
@@ -179,7 +183,7 @@ chub annotate [<id>] [<note>] [OPTIONS]
 # Write a team note (default kind)
 chub annotate openai/chat "Use v4 streaming, not completions" --team
 
-# Record a confirmed bug
+# Record a confirmed bug with severity
 chub annotate openai/chat "tool_choice='none' silently ignores tools and returns null" \
   --kind issue --severity high --team
 
@@ -191,15 +195,26 @@ chub annotate openai/chat "Use tool_choice='auto' or remove tools from the array
 chub annotate openai/chat "Always set max_tokens to avoid unbounded streaming cost" \
   --kind practice --team
 
-# Read current annotations for an entry
+# Org-level annotation (requires annotation_server in .chub/config.yaml)
+chub annotate openai/chat "Always set max_tokens explicitly" \
+  --kind practice --org
+
+# Read annotations for an entry (personal, team, and org merged)
+chub annotate openai/chat
+
+# Read only team annotations
 chub annotate openai/chat --team
 
 # List all team annotations
 chub annotate --list --team
 ```
 
-::: tip Personal vs team semantics
-Personal annotations use **overwrite** semantics — each write replaces the previous note for that entry. Team annotations use **append** semantics — each write adds a new entry to the history, preserving author and date. Team annotations live in `.chub/annotations/` and are committed to git.
+::: tip Storage tiers
+- **Personal** (`--personal`, default): overwrite semantics — one note per entry, stored in `~/.chub/annotations/`, local only.
+- **Team** (`--team`): append semantics — adds to history with author + date, stored in `.chub/annotations/`, git-tracked.
+- **Org** (`--org`): append semantics — sent to the org annotation server, requires `annotation_server.url` in `.chub/config.yaml`.
+
+Reading without a flag shows all three tiers merged.
 :::
 
 ### chub feedback

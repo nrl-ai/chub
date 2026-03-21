@@ -1,6 +1,6 @@
 # Annotations & Self-Learning
 
-Annotations are structured notes attached to docs — confirmed bugs, workarounds found, and team conventions validated. They live alongside the doc registry in git, and appear automatically in every agent's view of that doc from then on.
+Annotations are structured notes attached to docs — confirmed bugs, workarounds found, and team conventions validated. They appear automatically in every agent's view of that doc from then on.
 
 This is how Chub builds a **self-learning knowledge base**: when one agent resolves a non-obvious problem with a library, it records it once. Every future agent sees it. The team never rediscovers the same issue twice.
 
@@ -27,7 +27,7 @@ Annotations have three tiers with different semantics:
 | 2 — Team | `.chub/annotations/<id>.yaml` | **Append** — adds to history, preserves author + date | Git-tracked |
 | 3 — Org | Remote HTTP API | **Append** — org-wide baseline, locally cached | All teams |
 
-Resolution order: Org annotations shown first (baseline), Team second (project overlay), Personal last (most specific, wins if conflict).
+**Resolution order:** Org (baseline) → Team (project overlay) → Personal (most specific). When fetched via `chub get` or MCP, all three tiers are merged and appended to the doc automatically.
 
 The team tier requires a `.chub/` project directory (created by `chub init`). The org tier requires an `annotation_server` configured in `.chub/config.yaml` or the `CHUB_ANNOTATION_SERVER` env var.
 
@@ -42,7 +42,7 @@ annotation_server:
 ```
 
 ```yaml
-# ~/.chub/config.yaml or CHUB_ANNOTATION_TOKEN env var (token is sensitive — personal only!)
+# ~/.chub/config.yaml or CHUB_ANNOTATION_TOKEN env var (token is sensitive — never commit)
 annotation_token: "your-secret-token"
 ```
 
@@ -51,9 +51,6 @@ annotation_token: "your-secret-token"
 ### CLI
 
 ```sh
-# Org annotation — write to org server (Tier 3)
-chub annotate openai/chat "Always set max_tokens" --kind practice --org
-
 # Team annotation — append to shared history
 chub annotate openai/chat "Use v4 streaming, not completions" --team
 
@@ -69,13 +66,16 @@ chub annotate openai/chat "Use tool_choice='auto' or remove tools from the array
 chub annotate openai/chat "Always set max_tokens to avoid unbounded streaming cost" \
   --kind practice --team
 
+# Org annotation — write to org server (Tier 3)
+chub annotate openai/chat "Always set max_tokens explicitly" --kind practice --org
+
 # Personal annotation (local only, replaces previous note for this entry)
 chub annotate openai/chat "My local WIP note"
 ```
 
 ### MCP (via agent)
 
-Agents write annotations using the `chub_annotate` MCP tool. In a project with `.chub/`, the tool automatically routes to the team tier. Use `scope` to target a specific tier:
+Agents write annotations using the `chub_annotate` MCP tool. In a project with `.chub/`, writes automatically route to the team tier. Use `scope` to target a specific tier:
 
 ```json
 { "id": "openai/chat", "kind": "issue", "severity": "high",
@@ -125,20 +125,22 @@ The file is committed to git. Every section is an append-only history. Use `chub
 
 ## What agents see
 
-When any agent fetches `openai/chat`, annotations are appended to the doc content automatically:
+When any agent fetches `openai/chat`, all three tiers of annotations are merged and appended to the doc content automatically:
 
 ```
 [official doc content]
 
 ---
 ⚠ USER-CONTRIBUTED ANNOTATIONS (not part of official documentation):
+[Org practice — platform-team (2026-03-10)] Always set max_tokens to avoid unbounded cost
 [Team issue (high) — alice (2026-03-20)] tool_choice='none' silently ignores tools and returns null
 [Team fix — alice (2026-03-20)] Pass tool_choice='auto' or remove tools from the array entirely
 [Team practice — bob (2026-03-18)] Always set max_tokens to avoid unbounded cost
 [Team — carol (2026-03-15)] openai>=1.0 SDK auto-retries 429. Do not wrap in a retry loop.
+[Personal note — 2026-03-21] My local WIP note
 ```
 
-The framing makes it clear this is team-contributed knowledge, not official docs.
+The framing makes it clear this is team-contributed knowledge, not official docs. Tiers are labeled (`Org`, `Team`, `Personal`) so agents know the provenance.
 
 ## Self-learning agents
 
@@ -199,16 +201,21 @@ Or via MCP:
 
 ## Reading and listing annotations
 
+### CLI
+
 ```sh
-# Read annotations for a specific entry
-chub annotate openai/chat --org         # org annotations
-chub annotate openai/chat --team        # team annotations
-chub annotate openai/chat               # personal annotation
+# Read all annotations for an entry (org + team + personal merged)
+chub annotate openai/chat
+
+# Read a specific tier only
+chub annotate openai/chat --org           # org annotations
+chub annotate openai/chat --team          # team annotations
+chub annotate openai/chat --personal      # personal annotation
 
 # List all annotations
-chub annotate --list --org              # list all org annotations
-chub annotate --list --team             # all team annotations, grouped by kind
-chub annotate --list                    # all personal annotations
+chub annotate --list --org                # list all org annotations
+chub annotate --list --team               # all team annotations, grouped by kind
+chub annotate --list                      # all personal annotations
 
 # Remove annotations
 chub annotate openai/chat --clear --org
@@ -216,13 +223,15 @@ chub annotate openai/chat --clear --team
 chub annotate openai/chat --clear
 ```
 
-Via MCP:
+### MCP
+
 ```json
-{ "id": "openai/chat" }                       // read merged (org + team + personal)
-{ "id": "openai/chat", "scope": "org" }       // read org annotation
-{ "list": true }                              // list all (auto-routes to team tier in projects)
-{ "list": true, "scope": "org" }              // list all org annotations
-{ "id": "openai/chat", "clear": true }        // remove (auto-routes)
+{ "id": "openai/chat" }                              // read merged (org + team + personal)
+{ "id": "openai/chat", "scope": "org" }              // read org annotations only
+{ "id": "openai/chat", "scope": "team" }             // read team annotations only
+{ "list": true }                                     // list all (auto-routes: team in projects, personal otherwise)
+{ "list": true, "scope": "org" }                     // list all org annotations
+{ "id": "openai/chat", "clear": true }               // remove (auto-routes)
 { "id": "openai/chat", "clear": true, "scope": "org" }  // remove org annotation
 ```
 
@@ -243,7 +252,7 @@ Entry ID encoding: replace "/" with "--" in URL path segment
                    e.g. "openai/chat" → "/api/v1/annotations/openai--chat"
 ```
 
-The `TeamAnnotation` response shape is the same as team annotation YAML files, serialized as JSON.
+The `TeamAnnotation` response shape is the same as the team annotation YAML file format, serialized as JSON. The client caches responses locally with a configurable TTL and falls back to the stale cache if the server is unreachable.
 
 ## Pin notices
 
