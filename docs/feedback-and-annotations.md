@@ -70,9 +70,26 @@ Good annotations capture knowledge that isn't obvious from the doc:
 
 Don't annotate information that's already clearly stated in the doc.
 
-### Storage
+### Annotation Kinds
 
-Annotations are stored locally at `~/.chub/annotations/` as JSON files. They are specific to your machine and are not shared or synced. Each entry gets one annotation — setting a new note replaces the previous one.
+Use `--kind` to classify what the agent learned:
+
+- `note` — general observation (default)
+- `issue` — undocumented bug, broken param, or misleading example (supports `--severity high|medium|low`)
+- `fix` — workaround that resolved an issue
+- `practice` — team convention or validated pattern
+
+### 3-Tier Storage
+
+Annotations support three tiers with escalating scope:
+
+| Tier | Flag | Storage | Sharing |
+|------|------|---------|---------|
+| **Personal** | `--personal` (default) | `~/.chub/annotations/<id>.json` | None |
+| **Team** | `--team` | `.chub/annotations/<id>.yaml` | Via git |
+| **Org** | `--org` | Remote HTTP API + local cache | Via annotation server |
+
+When reading, all tiers are merged automatically. See [Agent Annotations](features/agent-annotations.md) for full details on the 3-tier system and org server configuration.
 
 ## Feedback
 
@@ -116,10 +133,10 @@ Or via environment variable: `CHUB_FEEDBACK=0`. Check status with `chub feedback
 
 | | Annotations | Feedback |
 |---|---|---|
-| **For whom** | Your agent, locally | Doc authors, via registry |
-| **Persists** | On your machine | In the registry |
+| **For whom** | Your agent / team / org | Doc authors, via registry |
+| **Persists** | Locally, in git, or on server | In the registry |
 | **Purpose** | Don't repeat mistakes | Improve the content |
-| **Visible to** | You only | Maintainers |
+| **Visible to** | You, your team, or your org | Maintainers |
 | **Effect** | Shows on future fetches | Authors update the doc |
 
 Both matter. Annotations help your agent today. Feedback helps everyone tomorrow.

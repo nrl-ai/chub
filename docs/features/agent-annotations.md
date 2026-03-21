@@ -2,112 +2,168 @@
 
 ## Overview
 
-Agents can annotate docs and skills with gotchas, tips, and experiences learned while building with them. Two workflows:
+Agents can annotate docs and skills with gotchas, tips, and experiences learned while building with them. Annotations persist across sessions and appear automatically when the agent fetches the same doc again.
 
-1. **Private annotations** — stored locally in `~/.chub/annotations/`, automatically included when the agent fetches the same doc/skill again. Personal knowledge base that improves with use.
-2. **Suggest to author** (future) — push annotations upstream as structured feedback. Mechanism TBD (author dashboard, GitHub issue, etc.). For now, just ensure the annotation format is structured enough to be submittable later.
+Chub supports a **3-tier annotation system** with escalating scope:
 
-## Annotation format
+| Tier | Scope | Storage | Sharing |
+|------|-------|---------|---------|
+| **Personal** (Tier 1) | Per-user, per-machine | `~/.chub/annotations/<id>.json` | None |
+| **Team** (Tier 2) | Per-project, git-tracked | `.chub/annotations/<id>.yaml` | Via git |
+| **Org** (Tier 3) | Org-wide, server-hosted | Remote HTTP API with local cache | Via annotation server |
 
-Stored as markdown files at `~/.chub/annotations/<id>.md` (e.g. `~/.chub/annotations/openai/chat.md`):
+When reading annotations, all tiers are merged automatically. On `chub get`, annotations from all tiers appear appended to the doc.
 
-```markdown
----
-doc_id: openai/chat
-created: 2026-02-02
-updated: 2026-02-02
----
+## Annotation Kinds
 
-## Gotcha: streaming requires explicit close
+Each annotation has a `kind` that classifies what the agent learned:
 
-When using streaming with function calling, you must explicitly close the stream
-after the final function call response. The doc doesn't mention this — if you
-don't close it, the connection hangs for 30 seconds before timing out.
+| Kind | Purpose |
+|------|---------|
+| `note` | General observation (default) |
+| `issue` | Undocumented bug, broken param, or misleading example |
+| `fix` | Workaround that resolved an issue |
+| `practice` | Team convention or validated pattern |
 
-## Tip: batch function calls
+Issue annotations can optionally carry a `severity`: `high`, `medium`, or `low`.
 
-You can pass multiple function definitions and the model will call them in
-parallel. Much faster than sequential calls for independent operations.
-```
+## CLI Commands
 
-Each annotation is a `##` section. Agents append new sections. The frontmatter tracks which doc it's for and when it was last updated.
+### `chub annotate <id> <note>`
 
-## CLI commands
-
-### `chub annotate <id> <message>`
-
-Add an annotation to a doc or skill.
+Write a personal annotation (default).
 
 ```bash
-# Agent adds a gotcha after encountering an issue
+# Personal annotation (default)
 chub annotate openai/chat "streaming requires explicit close when using function calling"
 
-# Add with a type prefix
-chub annotate openai/chat --type gotcha "streaming requires explicit close..."
-chub annotate openai/chat --type tip "batch function calls for parallel execution"
+# Team annotation (git-tracked)
+chub annotate --team openai/chat "Use batch endpoint for our pipeline"
+
+# Org annotation (server-hosted)
+chub annotate --org openai/chat "Company-wide: always use v2 API"
+
+# With kind and severity
+chub annotate --kind issue --severity high stripe/api "Webhook sig fails with raw body middleware"
+chub annotate --kind fix stripe/api "Use express.raw() middleware before webhook handler"
+chub annotate --kind practice openai/chat "Always set max_tokens to avoid runaway costs"
+
+# Author attribution (team/org)
+chub annotate --team --author "alice" openai/chat "Verified: streaming works with function calling"
 ```
 
-- Creates `~/.chub/annotations/openai/chat.md` if it doesn't exist
-- Appends a new `## Gotcha:` or `## Tip:` section
-- Updates the `updated` timestamp in frontmatter
-
-### `chub get <id>` — automatically includes annotations
-
-When fetching a doc, check if annotations exist for that id. If so, append them after the doc content under a `# Annotations` heading.
+### Read annotations
 
 ```bash
-chub get openai/chat
-# Returns: doc content + "# Annotations\n## Gotcha: streaming requires..."
+# View merged annotations for a doc (all tiers)
+chub annotate openai/chat
 
-chub get openai/chat --no-annotations
-# Returns: doc content only
+# View personal only
+chub annotate --personal openai/chat
+
+# View team only
+chub annotate --team openai/chat
 ```
 
-### `chub annotations list`
-
-List all annotated docs/skills.
+### List all annotations
 
 ```bash
-chub annotations list
-# openai/chat     2 annotations   updated 2026-02-02
-# stripe/payments 1 annotation    updated 2026-01-28
+chub annotate --list               # personal annotations
+chub annotate --list --team        # team annotations
+chub annotate --list --org         # org annotations
 ```
 
-### `chub annotations show <id>`
+### Clear an annotation
 
-Show annotations for a specific doc/skill.
+```bash
+chub annotate --clear stripe/api             # clear personal
+chub annotate --clear --team stripe/api      # clear team
+chub annotate --clear --org stripe/api       # clear org (requires server)
+```
 
-### `chub annotations clear <id>`
+### Annotations in `chub get`
 
-Remove annotations for a doc/skill.
+When annotations exist, `chub get` appends them after the doc content:
 
-## Files to create/modify
+```
+# Stripe API
+...doc content...
 
-### New: `cli/src/lib/annotations.js`
-- `getAnnotationPath(id)` — returns `~/.chub/annotations/<id>.md`
-- `readAnnotations(id)` — returns parsed annotation content or null
-- `addAnnotation(id, message, type)` — appends annotation to file
-- `listAnnotations()` — lists all annotated ids with counts
-- `clearAnnotations(id)` — removes annotation file
+---
+[Agent note — 2026-03-15T10:30:00Z]
+Webhook verification requires raw body — do not parse JSON before verifying
+```
 
-### New: `cli/src/commands/annotate.js`
-- `chub annotate <id> <message>` command
-- `chub annotations list|show|clear` subcommands
+With `--json`, annotations are included in the response object:
 
-### Modify: `cli/src/commands/get.js`
-- After fetching doc/skill content, check for annotations
-- Append annotations to output unless `--no-annotations`
+```json
+{
+  "id": "stripe/api",
+  "type": "doc",
+  "content": "...",
+  "annotation": {
+    "id": "stripe/api",
+    "note": "Webhook verification requires raw body...",
+    "kind": "issue",
+    "severity": "high",
+    "updatedAt": "2026-03-15T10:30:00.000Z"
+  }
+}
+```
 
-### Modify: `cli/src/index.js`
-- Register annotate command
-- Add `annotate` to SKIP_REGISTRY (annotations are local, don't need registry)
+## MCP Tool
 
-## Verification
+The `chub_annotate` MCP tool provides the same functionality for AI coding agents:
 
-1. `chub annotate openai/chat "streaming needs explicit close"` — creates annotation file
-2. `chub annotate openai/chat --type tip "batch function calls"` — appends to file
-3. `chub annotations list` — shows openai/chat with 2 annotations
-4. `chub annotations show openai/chat` — shows both annotations
-5. `chub get openai/chat` — doc content + annotations appended
-6. `chub get openai/chat --no-annotations` — doc content only
-7. `chub annotations clear openai/chat` — removes annotation file
+```json
+{
+  "name": "chub_annotate",
+  "arguments": {
+    "id": "stripe/api",
+    "note": "Use idempotency keys for POST requests",
+    "kind": "practice",
+    "scope": "team"
+  }
+}
+```
+
+Parameters:
+- `id` — entry ID (required for read/write; optional for list)
+- `note` — annotation text (omit to read)
+- `clear` — set `true` to remove the annotation
+- `list` — set `true` to list all annotations
+- `scope` — `"personal"` (default), `"team"`, `"org"`, or `"auto"`
+- `kind` — `"note"`, `"issue"`, `"fix"`, or `"practice"`
+- `severity` — `"high"`, `"medium"`, or `"low"` (only for `kind: "issue"`)
+- `author` — author name for team/org annotations
+
+## Storage Details
+
+### Tier 1 — Personal (`~/.chub/annotations/`)
+
+- One JSON file per entry (e.g., `stripe--api.json`)
+- **Overwrite semantics**: writing replaces the previous note entirely
+- Not shared or synced
+
+### Tier 2 — Team (`.chub/annotations/`)
+
+- YAML files inside the project's `.chub/` directory
+- **Append semantics**: each write adds a new entry with author + timestamp
+- Git-tracked — team members share annotations via version control
+- Requires `chub init` to set up the project directory
+
+### Tier 3 — Org (`annotation_server`)
+
+- Annotations stored on a remote HTTP server
+- Locally cached with configurable TTL (default: 1 hour)
+- Requires configuration in `.chub/config.yaml`:
+
+```yaml
+annotation_server:
+  url: https://annotations.example.com
+  auto_push: false
+  cache_ttl_secs: 3600
+```
+
+- Auth token: set `annotation_token` in `~/.chub/config.yaml` or `CHUB_ANNOTATION_TOKEN` env var
+- Server URL: can also be set via `CHUB_ANNOTATION_SERVER` env var

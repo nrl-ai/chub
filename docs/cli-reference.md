@@ -82,19 +82,28 @@ If a doc has only one language, `--lang` is not required — it's auto-inferred.
 
 ## chub annotate [id] [note]
 
-Attach persistent notes to a doc or skill. See [Feedback and Annotations](feedback-and-annotations.md) for the full guide.
+Attach persistent notes to a doc or skill. See [Feedback and Annotations](feedback-and-annotations.md) and [Agent Annotations](features/agent-annotations.md) for the full guide.
 
 | Flag | Purpose |
 |------|---------|
-| `--clear` | Remove annotation for this entry |
+| `--clear` | Remove annotation (respects `--team`/`--org` flag) |
 | `--list` | List all annotations |
+| `--team` | Save as team annotation (git-tracked in `.chub/annotations/`) |
+| `--personal` | Save as personal annotation only (default) |
+| `--org` | Write to org annotation server (Tier 3) |
+| `--author <name>` | Author name for team/org annotations |
+| `--kind <kind>` | Annotation kind: `note` (default), `issue`, `fix`, `practice` |
+| `--severity <level>` | Severity for issue annotations: `high`, `medium`, `low` |
 
 ```bash
 chub annotate stripe/api "Use idempotency keys for POST requests"
-chub annotate stripe/api                   # view current note
+chub annotate stripe/api                   # view current note (all tiers merged)
 chub annotate stripe/api "new note"        # replaces previous
-chub annotate stripe/api --clear           # remove
-chub annotate --list                       # list all
+chub annotate stripe/api --clear           # remove personal annotation
+chub annotate --list                       # list all personal annotations
+chub annotate --team stripe/api "Team note"  # team annotation
+chub annotate --list --org                 # list org annotations
+chub annotate --kind issue --severity high stripe/api "Webhook sig fails"
 ```
 
 ## chub feedback [id] [rating] [comment]
@@ -142,12 +151,111 @@ Build a registry from a local content directory. See the [Content Guide](content
 | `-o, --output <path>` | Output directory (default: `<content-dir>/dist`) |
 | `--base-url <url>` | Base URL for remote serving |
 | `--validate-only` | Validate content without building |
+| `--no-incremental` | Disable incremental builds (copy all files) |
 
 ```bash
 chub build my-content/                           # build to my-content/dist/
 chub build my-content/ -o dist/                  # custom output dir
 chub build my-content/ --validate-only           # validate only
 ```
+
+## chub serve \<content-dir\>
+
+Build and serve a content directory as a local HTTP registry.
+
+| Flag | Purpose |
+|------|---------|
+| `-p, --port <port>` | Port to listen on (default: 4242) |
+| `--host <host>` | Host to bind to (default: 127.0.0.1) |
+| `-o, --output <path>` | Output directory for built content |
+
+```bash
+chub serve my-content/                           # serve at http://localhost:4242
+chub serve my-content/ -p 8080                   # custom port
+chub serve my-content/ --host 0.0.0.0            # expose to network
+```
+
+## chub init
+
+Initialize a `.chub/` project directory in the current working directory. Creates the directory structure for pins, profiles, annotations, bundles, and snapshots.
+
+## chub pin add\|remove\|list\|get
+
+Manage pinned docs for the project.
+
+```bash
+chub pin add stripe/api                  # pin a doc
+chub pin add openai/chat --lang python   # pin with language preference
+chub pin list                            # list all pins
+chub pin get                             # fetch all pinned docs at once
+chub pin remove stripe/api               # unpin
+```
+
+## chub profile use\|list\|current
+
+Manage context profiles with inheritance.
+
+```bash
+chub profile list                        # list available profiles
+chub profile use backend                 # activate a profile
+chub profile current                     # show active profile
+```
+
+## chub detect
+
+Detect project dependencies and match them to available docs.
+
+| Flag | Purpose |
+|------|---------|
+| `--pin` | Auto-pin all detected docs |
+
+Supports: package.json, Cargo.toml, requirements.txt, pyproject.toml, Pipfile, go.mod, Gemfile, pom.xml, build.gradle.
+
+```bash
+chub detect                              # show detected deps and matching docs
+chub detect --pin                        # auto-pin matches
+```
+
+## chub agent-config
+
+Generate or sync agent config files (CLAUDE.md, .cursorrules, etc.) from pinned docs and annotations.
+
+## chub check
+
+Check freshness of pinned doc versions against installed dependency versions.
+
+## chub context
+
+Browse and query project context docs stored in `.chub/context/`.
+
+## chub stats
+
+Show usage analytics (fetch counts, most-used docs).
+
+## chub bundle create\|install\|list
+
+Manage doc bundles — shareable collections of docs.
+
+```bash
+chub bundle create my-stack --entries "openai/chat,stripe/api"
+chub bundle install my-stack             # pin all entries from a bundle
+chub bundle list                         # list available bundles
+```
+
+## chub snapshot create\|restore\|diff\|list
+
+Manage doc snapshots for reproducible builds.
+
+```bash
+chub snapshot create v1.0                # capture current pins
+chub snapshot list                       # list snapshots
+chub snapshot diff v1.0 v1.1             # show what changed
+chub snapshot restore v1.0               # restore exact pin versions
+```
+
+## chub mcp
+
+Start the MCP stdio server for AI coding agents. See the [MCP integration docs](../website/docs/mcp.md) for setup instructions.
 
 ## Piping Patterns
 

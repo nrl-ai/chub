@@ -17,6 +17,10 @@ pub struct ServeArgs {
     #[arg(short, long, default_value = "4242")]
     port: u16,
 
+    /// Host to bind to (default: 127.0.0.1; use 0.0.0.0 to expose to the network)
+    #[arg(long, default_value = "127.0.0.1")]
+    host: String,
+
     /// Output directory for built content (default: temp dir)
     #[arg(short, long)]
     output: Option<PathBuf>,
@@ -55,7 +59,10 @@ pub async fn run(args: ServeArgs, json: bool) -> Result<()> {
     }
 
     // Serve the output directory
-    let addr = std::net::SocketAddr::from(([0, 0, 0, 0], args.port));
+    let host: std::net::IpAddr = args.host.parse().map_err(|e| {
+        chub_core::error::Error::Config(format!("Invalid host \"{}\": {}", args.host, e))
+    })?;
+    let addr = std::net::SocketAddr::from((host, args.port));
 
     if !json {
         eprintln!(

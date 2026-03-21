@@ -7,6 +7,22 @@ use crate::error::{Error, Result};
 use crate::team::pins::{load_pins, save_pins, PinEntry, PinsFile};
 use crate::team::project::project_chub_dir;
 
+/// Validate that a name is safe for use as a filename (no path traversal).
+fn validate_name(name: &str) -> Result<()> {
+    if name.is_empty()
+        || name.contains('/')
+        || name.contains('\\')
+        || name.contains("..")
+        || name.starts_with('.')
+    {
+        return Err(Error::Config(format!(
+            "Invalid snapshot name \"{}\": must not contain path separators or \"..\"",
+            name
+        )));
+    }
+    Ok(())
+}
+
 /// A point-in-time snapshot of all pins.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Snapshot {
@@ -62,6 +78,7 @@ fn now_iso() -> String {
 
 /// Create a snapshot of the current pins.
 pub fn create_snapshot(name: &str) -> Result<Snapshot> {
+    validate_name(name)?;
     let dir =
         snapshots_dir().ok_or_else(|| Error::Config("No .chub/ directory found.".to_string()))?;
     fs::create_dir_all(&dir)?;
@@ -82,6 +99,7 @@ pub fn create_snapshot(name: &str) -> Result<Snapshot> {
 
 /// Restore pins from a snapshot.
 pub fn restore_snapshot(name: &str) -> Result<Snapshot> {
+    validate_name(name)?;
     let dir =
         snapshots_dir().ok_or_else(|| Error::Config("No .chub/ directory found.".to_string()))?;
 
@@ -104,6 +122,8 @@ pub fn restore_snapshot(name: &str) -> Result<Snapshot> {
 
 /// Diff two snapshots.
 pub fn diff_snapshots(name_a: &str, name_b: &str) -> Result<Vec<SnapshotDiff>> {
+    validate_name(name_a)?;
+    validate_name(name_b)?;
     let dir =
         snapshots_dir().ok_or_else(|| Error::Config("No .chub/ directory found.".to_string()))?;
 

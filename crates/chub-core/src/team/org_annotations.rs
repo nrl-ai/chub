@@ -125,6 +125,7 @@ pub async fn read_org_annotation(entry_id: &str) -> Option<TeamAnnotation> {
     };
 
     if resp.status().as_u16() == 404 {
+        invalidate_cache(entry_id);
         return None;
     }
     if !resp.status().is_success() {
@@ -181,7 +182,7 @@ pub async fn write_org_annotation(
         .await
         .map_err(|e| format!("Invalid response: {}", e))?;
 
-    invalidate_cache(entry_id);
+    write_cache(&ann);
     Ok(ann)
 }
 
@@ -202,8 +203,16 @@ pub async fn clear_org_annotation(entry_id: &str) -> Result<bool, String> {
         .await
         .map_err(|e| format!("Network error: {}", e))?;
 
-    invalidate_cache(entry_id);
-    Ok(resp.status().as_u16() != 404)
+    let status = resp.status();
+    if status.is_success() {
+        invalidate_cache(entry_id);
+        Ok(true)
+    } else if status.as_u16() == 404 {
+        invalidate_cache(entry_id);
+        Ok(false)
+    } else {
+        Err(format!("Server returned {}", status.as_u16()))
+    }
 }
 
 /// List all org annotations.

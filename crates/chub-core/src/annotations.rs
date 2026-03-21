@@ -82,10 +82,10 @@ pub fn read_annotation(entry_id: &str) -> Option<Annotation> {
 /// Sanitize annotation text: truncate to max length.
 pub fn sanitize_note(note: &str) -> String {
     let trimmed = note.trim();
-    if trimmed.len() <= MAX_ANNOTATION_LENGTH {
+    if trimmed.chars().count() <= MAX_ANNOTATION_LENGTH {
         trimmed.to_string()
     } else {
-        let mut s = trimmed[..MAX_ANNOTATION_LENGTH].to_string();
+        let mut s: String = trimmed.chars().take(MAX_ANNOTATION_LENGTH).collect();
         s.push_str(" [truncated]");
         s
     }

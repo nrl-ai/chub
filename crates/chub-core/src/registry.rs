@@ -1,4 +1,4 @@
-use std::collections::{HashMap, HashSet};
+use std::collections::{BTreeSet, HashMap, HashSet};
 
 use crate::cache::{load_search_index, load_source_registry};
 use crate::config::{load_config, SourceConfig};
@@ -369,7 +369,7 @@ fn score_compact_candidate(
 }
 
 fn split_compact_segments(text: &str) -> Vec<String> {
-    let mut segments: HashSet<String> = HashSet::new();
+    let mut segments: BTreeSet<String> = BTreeSet::new();
     for seg in text.split('/') {
         let c = compact_identifier(seg);
         if !c.is_empty() {

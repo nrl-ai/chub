@@ -11,10 +11,6 @@ pub struct DetectArgs {
     /// Auto-pin all detected docs
     #[arg(long)]
     pin: bool,
-
-    /// Show new deps since last detect
-    #[arg(long)]
-    diff: bool,
 }
 
 pub fn run(args: DetectArgs, json: bool, merged: &MergedRegistry) {

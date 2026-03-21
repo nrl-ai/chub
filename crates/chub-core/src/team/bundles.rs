@@ -7,6 +7,22 @@ use crate::error::{Error, Result};
 use crate::team::pins;
 use crate::team::project::project_chub_dir;
 
+/// Validate that a name is safe for use as a filename (no path traversal).
+fn validate_name(name: &str) -> Result<()> {
+    if name.is_empty()
+        || name.contains('/')
+        || name.contains('\\')
+        || name.contains("..")
+        || name.starts_with('.')
+    {
+        return Err(Error::Config(format!(
+            "Invalid bundle name \"{}\": must not contain path separators or \"..\"",
+            name
+        )));
+    }
+    Ok(())
+}
+
 /// A doc bundle — a curated, shareable collection of docs.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Bundle {
@@ -33,6 +49,7 @@ pub fn load_bundle(path: &Path) -> Result<Bundle> {
 
 /// Load a bundle by name from `.chub/bundles/`.
 pub fn load_bundle_by_name(name: &str) -> Result<Bundle> {
+    validate_name(name)?;
     let dir =
         bundles_dir().ok_or_else(|| Error::Config("No .chub/ directory found.".to_string()))?;
     let path = dir.join(format!("{}.yaml", name));
@@ -70,6 +87,7 @@ pub fn create_bundle(
     entries: Vec<String>,
     notes: Option<&str>,
 ) -> Result<std::path::PathBuf> {
+    validate_name(name)?;
     let dir =
         bundles_dir().ok_or_else(|| Error::Config("No .chub/ directory found.".to_string()))?;
     fs::create_dir_all(&dir)?;

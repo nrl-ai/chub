@@ -93,7 +93,12 @@ pub async fn run(args: UpdateArgs, json: bool) -> Result<()> {
             eprintln!("{}", format!("Warning: {}: {}", e.source, e.error).yellow());
         }
 
-        let updated = config.sources.iter().filter(|s| s.path.is_none()).count() - errors.len();
+        let updated = config
+            .sources
+            .iter()
+            .filter(|s| s.path.is_none())
+            .count()
+            .saturating_sub(errors.len());
 
         if json {
             println!(

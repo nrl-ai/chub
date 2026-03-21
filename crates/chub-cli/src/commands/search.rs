@@ -134,13 +134,15 @@ pub fn run(args: SearchArgs, json: bool, merged: &MergedRegistry) {
     // No query: list all
     if args.query.is_none() {
         let entries = list_entries(&filters, merged);
+        let total = entries.len();
         let entries: Vec<_> = entries.into_iter().take(args.limit).collect();
         if json {
             println!(
                 "{}",
                 serde_json::json!({
                     "results": entries.iter().map(simplify_entry).collect::<Vec<_>>(),
-                    "total": entries.len(),
+                    "total": total,
+                    "showing": entries.len(),
                 })
             );
         } else {
@@ -193,6 +195,7 @@ pub fn run(args: SearchArgs, json: bool, merged: &MergedRegistry) {
 
     // Fuzzy search
     let results = search_entries(query, &filters, merged);
+    let total = results.len();
     let results: Vec<_> = results.into_iter().take(args.limit).collect();
 
     if json {
@@ -200,7 +203,8 @@ pub fn run(args: SearchArgs, json: bool, merged: &MergedRegistry) {
             "{}",
             serde_json::json!({
                 "results": results.iter().map(simplify_entry).collect::<Vec<_>>(),
-                "total": results.len(),
+                "total": total,
+                "showing": results.len(),
                 "query": query,
             })
         );
