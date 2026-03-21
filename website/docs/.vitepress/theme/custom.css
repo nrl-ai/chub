@@ -1,30 +1,30 @@
-/* Chub — Sky blue theme overrides for VitePress */
+/* Chub — Blue theme overrides for VitePress */
 
 :root {
-  --vp-c-brand-1: #0ea5e9;
-  --vp-c-brand-2: #0284c7;
-  --vp-c-brand-3: #0369a1;
-  --vp-c-brand-soft: rgba(14, 165, 233, 0.14);
+  --vp-c-brand-1: #2563eb;
+  --vp-c-brand-2: #1d4ed8;
+  --vp-c-brand-3: #1e40af;
+  --vp-c-brand-soft: rgba(37, 99, 235, 0.14);
 
-  --vp-home-hero-name-color: #0ea5e9;
+  --vp-home-hero-name-color: #2563eb;
 
   --vp-button-brand-border: transparent;
   --vp-button-brand-text: #fff;
-  --vp-button-brand-bg: #0ea5e9;
+  --vp-button-brand-bg: #2563eb;
   --vp-button-brand-hover-border: transparent;
   --vp-button-brand-hover-text: #fff;
-  --vp-button-brand-hover-bg: #0284c7;
+  --vp-button-brand-hover-bg: #1d4ed8;
   --vp-button-brand-active-border: transparent;
   --vp-button-brand-active-text: #fff;
-  --vp-button-brand-active-bg: #0369a1;
+  --vp-button-brand-active-bg: #1e40af;
 }
 
 .dark {
-  --vp-c-brand-1: #38bdf8;
-  --vp-c-brand-2: #0ea5e9;
-  --vp-c-brand-3: #0284c7;
-  --vp-c-brand-soft: rgba(56, 189, 248, 0.14);
-  --vp-home-hero-name-color: #38bdf8;
+  --vp-c-brand-1: #3b82f6;
+  --vp-c-brand-2: #2563eb;
+  --vp-c-brand-3: #1d4ed8;
+  --vp-c-brand-soft: rgba(59, 130, 246, 0.14);
+  --vp-home-hero-name-color: #3b82f6;
 }
 
 /* Hero name styling - solid color, no gradient */

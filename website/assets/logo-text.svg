@@ -1,5 +1,5 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 180 48" width="180" height="48">
-  <rect x="2" y="2" width="44" height="44" rx="12" fill="#0ea5e9"/>
+  <rect x="2" y="2" width="44" height="44" rx="12" fill="#2563eb"/>
   <polygon points="28,7 14,24 22,24 19,41 33,24 25,24" fill="#fff"/>
   <text x="56" y="35" font-family="Arial,Helvetica,sans-serif" font-size="28" font-weight="700" letter-spacing="-0.5" fill="#e4e4e7">Chub</text>
 </svg>
