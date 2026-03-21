@@ -7,6 +7,8 @@ export default defineConfig({
     ['link', { rel: 'icon', type: 'image/svg+xml', href: '/logo.svg' }],
   ],
 
+  appearance: 'dark',
+
   themeConfig: {
     logo: '/logo.svg',
 
@@ -19,6 +21,7 @@ export default defineConfig({
           { text: 'GitHub', link: 'https://github.com/nrl-ai/chub' },
           { text: 'npm', link: 'https://www.npmjs.com/package/@nrl-ai/chub' },
           { text: 'PyPI', link: 'https://pypi.org/project/chub/' },
+          { text: 'crates.io', link: 'https://crates.io/crates/chub' },
         ]
       }
     ],
@@ -29,6 +32,7 @@ export default defineConfig({
           text: 'Introduction',
           items: [
             { text: 'Getting Started', link: '/guide/getting-started' },
+            { text: 'Installation', link: '/guide/installation' },
             { text: 'Why Chub', link: '/guide/why-chub' },
           ]
         },

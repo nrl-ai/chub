@@ -1,6 +1,6 @@
 {
   "name": "@nrl-ai/chub",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "description": "Chub — high-performance curated docs for AI coding agents with team sharing",
   "license": "MIT",
   "repository": {
@@ -11,11 +11,11 @@
     "chub": "bin/chub.js"
   },
   "optionalDependencies": {
-    "@nrl-ai/chub-linux-x64": "0.1.1",
-    "@nrl-ai/chub-linux-arm64": "0.1.1",
-    "@nrl-ai/chub-darwin-x64": "0.1.1",
-    "@nrl-ai/chub-darwin-arm64": "0.1.1",
-    "@nrl-ai/chub-win32-x64": "0.1.1"
+    "@nrl-ai/chub-linux-x64": "0.1.2",
+    "@nrl-ai/chub-linux-arm64": "0.1.2",
+    "@nrl-ai/chub-darwin-x64": "0.1.2",
+    "@nrl-ai/chub-darwin-arm64": "0.1.2",
+    "@nrl-ai/chub-win32-x64": "0.1.2"
   },
   "engines": {
     "node": ">=16"

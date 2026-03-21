@@ -12,46 +12,70 @@ pip install chub
 
 Pre-built wheels are available for:
 
-- Linux x86_64, aarch64
+- Linux x86_64, ARM64
 - macOS x86_64, Apple Silicon
 - Windows x86_64
 
-## Usage
+## Quick Start
 
 ```sh
-# Search and browse
-chub search                          # list all entries
-chub search "stripe"                 # BM25 search
-chub search --tags openai --lang py  # filtered search
+# Search for docs
+chub search "stripe payments"
 
-# Fetch docs and skills
-chub get stripe/api --lang python    # fetch a doc
-chub get openai/chat stripe/api      # fetch multiple
-chub get openai/chat --full          # all files
-chub get openai/chat -o doc.md       # save to file
+# Fetch a doc
+chub get openai/chat --lang python
 
-# Registry management
-chub update                          # refresh registries
-chub cache status
-chub cache clear
+# List all available docs
+chub list
 
-# Annotations (persist across sessions)
-chub annotate stripe/api "Webhook needs raw body"
-chub annotate --list
-
-# MCP server (for Claude Code, Cursor, Windsurf, etc.)
-chub mcp
+# Initialize project for team sharing
+chub init
 ```
 
-You can also invoke it as a Python module:
+You can also invoke Chub as a Python module:
 
 ```sh
 python -m chub search "stripe"
+python -m chub get openai/chat --lang python
+```
+
+## Usage
+
+### Search and fetch
+
+```sh
+chub search "stripe"                    # BM25 search
+chub search "auth" --limit 5            # limit results
+chub get stripe/api --lang python       # fetch a doc
+chub get openai/chat --version 4.0      # specific version
+chub list                               # list all docs
+chub list --json                        # JSON output
+```
+
+### Team features
+
+```sh
+chub init                               # create .chub/ project directory
+chub init --from-deps                   # auto-detect dependencies
+chub pin openai/chat --lang python      # pin a doc version
+chub pins                               # list pinned docs
+chub profile use backend                # activate a profile
+chub annotate openai/chat "note" --team # team annotation
+chub detect --pin                       # auto-pin from deps
+chub agent-config generate              # generate CLAUDE.md, .cursorrules
+```
+
+### Cache management
+
+```sh
+chub update                             # refresh cached registry
+chub cache status                       # show cache state
+chub cache clear                        # clear local cache
 ```
 
 ## MCP Integration
 
-Add to your MCP config (`claude_desktop_config.json` or `.cursor/mcp.json`):
+Add to your MCP config (`.mcp.json` for Claude Code, `.cursor/mcp.json` for Cursor):
 
 ```json
 {
@@ -64,16 +88,18 @@ Add to your MCP config (`claude_desktop_config.json` or `.cursor/mcp.json`):
 }
 ```
 
-Available MCP tools: `chub_search`, `chub_get`, `chub_list`, `chub_annotate`, `chub_feedback`.
+MCP tools: `chub_search`, `chub_get`, `chub_list`, `chub_annotate`, `chub_feedback`.
 
 ## How It Works
 
-This Python package is a thin wrapper around the native Rust binary. When you run `chub` or `python -m chub`, it delegates to the platform-specific compiled binary bundled in the wheel. No runtime dependencies required.
+This Python package is a thin wrapper around the native Rust binary. When you run `chub` or `python -m chub`, it delegates to the platform-specific compiled binary bundled in the wheel. No Python runtime dependencies are required.
 
 ## Links
 
-- [GitHub](https://github.com/vietanhdev/chub)
-- [Issues](https://github.com/vietanhdev/chub/issues)
+- [Documentation](https://chub.nrl.ai)
+- [GitHub](https://github.com/nrl-ai/chub)
+- [npm package](https://www.npmjs.com/package/@nrl-ai/chub)
+- [Issues](https://github.com/nrl-ai/chub/issues)
 
 ## License
 

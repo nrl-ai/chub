@@ -1,90 +1,89 @@
 # Getting Started
 
-Install Chub and start serving curated docs to your AI coding agents in under 5 minutes.
+Get up and running with Chub in under 5 minutes. This guide covers installation, basic commands, and setting up your project for team sharing.
 
-## Installation
+## Install
 
-### npm (recommended)
+Pick your preferred method:
 
-```sh
+::: code-group
+
+```sh [npm]
 npm install -g @nrl-ai/chub
 ```
 
-### Cargo (from source)
+```sh [pip]
+pip install chub
+```
 
-```sh
+```sh [Cargo]
 cargo install chub
 ```
 
-### Binary download
+```sh [Homebrew]
+brew install nrl-ai/tap/chub
+```
 
-Download prebuilt binaries from [GitHub Releases](https://github.com/nrl-ai/chub/releases).
+:::
 
-| Platform | Package |
-|---|---|
-| Linux x64 | `chub-linux-x64` |
-| macOS x64 | `chub-darwin-x64` |
-| macOS ARM | `chub-darwin-arm64` |
-| Windows x64 | `chub-win32-x64` |
+See the full [Installation guide](/guide/installation) for binary downloads and platform-specific instructions.
 
-### Verify installation
+Verify it works:
 
 ```sh
 chub --version
 ```
 
-## Quick Start
+## Search for docs
 
-### Search for docs
+Chub serves curated API documentation from a public registry of 1,553+ docs. Search for anything:
 
 ```sh
 chub search "stripe payments"
 ```
 
-### Fetch a doc
+```
+  1. stripe/api            Stripe API reference           ★ 0.92
+  2. stripe/webhooks       Stripe webhook handling         ★ 0.78
+  3. stripe/checkout       Stripe Checkout integration     ★ 0.71
+```
+
+## Fetch a doc
+
+Grab a specific doc by ID. Use `--lang` to get language-specific content:
 
 ```sh
 chub get openai/chat --lang python
 ```
 
-### List all available docs
+This outputs the full markdown doc — ready to be consumed by an AI agent or read by a human.
+
+```sh
+# Other examples
+chub get stripe/api --lang javascript
+chub get nextjs/app-router --version 15.0
+chub get openai/chat --lang python --version 4.0
+```
+
+## List all docs
 
 ```sh
 chub list
 ```
 
-### Initialize a project
+Use `--json` with any command for machine-readable output:
 
 ```sh
-# Create .chub/ directory with defaults
-chub init
-
-# Auto-detect dependencies and pin matching docs
-chub init --from-deps
+chub list --json
 ```
 
-### Pin docs for your team
+## Set up MCP for your AI agent
 
-```sh
-# Pin a doc with version lock
-chub pin openai/chat --lang python --version 4.0
+Chub includes a built-in MCP (Model Context Protocol) server. This is how AI agents like Claude and Cursor access docs automatically.
 
-# List pinned docs
-chub pins
+::: code-group
 
-# Fetch all pinned docs at once
-chub get --pinned
-```
-
-## MCP Setup
-
-Chub includes a built-in MCP (Model Context Protocol) server for AI agents.
-
-### Claude Code
-
-Add to your `.mcp.json`:
-
-```json
+```json [Claude Code (.mcp.json)]
 {
   "mcpServers": {
     "chub": {
@@ -95,28 +94,30 @@ Add to your `.mcp.json`:
 }
 ```
 
-### Cursor
-
-Go to **Settings → MCP Servers → Add Server**:
-
-```
-Command: chub mcp
-Transport: stdio
-```
-
-### With a profile
-
-```sh
-chub mcp --profile backend
+```json [Cursor (.cursor/mcp.json)]
+{
+  "mcpServers": {
+    "chub": {
+      "command": "chub",
+      "args": ["mcp"]
+    }
+  }
+}
 ```
 
-::: tip
-When using MCP, pinned doc versions are automatically applied. Agents don't need to know which version to use.
 :::
 
-## Project Setup
+Once configured, your AI agent can search and fetch docs without any manual commands.
 
-`chub init` creates a `.chub/` directory in your project root:
+## Initialize a project
+
+Set up team sharing by creating a `.chub/` directory in your project:
+
+```sh
+chub init
+```
+
+This creates:
 
 ```
 my-project/
@@ -128,11 +129,35 @@ my-project/
 │   └── profiles/          # Named context profiles
 ```
 
-::: info
-Commit `.chub/` to git so the whole team shares the same context. Personal settings stay in `~/.chub/`.
+::: tip Auto-detect dependencies
+Use `--from-deps` to scan `package.json`, `Cargo.toml`, `requirements.txt`, etc. and auto-pin matching docs:
+
+```sh
+chub init --from-deps
+```
 :::
 
-### Three-tier config inheritance
+Commit `.chub/` to git so the whole team shares the same context. Personal settings stay in `~/.chub/`.
+
+## Pin docs for your team
+
+Lock specific doc versions so every team member and AI agent uses the same reference:
+
+```sh
+chub pin openai/chat --lang python --version 4.0 --reason "Use v4 streaming API"
+chub pin stripe/api --lang javascript
+```
+
+List and fetch pinned docs:
+
+```sh
+chub pins              # list all pins
+chub get --pinned      # fetch all pinned docs at once
+```
+
+## Three-tier config
+
+Chub uses a layered config system — no tier is required:
 
 ```
 ~/.chub/config.yaml          # Tier 1 — personal defaults
@@ -142,9 +167,19 @@ Commit `.chub/` to git so the whole team shares the same context. Personal setti
 .chub/profiles/<name>.yaml   # Tier 3 — role/task profile
 ```
 
-## Next Steps
+## What to learn next
 
-- [Doc Pinning](/guide/pinning) — lock doc versions for your team
-- [Context Profiles](/guide/profiles) — role-scoped context
-- [CLI Reference](/reference/cli) — all commands and flags
-- [Configuration](/reference/configuration) — config file format
+Now that you have Chub installed, explore the features that matter to your workflow:
+
+| If you want to... | Read |
+|---|---|
+| Understand why Chub exists | [Why Chub](/guide/why-chub) |
+| Lock doc versions for your team | [Doc Pinning](/guide/pinning) |
+| Give different roles different context | [Context Profiles](/guide/profiles) |
+| Share team knowledge in git | [Team Annotations](/guide/annotations) |
+| Add custom project docs | [Project Context](/guide/project-context) |
+| Auto-detect deps and pin docs | [Dep Auto-Detection](/guide/detect) |
+| Sync CLAUDE.md / .cursorrules | [Agent Config Sync](/guide/agent-config) |
+| See all CLI commands | [CLI Reference](/reference/cli) |
+| Configure Chub | [Configuration](/reference/configuration) |
+| Connect AI agents via MCP | [MCP Server](/reference/mcp-server) |

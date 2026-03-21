@@ -1,33 +1,33 @@
-/* Chub — Blue theme overrides for VitePress */
+/* Chub — Sky blue theme overrides for VitePress */
 
 :root {
-  --vp-c-brand-1: #2563eb;
-  --vp-c-brand-2: #1d4ed8;
-  --vp-c-brand-3: #1e40af;
-  --vp-c-brand-soft: rgba(37, 99, 235, 0.14);
+  --vp-c-brand-1: #0ea5e9;
+  --vp-c-brand-2: #0284c7;
+  --vp-c-brand-3: #0369a1;
+  --vp-c-brand-soft: rgba(14, 165, 233, 0.14);
 
-  --vp-home-hero-name-color: #2563eb;
+  --vp-home-hero-name-color: #0ea5e9;
 
   --vp-button-brand-border: transparent;
   --vp-button-brand-text: #fff;
-  --vp-button-brand-bg: #2563eb;
+  --vp-button-brand-bg: #0ea5e9;
   --vp-button-brand-hover-border: transparent;
   --vp-button-brand-hover-text: #fff;
-  --vp-button-brand-hover-bg: #1d4ed8;
+  --vp-button-brand-hover-bg: #0284c7;
   --vp-button-brand-active-border: transparent;
   --vp-button-brand-active-text: #fff;
-  --vp-button-brand-active-bg: #1e40af;
+  --vp-button-brand-active-bg: #0369a1;
 }
 
 .dark {
-  --vp-c-brand-1: #3b82f6;
-  --vp-c-brand-2: #2563eb;
-  --vp-c-brand-3: #1d4ed8;
-  --vp-c-brand-soft: rgba(59, 130, 246, 0.14);
-  --vp-home-hero-name-color: #3b82f6;
+  --vp-c-brand-1: #38bdf8;
+  --vp-c-brand-2: #0ea5e9;
+  --vp-c-brand-3: #0284c7;
+  --vp-c-brand-soft: rgba(56, 189, 248, 0.14);
+  --vp-home-hero-name-color: #38bdf8;
 }
 
-/* Hero name styling - solid color, no gradient */
+/* ── Hero name styling ── */
 .VPHero .name {
   color: var(--vp-home-hero-name-color) !important;
   background: none !important;
@@ -35,7 +35,97 @@
   -webkit-text-fill-color: unset !important;
 }
 
-/* Stats bar on homepage */
+/* ── Animations ── */
+
+/* Fade-in-up for hero section */
+@keyframes fade-in-up {
+  from {
+    opacity: 0;
+    transform: translateY(24px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Fade-in for general elements */
+@keyframes fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+/* Scale-in for logo */
+@keyframes scale-in {
+  from {
+    opacity: 0;
+    transform: scale(0.8);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+/* Count-up pulse for stats */
+@keyframes pulse-in {
+  0% {
+    opacity: 0;
+    transform: scale(0.9);
+  }
+  60% {
+    opacity: 1;
+    transform: scale(1.04);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+/* Hero container */
+.VPHero .container {
+  animation: fade-in-up 0.6s ease-out both;
+}
+
+/* Hero logo image */
+.VPHero .image-container {
+  animation: scale-in 0.7s ease-out 0.15s both;
+}
+
+/* Hero action buttons */
+.VPHero .actions {
+  animation: fade-in-up 0.5s ease-out 0.3s both;
+}
+
+/* Feature cards */
+.VPFeatures .VPFeature {
+  animation: fade-in-up 0.5s ease-out both;
+  animation-delay: calc(var(--index, 0) * 0.08s + 0.3s);
+}
+
+.VPFeatures .VPFeature:nth-child(1) { --index: 0; }
+.VPFeatures .VPFeature:nth-child(2) { --index: 1; }
+.VPFeatures .VPFeature:nth-child(3) { --index: 2; }
+.VPFeatures .VPFeature:nth-child(4) { --index: 3; }
+.VPFeatures .VPFeature:nth-child(5) { --index: 4; }
+.VPFeatures .VPFeature:nth-child(6) { --index: 5; }
+
+/* Feature card hover lift */
+.VPFeatures .VPFeature {
+  transition: transform 0.25s ease, box-shadow 0.25s ease;
+}
+
+.VPFeatures .VPFeature:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+}
+
+.dark .VPFeatures .VPFeature:hover {
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
+}
+
+/* ── Stats bar ── */
 .stats-bar {
   display: flex;
   justify-content: center;
@@ -46,15 +136,50 @@
   border-bottom: 1px solid var(--vp-c-divider);
   margin: 0 auto;
   max-width: 640px;
+  animation: fade-in 0.6s ease-out 0.5s both;
 }
-.stat { text-align: center; }
+
+.stat {
+  text-align: center;
+  animation: pulse-in 0.5s ease-out both;
+}
+
+.stat:nth-child(1) { animation-delay: 0.55s; }
+.stat:nth-child(2) { animation-delay: 0.65s; }
+.stat:nth-child(3) { animation-delay: 0.75s; }
+.stat:nth-child(4) { animation-delay: 0.85s; }
+
 .stat-num {
   font-size: 1.75rem;
   font-weight: 700;
   color: var(--vp-c-brand-1);
 }
+
 .stat-label {
   font-size: 0.82rem;
   color: var(--vp-c-text-2);
   margin-top: 4px;
+}
+
+/* ── Smooth button transitions ── */
+.VPButton {
+  transition: background-color 0.2s ease, transform 0.15s ease, box-shadow 0.2s ease !important;
+}
+
+.VPButton:hover {
+  transform: translateY(-1px);
+}
+
+.VPButton:active {
+  transform: translateY(0);
+}
+
+/* ── Sidebar link transitions ── */
+.VPSidebar a {
+  transition: color 0.2s ease, padding-left 0.2s ease;
+}
+
+/* ── Nav bar subtle fade on scroll ── */
+.VPNav {
+  transition: background-color 0.3s ease, box-shadow 0.3s ease;
 }

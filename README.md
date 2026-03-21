@@ -1,15 +1,32 @@
-# Chub
+<p align="center">
+  <img src="website/assets/logo.svg" width="80" height="80" alt="Chub">
+</p>
 
-> The missing context layer for AI-assisted development teams.
+<h1 align="center">Chub</h1>
+
+<p align="center">
+  <strong>The missing context layer for AI-assisted development teams.</strong>
+</p>
+
+<p align="center">
+  <a href="https://www.npmjs.com/package/@nrl-ai/chub"><img src="https://img.shields.io/npm/v/@nrl-ai/chub?color=0ea5e9&label=npm" alt="npm"></a>
+  <a href="https://pypi.org/project/chub/"><img src="https://img.shields.io/pypi/v/chub?color=0ea5e9&label=pypi" alt="PyPI"></a>
+  <a href="https://crates.io/crates/chub"><img src="https://img.shields.io/crates/v/chub?color=0ea5e9&label=crates.io" alt="crates.io"></a>
+  <a href="https://github.com/nrl-ai/chub/blob/main/LICENSE"><img src="https://img.shields.io/badge/license-MIT-0ea5e9" alt="License"></a>
+</p>
+
+<p align="center">
+  <a href="https://chub.nrl.ai">Docs</a> · <a href="https://chub.nrl.ai/guide/getting-started">Getting Started</a> · <a href="https://github.com/nrl-ai/chub/releases">Releases</a>
+</p>
+
+---
 
 Built on [Context Hub](https://github.com/andrewyng/context-hub) by Andrew Ng — Chub is a high-performance Rust rewrite that extends the original with team-first features: shared doc pinning, git-tracked annotations, context profiles, and agent config sync.
 
 **For individuals**: drop-in replacement for `chub` with a faster binary, better search, and persistent annotations.
 **For teams**: commit a `.chub/` directory to your repo and every developer and every AI agent gets the same versioned context, automatically.
 
----
-
-## What Chub does
+## Why Chub
 
 Coding agents hallucinate APIs and forget what they learn between sessions. Context Hub's answer — curated, versioned markdown docs served via CLI and MCP — works well. Chub keeps that foundation and adds:
 
@@ -28,69 +45,176 @@ Coding agents hallucinate APIs and forget what they learn between sessions. Cont
 
 ## Installation
 
+### npm (recommended)
+
 ```sh
 npm install -g @nrl-ai/chub
 ```
 
-Or via pip:
+### pip
 
 ```sh
 pip install chub
 ```
 
-Or download a pre-built binary from [GitHub Releases](https://github.com/vietanhdev/chub/releases).
+Pre-built wheels for Linux (x64, ARM64), macOS (x64, Apple Silicon), and Windows (x64).
+
+### Cargo (build from source)
+
+```sh
+cargo install chub
+```
+
+### Homebrew (macOS / Linux)
+
+```sh
+brew install nrl-ai/tap/chub
+```
+
+### Binary download
+
+Download prebuilt binaries from [GitHub Releases](https://github.com/nrl-ai/chub/releases):
+
+| Platform | Binary |
+|---|---|
+| Linux x64 | `chub-linux-x64` |
+| Linux ARM64 | `chub-linux-arm64` |
+| macOS x64 | `chub-darwin-x64` |
+| macOS ARM (Apple Silicon) | `chub-darwin-arm64` |
+| Windows x64 | `chub-win32-x64.exe` |
+
+### Verify installation
+
+```sh
+chub --version
+```
+
+---
+
+## Quick Start
+
+### Search for docs
+
+```sh
+chub search "stripe payments"
+```
+
+### Fetch a doc
+
+```sh
+chub get openai/chat --lang python
+```
+
+### List all available docs
+
+```sh
+chub list
+```
+
+### Initialize a project for team sharing
+
+```sh
+chub init                    # create .chub/ directory
+chub init --from-deps        # auto-detect dependencies and pin matching docs
+```
 
 ---
 
 ## Usage
 
+### Search and fetch
+
 ```sh
-# Search and fetch docs
-chub search "stripe"
-chub get openai/chat --lang python
-chub list
+chub search "stripe"                    # BM25 search across all docs
+chub search "auth" --limit 5            # limit results
+chub search "react" --source official   # search specific source
+chub get openai/chat --lang python      # fetch doc by ID
+chub get stripe/api --lang javascript   # language-specific
+chub get openai/chat --version 4.0      # specific version
+chub list                               # list all available docs
+chub list --json                        # JSON output (works with all commands)
+```
 
-# Initialize project for team sharing
-chub init
-chub init --from-deps          # auto-detect dependencies
+### Doc pinning
 
-# Pin docs for the team
-chub pin openai/chat --lang python --version 4.0
-chub pins                      # list pins
-chub get --pinned              # fetch all pinned docs
+```sh
+chub pin openai/chat --lang python --version 4.0 --reason "Use v4 API"
+chub pin stripe/api --lang javascript
+chub pins                               # list all pins
+chub unpin openai/chat                  # remove a pin
+chub get --pinned                       # fetch all pinned docs at once
+```
 
-# Context profiles
-chub profile use backend
-chub profile list
+### Context profiles
 
-# Team annotations
-chub annotate openai/chat "Use streaming API" --team
+```sh
+chub profile use backend                # activate a profile
+chub profile use none                   # clear profile
+chub profile list                       # list available profiles
+```
 
-# Auto-detect dependencies and pin matching docs
-chub detect --pin
+### Team annotations
 
-# Generate CLAUDE.md, .cursorrules from .chub/config.yaml
-chub agent-config generate
+```sh
+chub annotate openai/chat "Use streaming API" --team       # git-tracked
+chub annotate openai/chat "My local note" --personal       # local only
+```
 
-# Doc freshness check
-chub check --fix
+### Dependency auto-detection
 
-# Snapshots
-chub snapshot create v1.0
-chub snapshot diff v1.0 v2.0
+```sh
+chub detect                             # show detected deps with matching docs
+chub detect --pin                       # auto-pin all matches
+```
 
-# MCP server
-chub mcp
+### Agent config sync
 
-# JSON output (all commands)
-chub search "stripe" --json
+```sh
+chub agent-config generate              # generate CLAUDE.md, .cursorrules, etc.
+chub agent-config sync                  # update only if changed
+chub agent-config diff                  # preview changes
+```
+
+### Snapshots and freshness
+
+```sh
+chub snapshot create v1.0               # save current pins
+chub snapshot list                      # list snapshots
+chub snapshot restore v1.0              # restore pin state
+chub snapshot diff v1.0 v2.0            # compare snapshots
+chub check                              # check pinned vs installed versions
+chub check --fix                        # auto-update outdated pins
+```
+
+### Cache management
+
+```sh
+chub update                             # refresh cached registry
+chub cache status                       # show cache state
+chub cache clear                        # clear local cache
+```
+
+### Usage analytics
+
+```sh
+chub stats                              # show fetch analytics (local, opt-in)
+chub stats --json                       # JSON output
 ```
 
 ---
 
 ## MCP Integration
 
-Add to your MCP config (`.mcp.json` for Claude Code, `.cursor/mcp.json` for Cursor):
+Chub includes a built-in MCP (Model Context Protocol) server that lets AI agents search and fetch docs directly.
+
+```sh
+chub mcp                                # start MCP stdio server
+chub mcp --profile backend              # with a profile
+```
+
+### Claude Code
+
+Add to `.mcp.json` in your project root:
 
 ```json
 {
@@ -103,8 +227,36 @@ Add to your MCP config (`.mcp.json` for Claude Code, `.cursor/mcp.json` for Curs
 }
 ```
 
-MCP tools: `chub_search`, `chub_get`, `chub_list`, `chub_annotate`, `chub_feedback`.
-Registry resource: `chub://registry`.
+### Cursor
+
+Add to `.cursor/mcp.json`:
+
+```json
+{
+  "mcpServers": {
+    "chub": {
+      "command": "chub",
+      "args": ["mcp"]
+    }
+  }
+}
+```
+
+### Windsurf / Other agents
+
+Any MCP-compatible agent can use Chub. The transport is stdio — just point the agent at `chub mcp`.
+
+### MCP tools
+
+| Tool | Description |
+|---|---|
+| `chub_search` | Search docs by query |
+| `chub_get` | Fetch a doc by ID |
+| `chub_list` | List all available docs |
+| `chub_annotate` | Add an annotation |
+| `chub_feedback` | Submit doc feedback |
+
+Registry resource: `chub://registry`
 
 ---
 
@@ -132,7 +284,7 @@ my-project/
 .chub/profiles/<name>.yaml   # Tier 3 — role/task profile
 ```
 
-### Implemented features
+### Feature overview
 
 | Feature | Status | Description |
 |---|---|---|
@@ -155,7 +307,7 @@ See [docs/plan.md](docs/plan.md) for the full roadmap.
 
 Measured on the production corpus (1,553 docs, 6 skills, 1,691 files).
 
-### Build
+### Build performance
 
 | Operation | JS (`chub`) | Rust (`Chub`) | Speedup |
 |---|---|---|---|
@@ -164,12 +316,12 @@ Measured on the production corpus (1,553 docs, 6 skills, 1,691 files).
 | `build --validate-only` | 6,300 ms | **360 ms** | **17x** |
 | Cold start (`--help`) | 120 ms | **26 ms** | **4.6x** |
 
-### Resource Usage
+### Resource usage
 
 | Metric | JS | Rust |
 |---|---|---|
 | Binary size | ~70 MB (with `node_modules`) | **1.2 MB** |
-| Runtime dependency | Node.js 20+ | None (single binary) |
+| Runtime dependency | Node.js 20+ | **None** (single binary) |
 | Memory (build, 1,559 entries) | ~120 MB | **~15 MB** |
 
 ---
@@ -191,17 +343,67 @@ Measured on the production corpus (1,553 docs, 6 skills, 1,691 files).
 
 All tests use isolated temp directories — no writes to the repo's `.chub/`.
 
+```sh
+cargo test --all                     # run all tests
+```
+
+---
+
+## Content Registry
+
+### Building from source content
+
+```sh
+chub build ./content -o ./dist                             # build registry
+chub build ./content --validate-only                       # validate only
+chub build ./content --base-url https://cdn.example.com/v1 # with CDN URL
+```
+
+### Serving a local registry
+
+```sh
+chub serve ./dist --port 4242        # serve as HTTP registry
+```
+
+### Content format
+
+```
+content/
+  <author>/
+    docs/<entry-name>/
+      <lang>/DOC.md                  # YAML frontmatter + markdown
+      <lang>/<version>/DOC.md        # versioned variant
+    skills/<entry-name>/
+      SKILL.md
+```
+
 ---
 
 ## Documentation
 
-Full documentation at [chub.nrl.ai](https://chub.nrl.ai) (VitePress):
+Full documentation at [chub.nrl.ai](https://chub.nrl.ai):
 
-- [Getting Started](https://chub.nrl.ai/guide/getting-started)
-- [Team Features](https://chub.nrl.ai/guide/pinning)
-- [CLI Reference](https://chub.nrl.ai/reference/cli)
-- [Configuration](https://chub.nrl.ai/reference/configuration)
-- [MCP Server](https://chub.nrl.ai/reference/mcp-server)
+- [Getting Started](https://chub.nrl.ai/guide/getting-started) — install and first commands
+- [Installation](https://chub.nrl.ai/guide/installation) — all platforms and package managers
+- [Why Chub](https://chub.nrl.ai/guide/why-chub) — comparison with Context Hub
+- [Doc Pinning](https://chub.nrl.ai/guide/pinning) — lock doc versions
+- [Context Profiles](https://chub.nrl.ai/guide/profiles) — role-scoped context
+- [Team Annotations](https://chub.nrl.ai/guide/annotations) — shared knowledge
+- [Project Context](https://chub.nrl.ai/guide/project-context) — custom docs
+- [CLI Reference](https://chub.nrl.ai/reference/cli) — all commands and flags
+- [Configuration](https://chub.nrl.ai/reference/configuration) — config file format
+- [MCP Server](https://chub.nrl.ai/reference/mcp-server) — agent integration
+
+---
+
+## Contributing
+
+```sh
+cargo build                          # debug build
+cargo test --all                     # run tests
+cargo fmt --all                      # format
+cargo clippy --all -- -D warnings    # lint
+```
 
 ---
 
