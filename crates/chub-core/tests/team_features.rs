@@ -1004,3 +1004,461 @@ fn merged_annotation_without_org_tier() {
         }
     });
 }
+
+// ==================== ORG ANNOTATIONS HTTP INTEGRATION TESTS ====================
+
+mod org_http {
+    use super::ENV_MUTEX;
+    use axum::{
+        extract::{Path, State},
+        http::{HeaderMap, StatusCode},
+        response::Json,
+        routing::get,
+        Router,
+    };
+    use chub_core::team::team_annotations::{TeamAnnotation, TeamAnnotationNote};
+    use std::collections::HashMap;
+    use std::sync::{Arc, Mutex};
+    use tokio::net::TcpListener;
+
+    #[derive(Clone)]
+    struct ServerState {
+        store: Arc<Mutex<HashMap<String, TeamAnnotation>>>,
+        auth_log: Arc<Mutex<Vec<Option<String>>>>,
+    }
+
+    impl ServerState {
+        fn new() -> Self {
+            Self {
+                store: Arc::new(Mutex::new(HashMap::new())),
+                auth_log: Arc::new(Mutex::new(vec![])),
+            }
+        }
+
+        fn insert(&self, ann: TeamAnnotation) {
+            self.store.lock().unwrap().insert(ann.id.clone(), ann);
+        }
+    }
+
+    async fn list_handler(
+        State(s): State<ServerState>,
+        headers: HeaderMap,
+    ) -> Json<Vec<TeamAnnotation>> {
+        s.auth_log.lock().unwrap().push(
+            headers
+                .get("authorization")
+                .and_then(|v| v.to_str().ok())
+                .map(String::from),
+        );
+        let store = s.store.lock().unwrap();
+        Json(store.values().cloned().collect())
+    }
+
+    async fn get_handler(
+        State(s): State<ServerState>,
+        headers: HeaderMap,
+        Path(id): Path<String>,
+    ) -> Result<Json<TeamAnnotation>, StatusCode> {
+        s.auth_log.lock().unwrap().push(
+            headers
+                .get("authorization")
+                .and_then(|v| v.to_str().ok())
+                .map(String::from),
+        );
+        let original_id = id.replace("--", "/");
+        let store = s.store.lock().unwrap();
+        store
+            .get(&original_id)
+            .cloned()
+            .map(Json)
+            .ok_or(StatusCode::NOT_FOUND)
+    }
+
+    async fn post_handler(
+        State(s): State<ServerState>,
+        headers: HeaderMap,
+        Path(id): Path<String>,
+        Json(body): Json<serde_json::Value>,
+    ) -> Json<TeamAnnotation> {
+        s.auth_log.lock().unwrap().push(
+            headers
+                .get("authorization")
+                .and_then(|v| v.to_str().ok())
+                .map(String::from),
+        );
+        let original_id = id.replace("--", "/");
+        let note_text = body["note"].as_str().unwrap_or("").to_string();
+        let author = body["author"].as_str().unwrap_or("").to_string();
+        let kind = body["kind"].as_str().unwrap_or("note").to_string();
+        let severity = body["severity"].as_str().map(String::from);
+
+        let mut store = s.store.lock().unwrap();
+        let ann = store.entry(original_id.clone()).or_insert(TeamAnnotation {
+            id: original_id.clone(),
+            notes: vec![],
+            issues: vec![],
+            fixes: vec![],
+            practices: vec![],
+        });
+        let entry = TeamAnnotationNote {
+            author,
+            date: "2026-03-21".to_string(),
+            note: note_text,
+            severity,
+        };
+        match kind.as_str() {
+            "issue" => ann.issues.push(entry),
+            "fix" => ann.fixes.push(entry),
+            "practice" => ann.practices.push(entry),
+            _ => ann.notes.push(entry),
+        }
+        Json(ann.clone())
+    }
+
+    async fn delete_handler(
+        State(s): State<ServerState>,
+        headers: HeaderMap,
+        Path(id): Path<String>,
+    ) -> StatusCode {
+        s.auth_log.lock().unwrap().push(
+            headers
+                .get("authorization")
+                .and_then(|v| v.to_str().ok())
+                .map(String::from),
+        );
+        let original_id = id.replace("--", "/");
+        let mut store = s.store.lock().unwrap();
+        if store.remove(&original_id).is_some() {
+            StatusCode::OK
+        } else {
+            StatusCode::NOT_FOUND
+        }
+    }
+
+    async fn start_server(state: ServerState) -> (u16, tokio::task::JoinHandle<()>) {
+        let app = Router::new()
+            .route("/api/v1/annotations", get(list_handler))
+            .route(
+                "/api/v1/annotations/:id",
+                get(get_handler).post(post_handler).delete(delete_handler),
+            )
+            .with_state(state);
+        let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
+        let port = listener.local_addr().unwrap().port();
+        let handle = tokio::spawn(async move {
+            axum::serve(listener, app).await.unwrap();
+        });
+        (port, handle)
+    }
+
+    #[test]
+    fn org_read_annotation_success() {
+        let rt = tokio::runtime::Runtime::new().unwrap();
+        rt.block_on(async {
+            let state = ServerState::new();
+            state.insert(TeamAnnotation {
+                id: "openai/chat".to_string(),
+                notes: vec![TeamAnnotationNote {
+                    author: "alice".to_string(),
+                    date: "2026-03-21".to_string(),
+                    note: "Use max_tokens".to_string(),
+                    severity: None,
+                }],
+                issues: vec![],
+                fixes: vec![],
+                practices: vec![],
+            });
+            let (port, handle) = start_server(state).await;
+
+            let dir = tempfile::tempdir().unwrap();
+            let _guard = ENV_MUTEX.lock().unwrap_or_else(|e| e.into_inner());
+            unsafe {
+                std::env::set_var(
+                    "CHUB_ANNOTATION_SERVER",
+                    format!("http://127.0.0.1:{}", port),
+                );
+                std::env::set_var("CHUB_DIR", dir.path().to_str().unwrap());
+            }
+            chub_core::team::org_annotations::clear_org_cache();
+
+            let result = chub_core::team::org_annotations::read_org_annotation("openai/chat").await;
+            assert!(result.is_some());
+            let ann = result.unwrap();
+            assert_eq!(ann.id, "openai/chat");
+            assert_eq!(ann.notes.len(), 1);
+            assert_eq!(ann.notes[0].note, "Use max_tokens");
+
+            unsafe {
+                std::env::remove_var("CHUB_ANNOTATION_SERVER");
+                std::env::remove_var("CHUB_DIR");
+            }
+            handle.abort();
+        });
+    }
+
+    #[test]
+    fn org_read_annotation_not_found() {
+        let rt = tokio::runtime::Runtime::new().unwrap();
+        rt.block_on(async {
+            let state = ServerState::new(); // empty store
+            let (port, handle) = start_server(state).await;
+
+            let dir = tempfile::tempdir().unwrap();
+            let _guard = ENV_MUTEX.lock().unwrap_or_else(|e| e.into_inner());
+            unsafe {
+                std::env::set_var(
+                    "CHUB_ANNOTATION_SERVER",
+                    format!("http://127.0.0.1:{}", port),
+                );
+                std::env::set_var("CHUB_DIR", dir.path().to_str().unwrap());
+            }
+            chub_core::team::org_annotations::clear_org_cache();
+
+            let result = chub_core::team::org_annotations::read_org_annotation("openai/chat").await;
+            assert!(result.is_none());
+
+            unsafe {
+                std::env::remove_var("CHUB_ANNOTATION_SERVER");
+                std::env::remove_var("CHUB_DIR");
+            }
+            handle.abort();
+        });
+    }
+
+    #[test]
+    fn org_write_annotation_success() {
+        let rt = tokio::runtime::Runtime::new().unwrap();
+        rt.block_on(async {
+            let state = ServerState::new();
+            let (port, handle) = start_server(state).await;
+
+            let dir = tempfile::tempdir().unwrap();
+            let _guard = ENV_MUTEX.lock().unwrap_or_else(|e| e.into_inner());
+            unsafe {
+                std::env::set_var(
+                    "CHUB_ANNOTATION_SERVER",
+                    format!("http://127.0.0.1:{}", port),
+                );
+                std::env::set_var("CHUB_DIR", dir.path().to_str().unwrap());
+            }
+            chub_core::team::org_annotations::clear_org_cache();
+
+            let result = chub_core::team::org_annotations::write_org_annotation(
+                "openai/chat",
+                "Always set max_tokens",
+                "alice",
+                chub_core::annotations::AnnotationKind::Practice,
+                None,
+            )
+            .await;
+            assert!(result.is_ok());
+            let ann = result.unwrap();
+            assert_eq!(ann.id, "openai/chat");
+            assert_eq!(ann.practices.len(), 1);
+            assert_eq!(ann.practices[0].note, "Always set max_tokens");
+            assert_eq!(ann.practices[0].author, "alice");
+
+            unsafe {
+                std::env::remove_var("CHUB_ANNOTATION_SERVER");
+                std::env::remove_var("CHUB_DIR");
+            }
+            handle.abort();
+        });
+    }
+
+    #[test]
+    fn org_clear_annotation_success() {
+        let rt = tokio::runtime::Runtime::new().unwrap();
+        rt.block_on(async {
+            let state = ServerState::new();
+            state.insert(TeamAnnotation {
+                id: "openai/chat".to_string(),
+                notes: vec![],
+                issues: vec![],
+                fixes: vec![],
+                practices: vec![],
+            });
+            let (port, handle) = start_server(state).await;
+
+            let dir = tempfile::tempdir().unwrap();
+            let _guard = ENV_MUTEX.lock().unwrap_or_else(|e| e.into_inner());
+            unsafe {
+                std::env::set_var(
+                    "CHUB_ANNOTATION_SERVER",
+                    format!("http://127.0.0.1:{}", port),
+                );
+                std::env::set_var("CHUB_DIR", dir.path().to_str().unwrap());
+            }
+
+            let result =
+                chub_core::team::org_annotations::clear_org_annotation("openai/chat").await;
+            assert!(result.is_ok());
+            assert!(result.unwrap()); // true = was found and deleted
+
+            // Clearing again → 404 → Ok(false)
+            let result2 =
+                chub_core::team::org_annotations::clear_org_annotation("openai/chat").await;
+            assert!(result2.is_ok());
+            assert!(!result2.unwrap()); // false = not found (already deleted)
+
+            unsafe {
+                std::env::remove_var("CHUB_ANNOTATION_SERVER");
+                std::env::remove_var("CHUB_DIR");
+            }
+            handle.abort();
+        });
+    }
+
+    #[test]
+    fn org_list_annotations_success() {
+        let rt = tokio::runtime::Runtime::new().unwrap();
+        rt.block_on(async {
+            let state = ServerState::new();
+            state.insert(TeamAnnotation {
+                id: "openai/chat".to_string(),
+                notes: vec![TeamAnnotationNote {
+                    author: "alice".to_string(),
+                    date: "2026-03-21".to_string(),
+                    note: "note1".to_string(),
+                    severity: None,
+                }],
+                issues: vec![],
+                fixes: vec![],
+                practices: vec![],
+            });
+            state.insert(TeamAnnotation {
+                id: "anthropic/claude".to_string(),
+                notes: vec![],
+                issues: vec![TeamAnnotationNote {
+                    author: "bob".to_string(),
+                    date: "2026-03-21".to_string(),
+                    note: "issue1".to_string(),
+                    severity: Some("high".to_string()),
+                }],
+                fixes: vec![],
+                practices: vec![],
+            });
+            let (port, handle) = start_server(state).await;
+
+            let _guard = ENV_MUTEX.lock().unwrap_or_else(|e| e.into_inner());
+            unsafe {
+                std::env::set_var(
+                    "CHUB_ANNOTATION_SERVER",
+                    format!("http://127.0.0.1:{}", port),
+                );
+            }
+
+            let result = chub_core::team::org_annotations::list_org_annotations().await;
+            assert_eq!(result.len(), 2);
+
+            unsafe {
+                std::env::remove_var("CHUB_ANNOTATION_SERVER");
+            }
+            handle.abort();
+        });
+    }
+
+    #[test]
+    fn org_auth_bearer_token_sent() {
+        let rt = tokio::runtime::Runtime::new().unwrap();
+        rt.block_on(async {
+            let state = ServerState::new();
+            let auth_log = state.auth_log.clone();
+            let (port, handle) = start_server(state).await;
+
+            let dir = tempfile::tempdir().unwrap();
+            let _guard = ENV_MUTEX.lock().unwrap_or_else(|e| e.into_inner());
+            unsafe {
+                std::env::set_var(
+                    "CHUB_ANNOTATION_SERVER",
+                    format!("http://127.0.0.1:{}", port),
+                );
+                std::env::set_var("CHUB_ANNOTATION_TOKEN", "secret-token-abc");
+                std::env::set_var("CHUB_DIR", dir.path().to_str().unwrap());
+            }
+            chub_core::team::org_annotations::clear_org_cache();
+
+            let _ = chub_core::team::org_annotations::read_org_annotation("openai/chat").await;
+
+            let log = auth_log.lock().unwrap();
+            assert!(!log.is_empty());
+            assert_eq!(
+                log[0].as_deref(),
+                Some("Bearer secret-token-abc"),
+                "Authorization header should contain the bearer token"
+            );
+
+            unsafe {
+                std::env::remove_var("CHUB_ANNOTATION_SERVER");
+                std::env::remove_var("CHUB_ANNOTATION_TOKEN");
+                std::env::remove_var("CHUB_DIR");
+            }
+            handle.abort();
+        });
+    }
+
+    #[test]
+    fn org_read_uses_fresh_cache_without_network() {
+        let rt = tokio::runtime::Runtime::new().unwrap();
+        rt.block_on(async {
+            let dir = tempfile::tempdir().unwrap();
+            let _guard = ENV_MUTEX.lock().unwrap_or_else(|e| e.into_inner());
+            unsafe {
+                std::env::set_var("CHUB_DIR", dir.path().to_str().unwrap());
+                // Point to a port that's not listening (connection refused)
+                std::env::set_var("CHUB_ANNOTATION_SERVER", "http://127.0.0.1:1");
+            }
+
+            // Pre-seed the cache (freshly written = within TTL)
+            let cached_ann = TeamAnnotation {
+                id: "openai/chat".to_string(),
+                notes: vec![TeamAnnotationNote {
+                    author: "cached-author".to_string(),
+                    date: "2026-01-01".to_string(),
+                    note: "from cache".to_string(),
+                    severity: None,
+                }],
+                issues: vec![],
+                fixes: vec![],
+                practices: vec![],
+            };
+            let cache_dir = dir.path().join("cache").join("org-annotations");
+            std::fs::create_dir_all(&cache_dir).unwrap();
+            let cache_file = cache_dir.join("openai--chat.json");
+            std::fs::write(&cache_file, serde_json::to_string(&cached_ann).unwrap()).unwrap();
+
+            // Fresh cache → returned without hitting the (unreachable) network
+            let result = chub_core::team::org_annotations::read_org_annotation("openai/chat").await;
+            assert!(result.is_some());
+            let ann = result.unwrap();
+            assert_eq!(ann.notes[0].note, "from cache");
+
+            unsafe {
+                std::env::remove_var("CHUB_DIR");
+                std::env::remove_var("CHUB_ANNOTATION_SERVER");
+            }
+        });
+    }
+
+    #[test]
+    fn org_write_no_server_configured_returns_err() {
+        let rt = tokio::runtime::Runtime::new().unwrap();
+        rt.block_on(async {
+            let _guard = ENV_MUTEX.lock().unwrap_or_else(|e| e.into_inner());
+            unsafe {
+                std::env::remove_var("CHUB_ANNOTATION_SERVER");
+            }
+
+            let result = chub_core::team::org_annotations::write_org_annotation(
+                "openai/chat",
+                "note",
+                "alice",
+                chub_core::annotations::AnnotationKind::Note,
+                None,
+            )
+            .await;
+            assert!(result.is_err());
+            assert!(result.unwrap_err().contains("No annotation_server"));
+        });
+    }
+}

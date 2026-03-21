@@ -9,7 +9,7 @@
 
 | Capability | Context Hub (JS) | Chub (Rust) |
 |---|---|---|
-| Public library docs | 1,600+ curated | 1,553+ curated |
+| Public library docs | 1,558+ curated | 1,558+ curated |
 | Custom/private docs | Yes (build cmd) | Yes (build cmd) |
 | Offline mode | Yes (bundle) | Yes (bundle) |
 | Team collaboration | No | **Yes** (pins, profiles, annotations) |

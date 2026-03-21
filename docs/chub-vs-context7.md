@@ -6,7 +6,7 @@ They solve different problems. Run both.
 
 | | Context7 | Chub |
 |---|---|---|
-| Public library docs | Auto-crawled, always fresh | 1,600+ curated entries |
+| Public library docs | Auto-crawled, always fresh | 1,558+ curated entries |
 | Private/internal docs | No | Yes |
 | Team annotations | No | Yes (git-tracked) |
 | Version pinning | No | Yes (with reasons) |
