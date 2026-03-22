@@ -143,20 +143,15 @@ impl TokenUsage {
 // Session phase
 // ---------------------------------------------------------------------------
 
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]
 pub enum Phase {
     #[serde(rename = "idle")]
+    #[default]
     Idle,
     #[serde(rename = "active")]
     Active,
     #[serde(rename = "ended")]
     Ended,
-}
-
-impl Default for Phase {
-    fn default() -> Self {
-        Self::Idle
-    }
 }
 
 // ---------------------------------------------------------------------------

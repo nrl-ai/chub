@@ -1,6 +1,9 @@
 # Chub project configuration
 # Shared with the team via git. Overrides personal ~/.chub/config.yaml.
 
+telemetry: false
+feedback: false
+
 sources:
   - name: official
     url: https://cdn.aichub.org/v1
