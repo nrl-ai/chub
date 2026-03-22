@@ -29,7 +29,7 @@ pub fn get_or_create_client_id() -> Option<String> {
     let hash = format!("{:x}", hasher.finalize());
 
     let _ = fs::create_dir_all(&chub);
-    let _ = fs::write(&id_path, &hash);
+    let _ = crate::util::atomic_write(&id_path, hash.as_bytes());
 
     FIRST_RUN.store(true, Ordering::Relaxed);
 

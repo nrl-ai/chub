@@ -116,8 +116,19 @@ pub fn discover_context_docs() -> Vec<ContextDoc> {
 pub fn get_context_doc(name: &str) -> Option<(ContextDoc, String)> {
     let dir = context_dir()?;
 
+    // Reject names with path traversal attempts
+    if name.contains("..") || name.contains('/') || name.contains('\\') || name.contains('\0') {
+        return None;
+    }
+
     // Try exact filename first
     let md_path = dir.join(format!("{}.md", name));
+
+    // Verify the resolved path stays within the context directory
+    if crate::util::validate_path_within(&dir, &md_path, "context doc").is_err() {
+        return None;
+    }
+
     if md_path.exists() {
         let content = fs::read_to_string(&md_path).ok()?;
         let (fm, _body) = parse_context_frontmatter(&content);
@@ -133,10 +144,14 @@ pub fn get_context_doc(name: &str) -> Option<(ContextDoc, String)> {
         return Some((doc, content));
     }
 
-    // Search by name field
+    // Search by name field (discover_context_docs only reads files directly in the dir)
     for doc in discover_context_docs() {
         if doc.name.to_lowercase() == name.to_lowercase() {
             let full_path = dir.join(&doc.file);
+            // doc.file comes from read_dir so it's already a direct child — verify anyway
+            if crate::util::validate_path_within(&dir, &full_path, "context doc").is_err() {
+                continue;
+            }
             let content = fs::read_to_string(&full_path).ok()?;
             return Some((doc, content));
         }

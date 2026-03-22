@@ -61,7 +61,7 @@ pub fn save_pins(pins: &PinsFile) -> Result<()> {
         Error::Config("No .chub/ directory found. Run `chub init` first.".to_string())
     })?;
     let yaml = serde_yaml::to_string(pins).map_err(|e| Error::Config(e.to_string()))?;
-    fs::write(&path, yaml)?;
+    crate::util::atomic_write(&path, yaml.as_bytes())?;
     Ok(())
 }
 

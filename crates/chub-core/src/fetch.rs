@@ -13,6 +13,13 @@ use crate::error::{Error, Result};
 
 const FETCH_TIMEOUT_SECS: u64 = 30;
 
+/// Maximum size for registry.json downloads (50 MB).
+const MAX_REGISTRY_SIZE: usize = 50 * 1024 * 1024;
+/// Maximum size for bundle.tar.gz downloads (500 MB).
+const MAX_BUNDLE_SIZE: usize = 500 * 1024 * 1024;
+/// Maximum size for individual doc downloads (10 MB).
+const MAX_DOC_SIZE: usize = 10 * 1024 * 1024;
+
 /// Fetch registry for a single remote source.
 pub async fn fetch_remote_registry(source: &SourceConfig, force: bool) -> Result<()> {
     if !force && !should_fetch_remote_registry(&source.name) {
@@ -45,10 +52,7 @@ pub async fn fetch_remote_registry(source: &SourceConfig, force: bool) -> Result
         )));
     }
 
-    let data = res
-        .text()
-        .await
-        .map_err(|e| Error::Config(format!("Failed to read registry body: {}", e)))?;
+    let data = read_response_limited(res, MAX_REGISTRY_SIZE, "registry").await?;
 
     save_source_registry(&source.name, &data);
     crate::cache::touch_source_meta(&source.name);
@@ -123,25 +127,44 @@ pub async fn fetch_full_bundle(source_name: &str) -> Result<()> {
         )));
     }
 
-    let bytes = res
-        .bytes()
-        .await
-        .map_err(|e| Error::Config(format!("Failed to read bundle body: {}", e)))?;
+    let bytes = read_response_bytes_limited(res, MAX_BUNDLE_SIZE, "bundle").await?;
 
     let source_dir = get_source_dir(source_name);
     fs::create_dir_all(&source_dir)?;
 
-    let tmp_path = source_dir.join("bundle.tar.gz");
+    // Use a unique temp file name to avoid predictable-name attacks
+    let tmp_name = format!("bundle.{}.tar.gz", std::process::id());
+    let tmp_path = source_dir.join(&tmp_name);
     fs::write(&tmp_path, &bytes)?;
 
-    // Extract tar.gz
+    // Extract tar.gz with path validation
     let data_dir = get_source_data_dir(source_name);
     fs::create_dir_all(&data_dir)?;
 
     let file = fs::File::open(&tmp_path)?;
     let gz = flate2::read::GzDecoder::new(file);
     let mut archive = tar::Archive::new(gz);
-    archive.unpack(&data_dir)?;
+
+    // Validate each entry path before extraction to prevent path traversal
+    for entry_result in archive.entries()? {
+        let mut entry = entry_result?;
+        let entry_path = entry.path()?.to_path_buf();
+        let entry_str = entry_path.to_string_lossy();
+
+        // Reject absolute paths, paths with "..", and paths with backslashes
+        if entry_path.is_absolute() || entry_str.contains("..") || entry_str.contains('\\') {
+            return Err(Error::Config(format!(
+                "Malicious tar entry rejected: \"{}\"",
+                entry_str
+            )));
+        }
+
+        let target = data_dir.join(&entry_path);
+        if let Some(parent) = target.parent() {
+            fs::create_dir_all(parent)?;
+        }
+        entry.unpack(&target)?;
+    }
 
     // Copy registry.json from extracted bundle if present
     let extracted_registry = data_dir.join("registry.json");
@@ -220,10 +243,7 @@ pub async fn fetch_doc(source: &SourceConfig, doc_path: &str) -> Result<String> 
         )));
     }
 
-    let content = res
-        .text()
-        .await
-        .map_err(|e| Error::Config(format!("Failed to read body: {}", e)))?;
+    let content = read_response_limited(res, MAX_DOC_SIZE, "doc").await?;
 
     // Cache locally
     save_cached_doc(&source.name, doc_path, &content);
@@ -244,6 +264,60 @@ pub async fn fetch_doc_full(
         results.push((file.clone(), content));
     }
     Ok(results)
+}
+
+/// Read a text response body with a size limit.
+async fn read_response_limited(
+    res: reqwest::Response,
+    max_bytes: usize,
+    kind: &str,
+) -> Result<String> {
+    // Check Content-Length header first (if present)
+    if let Some(len) = res.content_length() {
+        if len as usize > max_bytes {
+            return Err(Error::Config(format!(
+                "Response too large for {} ({} bytes, max {})",
+                kind, len, max_bytes
+            )));
+        }
+    }
+
+    let bytes = read_response_bytes_limited(res, max_bytes, kind).await?;
+    String::from_utf8(bytes)
+        .map_err(|_| Error::Config(format!("Invalid UTF-8 in {} response", kind)))
+}
+
+/// Read a binary response body with a size limit.
+async fn read_response_bytes_limited(
+    res: reqwest::Response,
+    max_bytes: usize,
+    kind: &str,
+) -> Result<Vec<u8>> {
+    // Check Content-Length header first (if present)
+    if let Some(len) = res.content_length() {
+        if len as usize > max_bytes {
+            return Err(Error::Config(format!(
+                "Response too large for {} ({} bytes, max {})",
+                kind, len, max_bytes
+            )));
+        }
+    }
+
+    let bytes = res
+        .bytes()
+        .await
+        .map_err(|e| Error::Config(format!("Failed to read {} body: {}", kind, e)))?;
+
+    if bytes.len() > max_bytes {
+        return Err(Error::Config(format!(
+            "Response too large for {} ({} bytes, max {})",
+            kind,
+            bytes.len(),
+            max_bytes
+        )));
+    }
+
+    Ok(bytes.to_vec())
 }
 
 /// Verify fetched content against an expected SHA-256 hash.

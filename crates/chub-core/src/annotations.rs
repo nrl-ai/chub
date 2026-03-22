@@ -117,10 +117,8 @@ pub fn write_annotation(
         updated_at,
     };
 
-    let _ = fs::write(
-        annotation_path(entry_id),
-        serde_json::to_string_pretty(&data).unwrap_or_default(),
-    );
+    let json = serde_json::to_string_pretty(&data).unwrap_or_default();
+    let _ = crate::util::atomic_write(&annotation_path(entry_id), json.as_bytes());
 
     data
 }

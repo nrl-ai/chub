@@ -33,14 +33,33 @@ const ORG_FETCH_TIMEOUT_SECS: u64 = 10;
 /// Load the annotation server config.
 /// Priority: CHUB_ANNOTATION_SERVER env var > .chub/config.yaml annotation_server.
 pub fn get_annotation_server_config() -> Option<AnnotationServerConfig> {
-    if let Ok(url) = std::env::var("CHUB_ANNOTATION_SERVER") {
-        return Some(AnnotationServerConfig {
-            url,
-            auto_push: false,
-            cache_ttl_secs: None,
-        });
+    if let Ok(raw_url) = std::env::var("CHUB_ANNOTATION_SERVER") {
+        match crate::util::validate_url(&raw_url, "CHUB_ANNOTATION_SERVER") {
+            Ok(url) => {
+                return Some(AnnotationServerConfig {
+                    url,
+                    auto_push: false,
+                    cache_ttl_secs: None,
+                });
+            }
+            Err(e) => {
+                eprintln!("Warning: {}", e);
+                return None;
+            }
+        }
     }
-    load_project_config()?.annotation_server
+    let mut config = load_project_config()?.annotation_server?;
+    // Validate configured URL
+    match crate::util::validate_url(&config.url, "annotation_server.url") {
+        Ok(url) => {
+            config.url = url;
+            Some(config)
+        }
+        Err(e) => {
+            eprintln!("Warning: {}", e);
+            None
+        }
+    }
 }
 
 fn org_cache_dir() -> PathBuf {
@@ -75,7 +94,7 @@ fn write_cache(ann: &TeamAnnotation) {
     }
     let path = org_cache_path(&ann.id);
     if let Ok(json) = serde_json::to_string_pretty(ann) {
-        let _ = fs::write(path, json);
+        let _ = crate::util::atomic_write(&path, json.as_bytes());
     }
 }
 

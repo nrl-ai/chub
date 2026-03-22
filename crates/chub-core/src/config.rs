@@ -4,6 +4,10 @@ use std::path::PathBuf;
 const DEFAULT_CDN_URL: &str = "https://cdn.aichub.org/v1";
 const DEFAULT_TELEMETRY_URL: &str = "https://api.aichub.org/v1";
 
+/// Maximum size for YAML config files (1 MB) to prevent denial-of-service via
+/// anchor bombs or deeply nested structures.
+const MAX_CONFIG_FILE_SIZE: u64 = 1024 * 1024;
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct SourceConfig {
     pub name: String,
@@ -90,17 +94,13 @@ pub fn load_config() -> Config {
     let defaults = Config::default();
     let config_path = chub_dir().join("config.yaml");
 
-    // Tier 1: personal config
-    let file_config: FileConfig = std::fs::read_to_string(&config_path)
-        .ok()
-        .and_then(|raw| serde_yaml::from_str(&raw).ok())
-        .unwrap_or_default();
+    // Tier 1: personal config (with size limit)
+    let file_config: FileConfig = read_config_file(&config_path).unwrap_or_default();
 
-    // Tier 2: project config (override personal)
+    // Tier 2: project config (override personal, with size limit)
     let project_config: FileConfig = find_project_chub_dir()
         .map(|d| d.join("config.yaml"))
-        .and_then(|p| std::fs::read_to_string(&p).ok())
-        .and_then(|raw| serde_yaml::from_str(&raw).ok())
+        .and_then(|p| read_config_file(&p))
         .unwrap_or_default();
 
     // Merge: project overrides personal, personal overrides defaults
@@ -108,11 +108,19 @@ pub fn load_config() -> Config {
         .sources
         .or(file_config.sources)
         .unwrap_or_else(|| {
-            let url = std::env::var("CHUB_BUNDLE_URL")
+            let raw_url = std::env::var("CHUB_BUNDLE_URL")
                 .ok()
                 .or(project_config.cdn_url)
                 .or(file_config.cdn_url)
                 .unwrap_or_else(|| DEFAULT_CDN_URL.to_string());
+            // Validate the URL scheme (HTTPS required, HTTP only for localhost)
+            let url = match crate::util::validate_url(&raw_url, "CHUB_BUNDLE_URL") {
+                Ok(u) => u,
+                Err(e) => {
+                    eprintln!("Warning: {}", e);
+                    DEFAULT_CDN_URL.to_string()
+                }
+            };
             vec![SourceConfig {
                 name: "default".to_string(),
                 url: Some(url),
@@ -163,6 +171,22 @@ pub fn get_annotation_token() -> Option<String> {
     std::env::var("CHUB_ANNOTATION_TOKEN")
         .ok()
         .or_else(|| load_config().annotation_token)
+}
+
+/// Read and parse a YAML config file with a size limit.
+fn read_config_file(path: &std::path::Path) -> Option<FileConfig> {
+    let meta = std::fs::metadata(path).ok()?;
+    if meta.len() > MAX_CONFIG_FILE_SIZE {
+        eprintln!(
+            "Warning: config file {} exceeds size limit ({} bytes, max {}). Skipping.",
+            path.display(),
+            meta.len(),
+            MAX_CONFIG_FILE_SIZE
+        );
+        return None;
+    }
+    let raw = std::fs::read_to_string(path).ok()?;
+    serde_yaml::from_str(&raw).ok()
 }
 
 /// Search upward from CWD for a `.chub/` directory (project-level).

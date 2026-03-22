@@ -55,10 +55,8 @@ pub fn read_meta(source_name: &str) -> SourceMeta {
 pub fn write_meta(source_name: &str, meta: &SourceMeta) {
     let dir = get_source_dir(source_name);
     let _ = fs::create_dir_all(&dir);
-    let _ = fs::write(
-        get_source_meta_path(source_name),
-        serde_json::to_string_pretty(meta).unwrap_or_default(),
-    );
+    let data = serde_json::to_string_pretty(meta).unwrap_or_default();
+    let _ = crate::util::atomic_write(&get_source_meta_path(source_name), data.as_bytes());
 }
 
 pub fn is_source_cache_fresh(source_name: &str) -> bool {
@@ -246,7 +244,7 @@ pub fn clear_cache() {
 pub fn save_source_registry(source_name: &str, data: &str) {
     let dir = get_source_dir(source_name);
     let _ = fs::create_dir_all(&dir);
-    let _ = fs::write(get_source_registry_path(source_name), data);
+    let _ = crate::util::atomic_write(&get_source_registry_path(source_name), data.as_bytes());
 }
 
 /// Update the last_updated timestamp for a source.

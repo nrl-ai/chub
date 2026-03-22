@@ -111,7 +111,7 @@ pub fn write_team_annotation(
             return None;
         }
     };
-    if let Err(e) = fs::write(&path, yaml) {
+    if let Err(e) = crate::util::atomic_write(&path, yaml.as_bytes()) {
         eprintln!(
             "Warning: failed to write annotation to {}: {}",
             path.display(),
