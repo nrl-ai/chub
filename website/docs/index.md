@@ -42,7 +42,7 @@ features:
 
 <div class="stats-bar">
   <div class="stat">
-    <div class="stat-num">1,553</div>
+    <div class="stat-num">1,560</div>
     <div class="stat-label">Curated Docs</div>
   </div>
   <div class="stat">
@@ -102,7 +102,7 @@ chub mcp
 
 ## MCP Setup
 
-Add to your MCP config and your AI agent gets instant access to 1,553+ curated docs:
+Add to your MCP config and your AI agent gets instant access to 1,560+ curated docs:
 
 ```json
 {
@@ -117,7 +117,7 @@ Add to your MCP config and your AI agent gets instant access to 1,553+ curated d
 
 ## Benchmarks
 
-Measured on the production corpus (1,553 docs, 7 skills). Median of 5 runs. Reproduce with `./scripts/benchmark.sh`.
+Measured on the production corpus (1,560 docs, 7 skills). Median of 5 runs. Reproduce with `./scripts/benchmark.sh`.
 
 | Operation | Context Hub (JS) | Chub (Rust) | Speedup |
 |---|---|---|---|
@@ -137,7 +137,7 @@ Measured on the production corpus (1,553 docs, 7 skills). Median of 5 runs. Repr
 
 | Capability | Context Hub | Context7 | Chub |
 |---|---|---|---|
-| Curated docs | 1,600+ | hosted | 1,553+ |
+| Curated docs | 1,600+ | hosted | 1,560+ |
 | MCP server | 5 tools | 2 tools | **7 tools** |
 | CLI commands | 7 | — | **20** |
 | Self-learning agents | No | **No** | **Yes** |
@@ -146,7 +146,7 @@ Measured on the production corpus (1,553 docs, 7 skills). Median of 5 runs. Repr
 | Doc pinning | No | No | **Yes** |
 | Team annotations | No | No | **Git-tracked** |
 | Context profiles | No | No | **With inheritance** |
-| Agent config sync | No | No | **5 targets** |
+| Agent config sync | No | No | **10 targets** |
 | Self-hosted registry | Yes | No | **Yes** |
 | Format compatible | — | — | **Identical to Context Hub** |
 

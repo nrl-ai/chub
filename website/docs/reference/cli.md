@@ -313,7 +313,7 @@ chub agent-config sync       # update only if source changed
 chub agent-config diff       # show what would change
 ```
 
-Supported targets: `CLAUDE.md`, `.cursorrules`, `.windsurfrules`, `AGENTS.md`, `.github/copilot-instructions.md`.
+Supported targets: `CLAUDE.md`, `.cursorrules`, `.windsurfrules`, `AGENTS.md`, `.github/copilot-instructions.md`, `GEMINI.md`, `.clinerules`, `.roo/rules/chub-rules.md`, `.augment/rules/chub-rules.md`, `.kiro/steering/chub-rules.md`.
 
 ### chub snapshot
 

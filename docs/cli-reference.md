@@ -260,7 +260,7 @@ chub snapshot restore v1.0               # restore exact pin versions
 
 ## chub mcp
 
-Start the MCP stdio server for AI coding agents. See the [MCP integration docs](../website/docs/mcp.md) for setup instructions.
+Start the MCP stdio server for AI coding agents. See the [MCP Server reference](../website/docs/reference/mcp-server.md) for setup instructions.
 
 ## Piping Patterns
 

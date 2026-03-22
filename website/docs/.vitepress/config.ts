@@ -58,6 +58,7 @@ export default defineConfig({
         {
           text: 'Going Further',
           items: [
+            { text: 'Content Guide', link: '/guide/content-guide' },
             { text: 'Self-Hosting a Registry', link: '/guide/self-hosting' },
           ]
         },

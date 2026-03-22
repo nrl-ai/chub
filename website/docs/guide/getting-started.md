@@ -36,7 +36,7 @@ chub --version
 
 ## Search for docs
 
-Chub serves curated API documentation from a public registry of 1,553+ docs. Search for anything:
+Chub serves curated API documentation from a public registry of 1,560+ docs. Search for anything:
 
 ```sh
 chub search "stripe payments"
@@ -183,4 +183,5 @@ Now that you have Chub installed, explore the features that matter to your workf
 | See all CLI commands | [CLI Reference](/reference/cli) |
 | Configure Chub | [Configuration](/reference/configuration) |
 | Connect AI agents via MCP | [MCP Server](/reference/mcp-server) |
+| Author docs and skills | [Content Guide](/guide/content-guide) |
 | Build a custom private registry | [Self-Hosting](/guide/self-hosting) |

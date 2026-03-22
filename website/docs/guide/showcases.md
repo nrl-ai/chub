@@ -155,7 +155,7 @@ Claude Code now has access to these MCP tools:
 
 | Tool | What it does |
 |---|---|
-| `chub_search` | Search 1,553+ curated docs |
+| `chub_search` | Search 1,560+ curated docs |
 | `chub_get` | Fetch a doc by ID with annotations |
 | `chub_list` | Browse available docs |
 | `chub_context` | Get pinned docs, annotations, and project context |
