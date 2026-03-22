@@ -238,8 +238,6 @@ fn git_output(args: &[&str]) -> Option<String> {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
-
     #[test]
     fn empty_tree_hash_is_valid() {
         // The well-known empty tree hash
