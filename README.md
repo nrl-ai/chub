@@ -96,7 +96,9 @@ Add to `.claude/settings.json` (Claude Code), `.cursor/mcp.json` (Cursor), or th
 }
 ```
 
-Your agent now has access to tools for searching, fetching, annotating, and managing docs. See [Agent Integrations](docs/integrations.md) for the full tool list and setup guides for all supported agents.
+Your agent now has access to `chub_search`, `chub_get`, `chub_list`, `chub_annotate`, `chub_context`, `chub_pins`, and `chub_feedback` tools.
+
+Works with Claude Code, Cursor, Windsurf, GitHub Copilot, Gemini CLI, Kiro, Cline, Roo Code, Augment, Codex, Continue.dev, and Aider. See [Agent Integrations](docs/integrations.md) for setup guides.
 
 ---
 
@@ -176,14 +178,13 @@ chub check --fix                 # auto-update outdated pins
 
 ### Sync agent config files
 
-Generate rules files for all configured agent targets from a single `.chub/config.yaml`:
+Generate rules files from a single `.chub/config.yaml` — one config, every agent in sync:
 
 ```sh
-chub agent-config generate       # generate rules for all configured targets
-chub agent-config sync           # update only if changed
+chub agent-config sync           # generate/update all configured targets
 ```
 
-See [Agent Integrations](docs/integrations.md) for the full list of supported targets.
+Supported targets: `claude.md`, `cursorrules`, `windsurfrules`, `agents.md`, `copilot`, `gemini.md`, `clinerules`, `roorules`, `augmentrules`, `kiro`.
 
 ---
 
@@ -234,7 +235,7 @@ chub detect                             # show detected deps with matching docs
 chub detect --pin                       # auto-pin all matches
 ```
 
-Supports all major package managers — see [CLI Reference](docs/cli-reference.md) for the full list.
+Supports: `package.json`, `requirements.txt`, `pyproject.toml`, `Cargo.toml`, `go.mod`, `Gemfile`, `Pipfile`, `pom.xml`, `build.gradle`.
 
 ### Agent Config Sync
 
@@ -305,7 +306,38 @@ Chub includes several security measures for safe use in team environments:
 
 ## Benchmarks
 
-**19x faster search**, 5x faster validation, 5.3x less memory, 10 MB single binary with no runtime dependencies. See [Chub vs Context Hub](docs/chub-vs-context-hub.md) for full benchmark tables and feature comparison.
+Measured on the production corpus (1,560+ docs). Median of 5 runs. Full methodology in [Chub vs Context Hub](docs/chub-vs-context-hub.md).
+
+### Performance
+
+| Operation | Context Hub (JS) | Chub (Rust) | Speedup |
+|---|---|---|---|
+| `search "stripe payments"` | 1,060 ms | **56 ms** | **19x** |
+| `build --validate-only` | 1,920 ms | **380 ms** | **5x** |
+| `build` (full registry) | 3,460 ms | **1,770 ms** | **2x** |
+| `get stripe/api` | 148 ms | **63 ms** | **2.3x** |
+| Cold start (`--help`) | 131 ms | **44 ms** | **3x** |
+
+### Resources
+
+| Metric | Context Hub (JS) | Chub (Rust) |
+|---|---|---|
+| Package size | ~22 MB (`node_modules`) | **10 MB** (single binary) |
+| Runtime dependency | Node.js 20+ | **None** |
+| Peak memory (build) | ~122 MB | **~23 MB** (5.3x less) |
+
+### Feature comparison
+
+| | Context Hub (JS) | Context7 | Chub (Rust) |
+|---|---|---|---|
+| Team features (pins, profiles, snapshots) | — | — | **Yes** |
+| Self-learning agents (structured annotations) | — | — | **Yes** |
+| 3-tier annotations (personal, team, org) | — | — | **Yes** |
+| Agent config sync | — | — | **Yes** |
+| Content integrity verification | — | — | **Yes** |
+| Auto version detection (`--match-env`) | — | — | **Yes** |
+| Self-hosted registry | Yes | — | **Yes** |
+| Registry format compatibility | — | — | **Identical** |
 
 ---
 
@@ -343,7 +375,16 @@ Add your private registry as an additional source in `~/.chub/config.yaml` — n
 
 ## Test Suite
 
-Comprehensive test coverage including unit tests (search, BM25, frontmatter, annotations), build/search parity tests, and team feature integration tests.
+Comprehensive test coverage across unit, parity, and integration tests:
+
+| Suite | Coverage |
+|---|---|
+| Search | BM25 scoring, tokenizer, inverted index, lexical boost |
+| Frontmatter | YAML parsing, CRLF, BOM, edge cases |
+| Annotations | Kind validation, severity, 3-tier storage |
+| Build parity | Output format matches JS Context Hub byte-for-byte |
+| Search parity | Multi-word, tags, descriptions match JS results |
+| Team features | Pins, profiles, snapshots, detect, freshness, org HTTP |
 
 ```sh
 cargo test --all                     # run all tests
