@@ -1,7 +1,7 @@
 {
   "name": "@nrl-ai/chub",
   "version": "0.1.15",
-  "description": "Chub — high-performance curated docs for AI coding agents with team sharing",
+  "description": "Chub — agent-agnostic context, tracking, and cost analytics for AI-assisted development",
   "license": "MIT",
   "repository": {
     "type": "git",

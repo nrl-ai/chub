@@ -1,7 +1,7 @@
 # Chub — Implementation Status & Roadmap
 
-> **Vision**: The missing context layer for AI-assisted development teams.
-> Not just docs lookup — a shared, versioned, project-aware knowledge system that makes every agent on your team as informed as your best engineer.
+> **Vision**: The agent-agnostic context and tracking layer for AI-assisted development teams.
+> Not just docs lookup — a shared, versioned, project-aware knowledge system with session tracking, cost analytics, and reasoning capture. Works with any AI coding agent. Makes every agent on your team as informed as your best engineer.
 
 ---
 
@@ -20,9 +20,11 @@
 | Agent integrations | No | **Yes** (MCP + agent config targets) |
 | Git-tracked context | No | **Yes** (`.chub/` in repo) |
 | Context profiles | No | **Yes** (role-scoped, with inheritance) |
+| AI usage tracking | No | **Yes** (sessions, tokens, costs, models) |
+| Offline telemetry | No | **Yes** (local JSONL journal, no external deps) |
 | Self-hosted registry | Yes | Yes + `chub serve` |
-| MCP server | 5 tools | **7 tools** (+ team tools) |
-| CLI commands | 7 | **20** |
+| MCP server | 5 tools | **8 tools** (+ team + tracking) |
+| CLI commands | 7 | **24** |
 | Cold start | ~131 ms | **~44 ms** |
 | Binary size | ~22 MB (node_modules) | **10 MB** (native) |
 
@@ -47,7 +49,8 @@
 | P2 | Doc bundles | **Partial** | Bundle struct + `create`/`install`/`list` commands; `publish` not wired |
 | P2 | Smart context selection (`chub_context`) | **Done** | MCP tool returns profile rules + pinned docs + annotations in one call |
 | P2 | Monorepo + path-scoped profiles | **Done** | `auto_profile` config with path globs |
-| P3 | Local usage analytics | **Done** | `chub stats` with `--days`, JSONL storage |
+| P3 | Local usage analytics | **Done** | `chub stats` with `--days`, JSONL storage, `chub telemetry` commands |
+| P2 | AI usage tracking | **Done** | `chub track` — sessions, hooks, cost estimation, MCP tool, agent config |
 | P3 | Doc snapshots | **Done** | `chub snapshot create/restore/diff/list` |
 | P3 | Task-scoped ephemeral context | **Planned** | `chub_task_context` MCP tool |
 | P3 | CI/CD integration | **Planned** | GitHub Actions, freshness checks, pin validation |
@@ -66,6 +69,37 @@
 ---
 
 ## Future Work
+
+### AI Usage Tracking (`chub track`)
+
+Track all AI coding agent activity per-project — sessions, prompts, tool calls, models, tokens, and costs.
+
+**Done (Phase 1)**:
+- Session model (`sessions.rs`): start/stop sessions, YAML summaries in `.chub/sessions/`, active state in `.git/chub-sessions/`
+- Event journal (`session_journal.rs`): JSONL transcript in `.git/chub-sessions/` (local-only)
+- Cost estimation (`cost.rs`): token-to-USD for Claude, GPT, Gemini, DeepSeek model families
+- Hook handler (`chub track hook`): session-start, stop, prompt, pre-tool, post-tool, model-update
+- CLI commands: `track status`, `track log`, `track show`, `track report`, `track export`, `track clear`
+
+**Done (Phase 2)**:
+- `chub track enable [agent]` — auto-install hooks in `.claude/settings.json`, `.cursor/hooks.json`
+- `chub track disable` — cleanly remove hooks, preserving non-chub hooks
+- Git hooks: `prepare-commit-msg` (add `Chub-Session:` trailer), `post-commit` (record commit hash)
+- Resolved binary path in hook commands (no dependency on PATH)
+- Error suppression (`2>/dev/null || true`) — broken hooks never block the IDE
+- Hook chaining: existing git hooks backed up to `.pre-chub` and called after chub hooks
+- Stdin JSON parsing from Claude Code / Cursor hook payloads (session_id, model, prompt, tool_input, tool_response)
+
+**Done (Phase 3)**:
+- Configurable cost rates in `.chub/config.yaml` (`tracking.cost_rates`)
+- Custom rates override built-in rates (model name substring matching)
+- Budget alert threshold (`tracking.budget_alert_usd`) with 80%/100% warnings in reports
+- Config merges via three-tier system (personal → project → profile)
+
+**Done (Phase 4)**:
+- `chub_track` MCP tool — agents can query status, report, log, and session details
+- AI Usage Tracking section in generated agent configs (`chub agent-config sync`)
+- 8 MCP tools total (was 7)
 
 ### Task-scoped ephemeral context
 

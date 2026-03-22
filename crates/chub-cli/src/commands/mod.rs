@@ -15,4 +15,6 @@ pub mod search;
 pub mod serve;
 pub mod snapshot;
 pub mod stats;
+pub mod telemetry_cmd;
+pub mod track;
 pub mod update;

@@ -1,8 +1,9 @@
 import { defineConfig } from 'vitepress'
+import { withMermaid } from 'vitepress-plugin-mermaid'
 
-export default defineConfig({
+export default withMermaid(defineConfig({
   title: 'Chub',
-  description: 'Curated docs for AI coding agents, with self-learning annotations. Team-first. Git-tracked. Built in Rust.',
+  description: 'Agent-agnostic context, tracking, and cost analytics for AI-assisted development teams. Git-native. Built in Rust.',
   head: [
     ['link', { rel: 'icon', type: 'image/svg+xml', href: '/logo.svg' }],
   ],
@@ -52,6 +53,7 @@ export default defineConfig({
             { text: 'Doc Pinning', link: '/guide/pinning' },
             { text: 'Context Profiles', link: '/guide/profiles' },
             { text: 'Project Context', link: '/guide/project-context' },
+            { text: 'AI Usage Tracking', link: '/guide/tracking' },
             { text: 'Dep Auto-Detection', link: '/guide/detect' },
             { text: 'Snapshots & Freshness', link: '/guide/snapshots' },
           ]
@@ -96,4 +98,6 @@ export default defineConfig({
       provider: 'local',
     },
   },
-})
+
+  mermaid: {},
+}))

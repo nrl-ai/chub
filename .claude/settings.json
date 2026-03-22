@@ -1,24 +1,38 @@
 {
-  "mcpServers": {
-    "chub": {
-      "command": "chub",
-      "args": ["mcp"],
-      "cwd": "."
-    }
-  },
-  "permissions": {
-    "allow": [
-      "Bash(chub *)",
-      "mcp__chub__chub_search",
-      "mcp__chub__chub_get",
-      "mcp__chub__chub_list",
-      "mcp__chub__chub_context",
-      "mcp__chub__chub_annotate",
-      "mcp__chub__chub_feedback",
-      "mcp__chub__chub_pins"
-    ]
-  },
   "hooks": {
+    "SessionStart": [
+      {
+        "matcher": "",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "chub track hook session-start 2>/dev/null || true"
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "matcher": "",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "chub track hook stop 2>/dev/null || true"
+          }
+        ]
+      }
+    ],
+    "UserPromptSubmit": [
+      {
+        "matcher": "",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "chub track hook prompt 2>/dev/null || true"
+          }
+        ]
+      }
+    ],
     "PreToolUse": [
       {
         "matcher": "Bash",
@@ -28,7 +42,65 @@
             "command": "bash .claude/hooks/chub-freshness-check.sh"
           }
         ]
+      },
+      {
+        "matcher": "",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "chub track hook pre-tool 2>/dev/null || true"
+          }
+        ]
       }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "chub track hook post-tool 2>/dev/null || true"
+          }
+        ]
+      }
+    ],
+    "SessionEnd": [
+      {
+        "matcher": "",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "chub track hook stop 2>/dev/null || true"
+          }
+        ]
+      }
+    ]
+  },
+  "mcpServers": {
+    "chub": {
+      "args": [
+        "mcp"
+      ],
+      "command": "chub",
+      "cwd": "."
+    }
+  },
+  "permissions": {
+    "allow": [
+      "Bash(chub *)",
+      "Bash(cargo *)",
+      "mcp__chub__chub_search",
+      "mcp__chub__chub_get",
+      "mcp__chub__chub_list",
+      "mcp__chub__chub_context",
+      "mcp__chub__chub_annotate",
+      "mcp__chub__chub_feedback",
+      "mcp__chub__chub_pins",
+      "mcp__chub__chub_track",
+      "Bash(entire *)"
+    ],
+    "deny": [
+      "Read(./.entire/metadata/**)"
     ]
   }
 }

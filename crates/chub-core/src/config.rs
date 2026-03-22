@@ -2,7 +2,9 @@ use serde::{Deserialize, Serialize};
 use std::path::PathBuf;
 
 const DEFAULT_CDN_URL: &str = "https://cdn.aichub.org/v1";
-const DEFAULT_TELEMETRY_URL: &str = "https://api.aichub.org/v1";
+/// Empty by default — online telemetry forwarding is opt-in.
+/// Set `telemetry_url` in config or CHUB_TELEMETRY_URL env var to enable.
+const DEFAULT_TELEMETRY_URL: &str = "";
 
 /// Maximum size for YAML config files (1 MB) to prevent denial-of-service via
 /// anchor bombs or deeply nested structures.
@@ -17,6 +19,33 @@ pub struct SourceConfig {
     pub path: Option<String>,
 }
 
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+pub struct TrackingConfig {
+    /// Custom cost rates keyed by model name substring (e.g. "opus", "gpt-4o").
+    /// Each rate is [input_per_m, output_per_m] or [input, output, cache_read, cache_write].
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub cost_rates: Vec<CustomCostRate>,
+    /// Monthly budget alert threshold in USD (0 = disabled).
+    #[serde(default)]
+    pub budget_alert_usd: f64,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct CustomCostRate {
+    /// Model name substring to match (e.g. "opus", "gpt-4o", "my-fine-tune").
+    pub model: String,
+    /// Cost per million input tokens.
+    pub input_per_m: f64,
+    /// Cost per million output tokens.
+    pub output_per_m: f64,
+    /// Cost per million cache-read tokens (defaults to input * 0.1).
+    #[serde(default)]
+    pub cache_read_per_m: Option<f64>,
+    /// Cost per million cache-write tokens (defaults to input * 1.25).
+    #[serde(default)]
+    pub cache_write_per_m: Option<f64>,
+}
+
 #[derive(Debug, Clone)]
 pub struct Config {
     pub sources: Vec<SourceConfig>,
@@ -28,6 +57,7 @@ pub struct Config {
     pub feedback: bool,
     pub telemetry_url: String,
     pub annotation_token: Option<String>,
+    pub tracking: TrackingConfig,
 }
 
 impl Default for Config {
@@ -46,6 +76,7 @@ impl Default for Config {
             feedback: true,
             telemetry_url: DEFAULT_TELEMETRY_URL.to_string(),
             annotation_token: None,
+            tracking: TrackingConfig::default(),
         }
     }
 }
@@ -73,6 +104,8 @@ struct FileConfig {
     telemetry_url: Option<String>,
     #[serde(default)]
     annotation_token: Option<String>,
+    #[serde(default)]
+    tracking: Option<TrackingConfig>,
 }
 
 /// Get the chub data directory (~/.chub or CHUB_DIR env var).
@@ -161,6 +194,10 @@ pub fn load_config() -> Config {
         // annotation_token intentionally comes from personal config only —
         // never from project config to avoid accidental token commits.
         annotation_token: file_config.annotation_token,
+        tracking: project_config
+            .tracking
+            .or(file_config.tracking)
+            .unwrap_or_default(),
     }
 }
 

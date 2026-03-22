@@ -8,7 +8,13 @@ Do not add `Co-Authored-By` trailers to commits. Commit messages should be plain
 
 ## What this repo is
 
-Chub is a high-performance Rust rewrite of [Context Hub](https://github.com/andrewyng/context-hub) — a CLI + MCP server that serves curated, versioned API documentation to AI coding agents. It is fully format-compatible with the original JS version and extends it with git-tracked team features (pinning, annotations, profiles, agent config sync). See `docs/plan.md` for roadmap.
+Chub is the **agent-agnostic context and tracking layer** for AI-assisted development teams. Built as a high-performance Rust rewrite of [Context Hub](https://github.com/andrewyng/context-hub), it provides:
+
+- **Context** — curated, versioned API docs served to any AI coding agent via CLI + MCP
+- **Tracking** — session lifecycle recording, token/cost analytics, and reasoning capture across Claude Code, Cursor, Copilot, Gemini CLI, Codex, and more
+- **Team** — git-tracked sharing of docs, annotations, profiles, agent configs, and usage reports
+
+Format-compatible with the original JS Context Hub and [entire.io](https://entire.io) checkpoint format. See `docs/plan.md` for roadmap.
 
 ## Commands
 

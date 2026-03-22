@@ -258,6 +258,29 @@ chub snapshot diff v1.0 v1.1             # show what changed
 chub snapshot restore v1.0               # restore exact pin versions
 ```
 
+## chub track
+
+Track AI coding agent sessions — tokens, costs, models, tools. See [Tracking](tracking.md) for full documentation.
+
+```bash
+chub track enable              # install hooks (auto-detect agent)
+chub track enable claude-code  # install for specific agent
+chub track enable --force      # overwrite existing hooks
+chub track disable             # remove all hooks
+chub track status              # show active session
+chub track log                 # session history (30 days)
+chub track log --days 7        # session history (7 days)
+chub track show <session-id>   # session detail
+chub track report              # aggregate usage report
+chub track report --days 7     # report for last 7 days
+chub track export              # JSON export for dashboards
+chub track clear               # delete local transcripts
+chub track dashboard           # web dashboard at localhost:4243
+chub track dashboard --port 8080  # custom port
+```
+
+Supported agents: `claude-code`, `cursor`, `copilot`, `gemini-cli`, `codex`.
+
 ## chub mcp
 
 Start the MCP stdio server for AI coding agents. See the [MCP Server reference](../website/docs/reference/mcp-server.md) for setup instructions.

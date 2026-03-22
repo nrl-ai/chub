@@ -3,8 +3,8 @@ layout: home
 
 hero:
   name: Chub
-  text: Give your AI agents the context to get it right the first time
-  tagline: Curated docs that learn from every session. Team knowledge that compounds. Built in Rust.
+  text: The context and tracking layer for AI-assisted development
+  tagline: Agent-agnostic. Curated docs, session tracking, cost analytics, and team knowledge — all git-native. Built in Rust.
   image:
     src: /logo.svg
     alt: Chub
@@ -35,6 +35,9 @@ features:
   - icon: 🔄
     title: Agent Config Sync
     details: Generate CLAUDE.md, .cursorrules, AGENTS.md, and more from a single source of truth. Add annotation policy to instruct agents automatically.
+  - icon: 📊
+    title: AI Usage Tracking
+    details: Track every AI session — tokens, costs, models, tools — across Claude Code, Cursor, and more. Team-visible summaries, local-only transcripts, entire.io compatible.
   - icon: 📄
     title: Project Context
     details: Custom markdown docs in .chub/context/ — architecture decisions, conventions, runbooks — served via CLI and MCP.
@@ -147,6 +150,7 @@ Measured on the production corpus (1,553 docs, 8 skills). Median of 5 runs. Repr
 | Team annotations | No | No | **Git-tracked** |
 | Context profiles | No | No | **With inheritance** |
 | Agent config sync | No | No | **10 targets** |
+| AI usage tracking | No | No | **Sessions, costs, dashboard** |
 | Self-hosted registry | Yes | No | **Yes** |
 | Format compatible | — | — | **Identical to Context Hub** |
 

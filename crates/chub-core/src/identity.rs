@@ -95,7 +95,11 @@ fn get_machine_uuid() -> Option<String> {
 
 /// Auto-detect the AI coding tool from environment variables.
 pub fn detect_agent() -> &'static str {
-    if std::env::var("CLAUDE_CODE").is_ok() || std::env::var("CLAUDE_SESSION_ID").is_ok() {
+    if std::env::var("CLAUDECODE").is_ok()
+        || std::env::var("CLAUDE_CODE").is_ok()
+        || std::env::var("CLAUDE_CODE_SSE_PORT").is_ok()
+        || std::env::var("CLAUDE_SESSION_ID").is_ok()
+    {
         return "claude-code";
     }
     if std::env::var("CURSOR_SESSION_ID").is_ok() || std::env::var("CURSOR_TRACE_ID").is_ok() {
@@ -123,5 +127,14 @@ pub fn detect_agent() -> &'static str {
 pub fn detect_agent_version() -> Option<String> {
     std::env::var("CLAUDE_CODE_VERSION")
         .or_else(|_| std::env::var("CURSOR_VERSION"))
+        .ok()
+}
+
+/// Detect the model name from agent environment variables.
+pub fn detect_model() -> Option<String> {
+    std::env::var("CLAUDE_MODEL")
+        .or_else(|_| std::env::var("ANTHROPIC_MODEL"))
+        .or_else(|_| std::env::var("CURSOR_MODEL"))
+        .or_else(|_| std::env::var("AIDER_MODEL"))
         .ok()
 }

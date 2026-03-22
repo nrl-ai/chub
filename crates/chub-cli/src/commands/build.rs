@@ -1,5 +1,6 @@
 use chub_core::build::builder::{build_registry, write_build_output_with_opts, BuildOptions};
 use chub_core::error::Result;
+use chub_core::team::analytics;
 use clap::Args;
 use indicatif::{ProgressBar, ProgressStyle};
 use std::path::PathBuf;
@@ -53,7 +54,16 @@ pub fn run(args: BuildArgs, json: bool) -> Result<()> {
         None
     };
 
+    let build_start = std::time::Instant::now();
     let result = build_registry(content_dir, &opts)?;
+    let build_duration = build_start.elapsed().as_millis() as u64;
+
+    analytics::record_build(
+        result.docs_count + result.skills_count,
+        build_duration,
+        result.warnings.len(),
+        args.validate_only,
+    );
 
     // Print warnings
     for w in &result.warnings {

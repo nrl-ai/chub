@@ -9,7 +9,7 @@ use clap::{Parser, Subcommand};
 #[command(
     name = "chub",
     version,
-    about = "chub-turbo — lightning-fast curated docs for AI coding agents"
+    about = "chub — agent-agnostic context, tracking, and cost analytics for AI-assisted development"
 )]
 struct Cli {
     /// Output in JSON format
@@ -64,6 +64,10 @@ enum Commands {
     Bundle(commands::bundle::BundleArgs),
     /// Manage doc snapshots for reproducible builds
     Snapshot(commands::snapshot::SnapshotArgs),
+    /// View and manage local usage telemetry
+    Telemetry(commands::telemetry_cmd::TelemetryArgs),
+    /// Track AI coding agent usage (sessions, tokens, costs)
+    Track(commands::track::TrackArgs),
 }
 
 #[tokio::main]
@@ -148,6 +152,14 @@ async fn main() {
             commands::snapshot::run(args, cli.json);
             return;
         }
+        Commands::Telemetry(args) => {
+            commands::telemetry_cmd::run(args, cli.json);
+            return;
+        }
+        Commands::Track(args) => {
+            commands::track::run(args, cli.json).await;
+            return;
+        }
         _ => {}
     }
 
@@ -196,6 +208,8 @@ async fn main() {
         | Commands::Serve(_)
         | Commands::Bundle(_)
         | Commands::Snapshot(_)
+        | Commands::Telemetry(_)
+        | Commands::Track(_)
         | Commands::Mcp => unreachable!(),
     }
 }

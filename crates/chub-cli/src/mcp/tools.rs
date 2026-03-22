@@ -181,6 +181,18 @@ pub struct PinsParams {
     pub list: Option<bool>,
 }
 
+#[derive(Debug, serde::Deserialize, schemars::JsonSchema)]
+pub struct TrackParams {
+    /// Action: "status", "report", "log", "show"
+    pub action: String,
+    /// Session ID (for "show" action)
+    #[schemars(default)]
+    pub session_id: Option<String>,
+    /// Number of days for report/log (default 30)
+    #[schemars(default)]
+    pub days: Option<u64>,
+}
+
 // --- MCP Server ---
 
 #[derive(Debug, Clone)]
@@ -212,11 +224,18 @@ impl ChubMcpServer {
             entry_type: None,
         };
 
+        let t0 = std::time::Instant::now();
         let entries = if let Some(ref query) = params.query {
             search_entries(query, &filters, &self.merged)
         } else {
             list_entries(&filters, &self.merged)
         };
+        let elapsed = t0.elapsed().as_millis() as u64;
+
+        if let Some(ref query) = params.query {
+            team::analytics::record_search(query, entries.len(), Some(elapsed), Some("mcp-server"));
+        }
+        team::analytics::record_mcp_call("chub_search", Some(elapsed), Some("mcp-server"));
 
         let sliced: Vec<_> = entries.iter().take(limit).collect();
         text_result(serde_json::json!({
@@ -432,6 +451,7 @@ impl ChubMcpServer {
 
         // Record analytics
         team::analytics::record_fetch(entry.id(), Some("mcp-server"));
+        team::analytics::record_mcp_call("chub_get", None, Some("mcp-server"));
 
         content
     }
@@ -450,6 +470,8 @@ impl ChubMcpServer {
 
         let entries = list_entries(&filters, &self.merged);
         let sliced: Vec<_> = entries.iter().take(limit).collect();
+
+        team::analytics::record_mcp_call("chub_list", None, Some("mcp-server"));
 
         text_result(serde_json::json!({
             "entries": sliced.iter().map(|e| simplify_entry(e)).collect::<Vec<_>>(),
@@ -582,6 +604,8 @@ impl ChubMcpServer {
 
             if scope == "personal" {
                 let saved = write_annotation(&id, &note, kind.clone(), params.severity.clone());
+                team::analytics::record_annotate(&id, kind.as_str());
+                team::analytics::record_mcp_call("chub_annotate", None, Some("mcp-server"));
                 return text_result(serde_json::json!({
                     "status": "saved",
                     "scope": "personal",
@@ -601,6 +625,8 @@ impl ChubMcpServer {
                     params.severity.clone(),
                 ) {
                     Some(saved) => {
+                        team::analytics::record_annotate(&id, kind.as_str());
+                        team::analytics::record_mcp_call("chub_annotate", None, Some("mcp-server"));
                         // auto_push if configured
                         let auto_push =
                             chub_core::team::org_annotations::get_annotation_server_config()
@@ -792,6 +818,91 @@ impl ChubMcpServer {
         .await;
 
         text_result(result)
+    }
+
+    #[tool(
+        name = "chub_track",
+        description = "Query AI usage tracking data — session status, cost reports, session history, and session details"
+    )]
+    async fn handle_track(&self, Parameters(params): Parameters<TrackParams>) -> String {
+        team::analytics::record_mcp_call("chub_track", None, None);
+
+        let days = params.days.unwrap_or(30);
+
+        match params.action.as_str() {
+            "status" => {
+                let active = team::sessions::get_active_session();
+                let journals = team::session_journal::list_journal_files();
+                let entire_states = team::tracking::session_state::list_states();
+                let active_state = active
+                    .as_ref()
+                    .and_then(|s| team::tracking::session_state::load_state(&s.session_id));
+                text_result(serde_json::json!({
+                    "active_session": active.as_ref().map(|s| serde_json::json!({
+                        "session_id": s.session_id,
+                        "agent": s.agent,
+                        "model": s.model,
+                        "started_at": s.started_at,
+                        "turns": s.turns,
+                        "tool_calls": s.tool_calls,
+                        "tokens": {
+                            "input": s.tokens.input,
+                            "output": s.tokens.output,
+                            "total": s.tokens.total(),
+                        },
+                        "phase": active_state.as_ref().map(|st| format!("{:?}", st.phase)),
+                        "files_touched": active_state.as_ref().map(|st| st.files_touched.len()),
+                        "transcript_linked": active_state.as_ref().map(|st| st.transcript_path.is_some()),
+                    })),
+                    "local_journals": journals.len(),
+                    "entire_sessions": entire_states.len(),
+                }))
+            }
+            "report" => {
+                let report = team::sessions::generate_report(days);
+                text_result(report)
+            }
+            "log" => {
+                let sessions = team::sessions::list_sessions(days);
+                let summaries: Vec<_> = sessions
+                    .iter()
+                    .map(|s| {
+                        serde_json::json!({
+                            "session_id": s.session_id,
+                            "agent": s.agent,
+                            "model": s.model,
+                            "started_at": s.started_at,
+                            "duration_s": s.duration_s,
+                            "turns": s.turns,
+                            "tokens_total": s.tokens.total(),
+                            "tool_calls": s.tool_calls,
+                            "est_cost_usd": s.est_cost_usd,
+                        })
+                    })
+                    .collect();
+                text_result(summaries)
+            }
+            "show" => {
+                let session_id = match params.session_id {
+                    Some(id) => id,
+                    None => {
+                        return text_result(serde_json::json!({
+                            "error": "session_id is required for 'show' action"
+                        }))
+                    }
+                };
+                if let Some(session) = team::sessions::get_session(&session_id) {
+                    text_result(session)
+                } else {
+                    text_result(serde_json::json!({
+                        "error": format!("Session '{}' not found", session_id)
+                    }))
+                }
+            }
+            other => text_result(serde_json::json!({
+                "error": format!("Unknown action: '{}'. Use: status, report, log, show", other)
+            })),
+        }
     }
 }
 

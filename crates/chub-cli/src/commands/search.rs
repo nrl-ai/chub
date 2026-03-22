@@ -6,6 +6,7 @@ use chub_core::registry::{
     get_entry, is_multi_source, list_entries, search_entries, MergedRegistry, SearchFilters,
     TaggedEntry,
 };
+use chub_core::team::analytics;
 
 #[derive(Args)]
 pub struct SearchArgs {
@@ -194,9 +195,13 @@ pub fn run(args: SearchArgs, json: bool, merged: &MergedRegistry) {
     }
 
     // Fuzzy search
+    let t0 = std::time::Instant::now();
     let results = search_entries(query, &filters, merged);
+    let elapsed = t0.elapsed().as_millis() as u64;
     let total = results.len();
     let results: Vec<_> = results.into_iter().take(args.limit).collect();
+
+    analytics::record_search(query, total, Some(elapsed), None);
 
     if json {
         println!(

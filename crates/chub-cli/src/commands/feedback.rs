@@ -208,7 +208,7 @@ async fn run_status(json: bool) {
                 "feedback": feedback_enabled,
                 "telemetry": telemetry_enabled,
                 "client_id_prefix": client_id.as_deref().map(|s| &s[..s.len().min(8)]),
-                "endpoint": get_telemetry_url(),
+                "endpoint": get_telemetry_url().unwrap_or_default(),
                 "valid_labels": VALID_LABELS,
             })
         );
@@ -229,7 +229,9 @@ async fn run_status(json: bool) {
             let prefix = &cid[..cid.len().min(8)];
             eprintln!("Client ID: {}...", prefix);
         }
-        eprintln!("Endpoint:  {}", get_telemetry_url());
+        let endpoint = get_telemetry_url()
+            .unwrap_or_else(|| "(local only — set telemetry_url to enable remote)".to_string());
+        eprintln!("Endpoint:  {}", endpoint);
         eprintln!("Labels:    {}", VALID_LABELS.join(", "));
     }
 }

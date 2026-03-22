@@ -7,6 +7,7 @@ use chub_core::fetch::{fetch_doc, fetch_doc_full};
 use chub_core::registry::{
     get_entry, resolve_doc_path, resolve_entry_file, MergedRegistry, ResolvedPath,
 };
+use chub_core::team::analytics;
 use clap::Args;
 
 use crate::output;
@@ -301,6 +302,11 @@ pub async fn run(args: GetArgs, json: bool, merged: &MergedRegistry) -> Result<(
                 additional_files: ref_files,
             });
         }
+    }
+
+    // Record fetch events
+    for r in &results {
+        analytics::record_fetch(&r.id, None);
     }
 
     // Output

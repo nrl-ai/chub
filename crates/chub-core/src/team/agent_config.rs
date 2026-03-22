@@ -139,6 +139,12 @@ pub fn generate_config(rules: &AgentRules) -> String {
     if rules.include_annotation_policy {
         output.push_str("## Annotation Policy\n\n");
         output.push_str(
+            "**IMPORTANT**: Before implementing anything with a pinned library, ALWAYS check \
+             for existing annotations first via `chub_annotate` (id only) or `chub get <id>`. \
+             Annotations contain team-verified issues, workarounds, and conventions that save \
+             you from repeating known mistakes.\n\n",
+        );
+        output.push_str(
             "When you encounter something non-obvious while using a library, record it \
              via the `chub_annotate` MCP tool (or `chub annotate` CLI):\n\n",
         );
@@ -152,6 +158,8 @@ pub fn generate_config(rules: &AgentRules) -> String {
             "- **Practice** (team convention): `chub_annotate` with `id`, `kind=\"practice\"`, `note`\n\n",
         );
         output.push_str("Rules:\n");
+        output.push_str("- **Read before implementing** — always check existing annotations before using a library to avoid known pitfalls\n");
+        output.push_str("- **Write after discovering** — if you hit a non-obvious issue, found a workaround, or established a working pattern, annotate it for the team\n");
         output.push_str("- Annotate after confirming, not speculatively — only write what you have verified works or fails\n");
         output
             .push_str("- One fact per annotation — do not bundle multiple issues into one note\n");
@@ -160,6 +168,18 @@ pub fn generate_config(rules: &AgentRules) -> String {
         );
         output.push_str("- Check first — call `chub_annotate` with only `id` to read existing annotations before writing to avoid duplicates\n");
         output.push_str("- Do not annotate what is already in the official docs — only capture what the docs missed or got wrong\n\n");
+    }
+
+    // AI usage tracking
+    if rules.include_annotation_policy {
+        output.push_str("## AI Usage Tracking\n\n");
+        output.push_str(
+            "This project tracks AI coding sessions via `chub track`. Use `chub_track` MCP tool to:\n",
+        );
+        output.push_str("- `{\"action\": \"status\"}` — check current session state\n");
+        output
+            .push_str("- `{\"action\": \"report\"}` — view usage summary (tokens, costs, tools)\n");
+        output.push_str("- `{\"action\": \"log\"}` — list recent sessions\n\n");
     }
 
     // Module rules — sort by name for deterministic output (HashMap iteration is unordered).

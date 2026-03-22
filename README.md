@@ -5,7 +5,8 @@
 <h1 align="center">Chub</h1>
 
 <p align="center">
-  <strong>Serve curated, versioned API docs to AI coding agents — so they stop hallucinating your APIs.</strong>
+  <strong>Agent-agnostic context, tracking, and cost analytics for AI-assisted development.</strong><br>
+  <em>Curated docs · Session tracking · Cost analytics · Team knowledge — all git-native.</em>
 </p>
 
 <p align="center">

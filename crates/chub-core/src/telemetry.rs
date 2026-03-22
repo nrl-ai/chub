@@ -1,7 +1,6 @@
 use crate::config::load_config;
 use crate::identity::{detect_agent, detect_agent_version, get_or_create_client_id};
-
-const DEFAULT_TELEMETRY_URL: &str = "https://api.aichub.org/v1";
+use crate::team::analytics;
 
 pub fn is_telemetry_enabled() -> bool {
     if let Ok(val) = std::env::var("CHUB_TELEMETRY") {
@@ -21,15 +20,19 @@ pub fn is_feedback_enabled() -> bool {
     load_config().feedback
 }
 
-pub fn get_telemetry_url() -> String {
+/// Get the remote telemetry URL, if configured.
+/// Returns None when no URL is set — online forwarding is opt-in.
+pub fn get_telemetry_url() -> Option<String> {
     if let Ok(url) = std::env::var("CHUB_TELEMETRY_URL") {
-        return url;
+        if !url.is_empty() {
+            return Some(url);
+        }
     }
     let config = load_config();
     if config.telemetry_url.is_empty() {
-        DEFAULT_TELEMETRY_URL.to_string()
+        None
     } else {
-        config.telemetry_url
+        Some(config.telemetry_url)
     }
 }
 
@@ -57,7 +60,7 @@ pub struct FeedbackOpts {
     pub source: Option<String>,
 }
 
-/// Send feedback to the API. 3s timeout, fire-and-forget style.
+/// Send feedback. Always records locally. Forwards to remote only if telemetry_url is configured.
 pub async fn send_feedback(
     entry_id: &str,
     entry_type: &str,
@@ -73,8 +76,23 @@ pub async fn send_feedback(
         };
     }
 
+    // Always record locally
+    analytics::record_feedback(entry_id, rating);
+
+    let telemetry_url = match get_telemetry_url() {
+        Some(url) => url,
+        None => {
+            // No remote endpoint — local-only mode
+            return FeedbackResult {
+                status: "recorded_locally".to_string(),
+                reason: None,
+                feedback_id: None,
+                code: None,
+            };
+        }
+    };
+
     let client_id = get_or_create_client_id().unwrap_or_default();
-    let telemetry_url = get_telemetry_url();
     let agent_name = opts.agent.unwrap_or_else(|| detect_agent().to_string());
     let agent_version = detect_agent_version();
 
@@ -103,8 +121,8 @@ pub async fn send_feedback(
         Ok(c) => c,
         Err(_) => {
             return FeedbackResult {
-                status: "error".to_string(),
-                reason: Some("network".to_string()),
+                status: "recorded_locally".to_string(),
+                reason: Some("network_unavailable".to_string()),
                 feedback_id: None,
                 code: None,
             }
@@ -137,16 +155,16 @@ pub async fn send_feedback(
                 }
             } else {
                 FeedbackResult {
-                    status: "error".to_string(),
-                    reason: None,
+                    status: "recorded_locally".to_string(),
+                    reason: Some(format!("remote_http_{}", status_code.as_u16())),
                     feedback_id: None,
                     code: Some(status_code.as_u16()),
                 }
             }
         }
         Err(_) => FeedbackResult {
-            status: "error".to_string(),
-            reason: Some("network".to_string()),
+            status: "recorded_locally".to_string(),
+            reason: Some("network_error".to_string()),
             feedback_id: None,
             code: None,
         },

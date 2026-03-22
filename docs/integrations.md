@@ -118,6 +118,7 @@ chub mcp   # reads stdin, writes stdout
 | `chub_pins` | Add/remove/list pinned docs |
 | `chub_annotate` | Read/write team annotations |
 | `chub_feedback` | Submit doc quality feedback |
+| `chub_track` | Query AI usage tracking data (sessions, costs, tokens) |
 
 ## Agent Config Generation
 
@@ -185,3 +186,16 @@ Some files are read by multiple agents:
 | `GEMINI.md` | Gemini CLI |
 
 For polyglot teams, generate `agents.md` + your primary agent's target.
+
+## Session Tracking
+
+Chub can track AI agent sessions — tokens, costs, models, tool usage — via lifecycle hooks. See [Tracking](tracking.md) for full documentation.
+
+```sh
+chub track enable          # install hooks (auto-detects agent)
+chub track status          # see active session
+chub track report          # aggregate usage report
+chub track dashboard       # local web dashboard
+```
+
+Supported agents: Claude Code (`.claude/settings.json`), Cursor (`.cursor/hooks.json`). Session state is compatible with [entire.io](https://entire.io).

@@ -354,6 +354,47 @@ chub stats [--days <n>] [--json]
 |---|---|---|
 | `--days <n>` | Number of days to include | 30 |
 
+## Tracking Commands
+
+### chub track
+
+Track AI coding agent sessions — tokens, costs, models, tool usage. See [AI Usage Tracking](/guide/tracking) for full documentation.
+
+```sh
+chub track enable [<agent>] [--force]   # install agent hooks
+chub track disable                      # remove all hooks
+chub track status                       # show active session
+chub track log [--days <n>]             # session history
+chub track show <session-id>            # session detail
+chub track report [--days <n>]          # aggregate usage report
+chub track export [--days <n>]          # JSON export
+chub track clear                        # delete local transcripts
+chub track dashboard [--port <n>]       # launch web dashboard
+```
+
+| Subcommand | Description |
+|---|---|
+| `enable [agent]` | Install hooks (auto-detects agent if omitted). Agents: `claude-code`, `cursor`, `copilot`, `gemini-cli`, `codex` |
+| `enable --force` | Overwrite existing hooks |
+| `disable` | Remove all chub hooks |
+| `status` | Show active session, detected agent/model |
+| `log --days <n>` | Session history (default 30 days) |
+| `show <id>` | Full details for a session |
+| `report --days <n>` | Aggregate cost, model, and tool report |
+| `export --days <n>` | JSON export for external dashboards |
+| `clear` | Delete local transcripts (`.git/chub-sessions/`) |
+| `dashboard --port <n>` | Web dashboard (default port 4243) |
+
+**Examples:**
+
+```sh
+chub track enable                        # auto-detect and install hooks
+chub track enable claude-code --force    # reinstall Claude Code hooks
+chub track status --json                 # active session as JSON
+chub track report --days 7              # last week's usage
+chub track dashboard --port 8080        # custom port
+```
+
 ## Server Commands
 
 ### chub mcp

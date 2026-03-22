@@ -44,7 +44,7 @@ This is the thesis behind Chub: **the knowledge base should get smarter every ti
 
 ## So we built Chub
 
-We took the foundation Context Hub laid down — curated docs, versioned entries, CLI + MCP serving — and rebuilt it in Rust with three goals:
+We took the foundation Context Hub laid down — curated docs, versioned entries, CLI + MCP serving — and rebuilt it in Rust with four goals:
 
 ### Make it fast enough to disappear
 
@@ -108,6 +108,39 @@ Individual developers can get by with ad-hoc context. Teams cannot. When five de
 
 All of this lives in `.chub/` inside your repo. If it's not in git, it doesn't exist for the team.
 
+### Track what your agents actually do
+
+You can't improve what you can't measure. Chub tracks AI coding agent activity across your entire team — sessions, tool calls, models, tokens, reasoning effort, and estimated costs — all stored alongside your code.
+
+```sh
+chub track enable          # install hooks (auto-detects your agent)
+# ... use your AI agent as normal ...
+chub track status          # see active session
+chub track report          # aggregate usage report
+chub track dashboard       # local web dashboard
+```
+
+**Agent-agnostic by design**: the same tracking pipeline works across Claude Code, Cursor, GitHub Copilot, Gemini CLI, Codex, and more. One command, any agent. No vendor lock-in.
+
+Session data is stored on orphan git branches and pushed alongside your code — your whole team sees usage patterns, cost trends, and which agents are most effective for different tasks. Full transcripts stay local for privacy.
+
+```mermaid
+flowchart LR
+    A[Any AI Agent] -->|hooks| B[chub track]
+    B --> C[Session Summaries]
+    B --> D[Cost Analytics]
+    B --> E[Token & Reasoning Tracking]
+    C -->|git push| F[Team Visibility]
+    D -->|dashboard| G[Local Dashboard]
+```
+
+Key tracking features:
+- **Session lifecycle** — start, prompts, tool calls, commits, stop — all recorded automatically
+- **Cost estimation** — built-in rates for Claude, GPT, Gemini, DeepSeek, o1/o3, with custom rate overrides
+- **Reasoning capture** — extended thinking tokens, thinking blocks, reasoning effort tracked separately
+- **Environment metadata** — OS, architecture, git branch, repo, user — captured at session start
+- **Web dashboard** — local dashboard with session history, cost charts, agent breakdowns, transcript viewer
+
 ## Respecting what came before
 
 We want to be clear about where we stand.
@@ -123,26 +156,28 @@ Chub      →  "How does our team use Stripe?"     (private, annotated, version-
 
 ## Where we're going
 
-We believe the best developer tools are the ones that compound. Every annotation an agent writes, every practice a team validates, every issue someone flags — it all adds up. A team that's been using Chub for six months has a knowledge base that a new team member (human or AI) can tap into on day one.
+We believe the best developer tools are the ones that compound. Every annotation an agent writes, every practice a team validates, every issue someone flags, every session tracked — it all adds up. A team that's been using Chub for six months has a knowledge base that a new team member (human or AI) can tap into on day one, and a clear picture of how AI is being used across the project.
 
-Our goal is simple: make Chub the best tool for giving AI coding agents the context they need to write correct code on the first try. Not by replacing human judgment, but by making sure the lessons humans have already learned are never lost.
+Our goal is simple: make Chub the agent-agnostic layer that gives AI coding agents the context they need to write correct code on the first try — and gives teams the visibility they need to use AI effectively. Not by replacing human judgment, but by making sure the lessons humans have already learned are never lost, and the costs and patterns of AI usage are always transparent.
 
-The knowledge base should grow with you. That's what we're building.
+The knowledge base should grow with you. The usage data should inform you. That's what we're building.
 
 ## Design Principles
 
-1. **Git-first** — team config lives in the repo. If it's not in git, it doesn't exist for the team.
-2. **Gradual adoption** — works for a solo developer today; adds team value when `.chub/` is committed.
-3. **Three-tier inheritance** — personal, project, profile. No tier is required.
-4. **Agent-native** — every feature is accessible via MCP. CLI is for humans, MCP is for agents.
-5. **Zero cloud dependency** — everything works offline and self-hosted.
-6. **Fast** — search in ~56ms, cold start in ~44ms. The tool should feel like it doesn't exist.
+1. **Agent-agnostic** — works with any AI coding agent. Claude Code, Cursor, Copilot, Gemini CLI, Codex — same tools, same data, no lock-in.
+2. **Git-first** — team config lives in the repo. If it's not in git, it doesn't exist for the team.
+3. **Gradual adoption** — works for a solo developer today; adds team value when `.chub/` is committed.
+4. **Three-tier inheritance** — personal, project, profile. No tier is required.
+5. **Agent-native** — every feature is accessible via MCP. CLI is for humans, MCP is for agents.
+6. **Zero cloud dependency** — everything works offline and self-hosted.
+7. **Fast** — search in ~56ms, cold start in ~44ms. The tool should feel like it doesn't exist.
 
 ## Who is it for
 
-- **Teams** where multiple developers and AI agents need consistent, accurate context
+- **Teams** where multiple developers and AI agents need consistent, accurate context and visibility into AI usage
 - **Projects** that are tired of agents applying wrong code practices and going in circles
-- **Organizations** that want git-tracked, reviewable, compounding knowledge
+- **Organizations** that want git-tracked, reviewable, compounding knowledge with cost analytics
+- **Engineering leads** who need to understand how AI agents are being used, what they cost, and where they're most effective
 - **Anyone** who believes coding agents should get smarter over time, not start from zero every session
 
 ## Detailed comparisons
