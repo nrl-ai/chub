@@ -83,6 +83,12 @@ For detailed architecture, data flow, conventions, and team feature design, use 
 |-----|---------|
 | `CHUB_DIR` | Override `~/.chub` data directory |
 | `CHUB_BUNDLE_URL` | Override the default CDN URL |
+| `CHUB_PROJECT_DIR` | Override project root |
+| `CHUB_PROFILE` | Override active context profile |
+| `CHUB_ANNOTATION_SERVER` | Override org annotation server URL |
+| `CHUB_ANNOTATION_TOKEN` | Auth token for org annotation server |
+| `CHUB_TELEMETRY` | Set to `0` to disable telemetry |
+| `CHUB_FEEDBACK` | Set to `0` to disable feedback |
 
 Config: `~/.chub/config.yaml` (personal) → `.chub/config.yaml` (project, git-tracked) → `.chub/profiles/<name>.yaml` (role).
 

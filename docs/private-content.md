@@ -37,4 +37,4 @@ chub get community:openai/chat         # the public version
 
 ## Enterprise
 
-For enterprise use cases, reach out at info@tbd-domain.com.
+For enterprise use cases, see the [Self-Hosting guide](../website/docs/guide/self-hosting.md) or open an issue on [GitHub](https://github.com/nrl-ai/chub/issues).

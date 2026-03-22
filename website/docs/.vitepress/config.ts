@@ -42,6 +42,7 @@ export default defineConfig({
           text: 'Self-Learning',
           items: [
             { text: 'Annotations', link: '/guide/annotations' },
+            { text: 'Feedback', link: '/guide/feedback' },
             { text: 'Agent Config Sync', link: '/guide/agent-config' },
           ]
         },
@@ -60,6 +61,13 @@ export default defineConfig({
           items: [
             { text: 'Content Guide', link: '/guide/content-guide' },
             { text: 'Self-Hosting a Registry', link: '/guide/self-hosting' },
+          ]
+        },
+        {
+          text: 'Comparisons',
+          items: [
+            { text: 'Chub vs Context Hub', link: '/guide/vs-context-hub' },
+            { text: 'Chub vs Context7', link: '/guide/vs-context7' },
           ]
         },
       ],

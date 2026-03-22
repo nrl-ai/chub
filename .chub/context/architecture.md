@@ -47,7 +47,7 @@ Three-tier config inheritance: `~/.chub/` → `.chub/` → `.chub/profiles/<name
 
 ## Search Pipeline
 
-`search/tokenizer.rs` — shared tokenizer (52 stop words, punctuation stripping, `compact_identifier` strips all non-alphanumeric for fuzzy matching).
+`search/tokenizer.rs` — shared tokenizer (56 stop words, punctuation stripping, `compact_identifier` strips all non-alphanumeric for fuzzy matching).
 
 `search/bm25.rs` — BM25 scoring (k1=1.5, b=0.75). Fields: `id`, `name`, `description`, `tags`.
 

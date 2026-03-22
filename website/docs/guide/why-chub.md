@@ -144,3 +144,8 @@ The knowledge base should grow with you. That's what we're building.
 - **Projects** that are tired of agents applying wrong code practices and going in circles
 - **Organizations** that want git-tracked, reviewable, compounding knowledge
 - **Anyone** who believes coding agents should get smarter over time, not start from zero every session
+
+## Detailed comparisons
+
+- [Chub vs Context Hub](/guide/vs-context-hub) — performance benchmarks, feature comparison, format compatibility
+- [Chub vs Context7](/guide/vs-context7) — different problems, complementary tools, how to run both

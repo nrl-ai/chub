@@ -67,8 +67,12 @@ auto_profile:
 | `CHUB_DIR` | Override `~/.chub` data directory |
 | `CHUB_BUNDLE_URL` | Override the default CDN URL |
 | `CHUB_PROJECT_DIR` | Override project root (for testing) |
+| `CHUB_PROFILE` | Override the active context profile name |
 | `CHUB_ANNOTATION_SERVER` | Override org annotation server URL |
 | `CHUB_ANNOTATION_TOKEN` | Auth token for org annotation server (personal only, never commit) |
+| `CHUB_TELEMETRY` | Set to `0` to disable anonymous telemetry |
+| `CHUB_FEEDBACK` | Set to `0` to disable the feedback command |
+| `CHUB_TELEMETRY_URL` | Override the telemetry endpoint URL |
 
 ## annotation_token (personal config)
 

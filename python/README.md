@@ -88,7 +88,7 @@ Add to your MCP config (`.mcp.json` for Claude Code, `.cursor/mcp.json` for Curs
 }
 ```
 
-MCP tools: `chub_search`, `chub_get`, `chub_list`, `chub_annotate`, `chub_feedback`.
+MCP tools: `chub_search`, `chub_get`, `chub_list`, `chub_context`, `chub_pins`, `chub_annotate`, `chub_feedback`.
 
 ## How It Works
 

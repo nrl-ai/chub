@@ -120,7 +120,7 @@ Both use BM25 scoring (k1=1.5, b=0.75) with lexical boost (Levenshtein distance,
 |---|---|---|
 | Scoring | BM25 | BM25 (identical parameters) |
 | Index type | Linear scan | **Inverted index** (only scores docs with matching terms) |
-| Tokenizer | 52 stop words, punctuation stripping | 52 stop words, punctuation stripping (identical) |
+| Tokenizer | 56 stop words, punctuation stripping | 56 stop words, punctuation stripping (identical) |
 | Lexical boost | Levenshtein + prefix/contains | Levenshtein + prefix/contains (identical) |
 | Search speed (1,560 entries) | ~1,060 ms | **~56 ms** (19x faster) |
 

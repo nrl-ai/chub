@@ -177,6 +177,7 @@ Now that you have Chub installed, explore the features that matter to your workf
 | Lock doc versions for your team | [Doc Pinning](/guide/pinning) |
 | Give different roles different context | [Context Profiles](/guide/profiles) |
 | Share team knowledge in git | [Annotations & Self-Learning](/guide/annotations) |
+| Rate doc quality for maintainers | [Feedback](/guide/feedback) |
 | Add custom project docs | [Project Context](/guide/project-context) |
 | Auto-detect deps and pin docs | [Dep Auto-Detection](/guide/detect) |
 | Sync CLAUDE.md / .cursorrules | [Agent Config Sync](/guide/agent-config) |
@@ -185,3 +186,4 @@ Now that you have Chub installed, explore the features that matter to your workf
 | Connect AI agents via MCP | [MCP Server](/reference/mcp-server) |
 | Author docs and skills | [Content Guide](/guide/content-guide) |
 | Build a custom private registry | [Self-Hosting](/guide/self-hosting) |
+| Compare with Context Hub or Context7 | [Comparisons](/guide/vs-context-hub) |
