@@ -25,9 +25,11 @@ The DOC.md has standard frontmatter:
 ---
 name: internal-api
 description: Our internal REST API
-languages: python
-versions: 2.0.0
-tags: internal, rest, api
+metadata:
+  languages: python
+  versions: 2.0.0
+  source: community
+  tags: "internal, rest, api"
 ---
 # Internal API
 ...

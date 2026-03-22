@@ -1,12 +1,14 @@
 # Feature: Search Ranking
 
+> **Note**: This is a historical design document from the JS era. The ranking model has been implemented in Rust — see `crates/chub-core/src/search/` for the current implementation.
+
 ## Overview
 
 Improve search result ranking with a three-layer scoring model inspired by Amazon product search: term matching, description quality scoring, and source authority boosting. Future layer: agent upvote/downvote signals.
 
-## Current state
+## Original state (JS)
 
-`searchEntries()` in `cli/src/lib/registry.js` uses a simple scoring model:
+`searchEntries()` in the original JS `cli/src/lib/registry.js` used a simple scoring model:
 
 - Exact id match: +100
 - Id contains query: +50

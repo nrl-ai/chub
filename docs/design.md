@@ -503,48 +503,29 @@ Makes chub content interoperable with the broader agent ecosystem. A skill fetch
 
 ## Project Structure
 
+> **Note**: The project was originally designed in JS and has been rewritten in Rust. The current project structure is:
+
 ```
-chub-first-draft/
-├── cli/
-│   ├── package.json              # npm package with bin entry
-│   ├── bin/chub                  # #!/usr/bin/env node entry point
-│   ├── src/
-│   │   ├── index.js              # Commander setup, global --json, preAction cache hook
-│   │   ├── commands/
-│   │   │   ├── search.js         # search / list / info (all in one)
-│   │   │   ├── get.js            # get command (auto-detects doc/skill)
-│   │   │   ├── build.js          # build registry from content directory
-│   │   │   ├── update.js         # refresh registry / full bundle
-│   │   │   └── cache.js          # cache status / clear
-│   │   └── lib/
-│   │       ├── config.js         # Load config.yaml, merge env vars, defaults
-│   │       ├── cache.js          # Registry fetch, on-demand doc fetch, bundle extract
-│   │       ├── registry.js       # Load registry, search/filter/query, resolve paths
-│   │       ├── frontmatter.js    # YAML frontmatter parser
-│   │       ├── output.js         # Dual-mode output (human with chalk / JSON)
-│   │       └── normalize.js      # Language aliases (js→javascript, py→python)
-├── plans-for-reference/          # Archived design plans
-├── NARRATIVE.md                  # Product pitch
-├── DESIGN.md                     # This file
-├── .gitignore
-└── package.json                  # Root workspace
+chub/
+├── crates/
+│   ├── chub-core/                # Library: all business logic
+│   │   └── src/
+│   │       ├── search/           # BM25, tokenizer, inverted index
+│   │       ├── team/             # Team features (pins, profiles, annotations, etc.)
+│   │       ├── build/            # Registry build pipeline
+│   │       └── ...
+│   └── chub-cli/                 # Binary: CLI commands, MCP server, output
+│       └── src/
+│           ├── commands/         # One file per CLI command
+│           ├── mcp/              # MCP server (rmcp crate)
+│           └── ...
+├── content/                      # Content registry (607 authors)
+├── npm/                          # Platform-specific npm packages
+├── python/                       # Python distribution
+└── docs/                         # Documentation
 ```
 
-## Dependencies
-
-- `commander` ^12 — CLI framework
-- `chalk` ^5 — Terminal colors
-- `yaml` ^2 — Config + frontmatter parsing
-- `tar` ^7 — Bundle extraction (for `--full` mode)
-- Node.js >= 18 (built-in `fetch`, no `node-fetch` needed)
-
-## Future considerations
-
-- **`skills_dir` / `docs_dir` config** — default output directories for skills and docs
-- **Agent detection** — auto-detect installed agents and write to the right skill directory
-- **`chub install`** — dedicated install command if the piping pattern proves too verbose
-- **Usage telemetry** — agents report which docs/skills they used, enabling quality signals
-- **CI/CD integration** — GitHub Action that runs `chub build` and publishes to CDN on push
+See `.chub/context/architecture.md` for detailed data flow and design decisions.
 
 ## Reference
 

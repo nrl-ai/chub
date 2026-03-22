@@ -209,7 +209,7 @@ Detect project dependencies and match them to available docs.
 |------|---------|
 | `--pin` | Auto-pin all detected docs |
 
-Supports: package.json, Cargo.toml, requirements.txt, pyproject.toml, Pipfile, go.mod, Gemfile, pom.xml, build.gradle.
+Supports: package.json, Cargo.toml, requirements.txt, pyproject.toml, Pipfile, go.mod, Gemfile, pom.xml, build.gradle, build.gradle.kts.
 
 ```bash
 chub detect                              # show detected deps and matching docs
@@ -218,7 +218,7 @@ chub detect --pin                        # auto-pin matches
 
 ## chub agent-config
 
-Generate or sync agent config files from `.chub/config.yaml` rules. 10 targets: `claude.md`, `cursorrules`, `windsurfrules`, `agents.md`, `copilot`, `gemini.md`, `clinerules`, `roorules`, `augmentrules`, `kiro`.
+Generate or sync agent config files from `.chub/config.yaml` rules. See [Agent Integrations](integrations.md) for the full list of supported targets.
 
 ```bash
 chub agent-config sync       # generate all configured targets

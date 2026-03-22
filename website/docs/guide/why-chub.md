@@ -102,7 +102,7 @@ Individual developers can get by with ad-hoc context. Teams cannot. When five de
 - **Context profiles** — backend devs get API docs, frontend gets UI docs, with shared base rules inherited automatically
 - **Agent config sync** — one source of truth that generates CLAUDE.md, .cursorrules, AGENTS.md, and 7 more targets
 - **Project context** — architecture decisions, conventions, runbooks — served alongside public docs via MCP
-- **Dep auto-detection** — scan your package.json, Cargo.toml, requirements.txt (9 file types) and auto-pin matching docs
+- **Dep auto-detection** — scan your package.json, Cargo.toml, requirements.txt, and more and auto-pin matching docs
 - **Doc snapshots** — point-in-time captures for reproducible builds
 - **Freshness checks** — detect when pinned doc versions lag behind installed packages
 

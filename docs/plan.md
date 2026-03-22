@@ -17,7 +17,7 @@
 | Three-tier annotations | No | **Yes** (personal / team / org server) |
 | Project awareness | No | **Yes** (auto-detect deps) |
 | Agent config sync | No | **Yes** (CLAUDE.md, .cursorrules, AGENTS.md) |
-| Agent integrations | No | **Yes** (MCP + 10 agent config targets) |
+| Agent integrations | No | **Yes** (MCP + agent config targets) |
 | Git-tracked context | No | **Yes** (`.chub/` in repo) |
 | Context profiles | No | **Yes** (role-scoped, with inheritance) |
 | Self-hosted registry | Yes | Yes + `chub serve` |
@@ -40,8 +40,8 @@
 | P1 | Org annotation server (Tier 3) | **Done** | REST API, bearer auth, TTL cache, auto-push, graceful degradation |
 | P0 | Context profiles with inheritance | **Done** | `extends:` inheritance, circular detection, active profile |
 | P1 | Custom project context | **Done** | Frontmatter parsing, `chub get project/<name>` |
-| P1 | Dependency auto-detection | **Done** | 9 file types (npm, Cargo, pip, pyproject, Pipfile, go.mod, Gemfile, pom.xml, Gradle) |
-| P1 | AGENTS.md / CLAUDE.md generation | **Done** | 5 targets: claude.md, cursorrules, windsurfrules, agents.md, copilot |
+| P1 | Dependency auto-detection | **Done** | All major package managers (see `docs/cli-reference.md` for list) |
+| P1 | AGENTS.md / CLAUDE.md generation | **Done** | All targets listed in `docs/integrations.md` |
 | P1 | Private registry + `chub serve` | **Done** | HTTP server via axum |
 | P2 | Doc freshness monitoring | **Done** | `chub check` + `chub check --fix` |
 | P2 | Doc bundles | **Partial** | Bundle struct + `create`/`install`/`list` commands; `publish` not wired |
@@ -53,7 +53,7 @@
 | P3 | CI/CD integration | **Planned** | GitHub Actions, freshness checks, pin validation |
 | P3 | Python/npm SDKs | **Partial** | npm wrapper done; Python CLI wrapper done; native Python API not started |
 | P3 | IDE extensions | **Planned** | VS Code, JetBrains, Neovim |
-| P2 | Agent integrations | **Done** | MCP server + 10 agent config targets (Claude Code, Cursor, Windsurf, Copilot, Gemini CLI, Kiro, Cline, Roo Code, Augment, Codex) |
+| P2 | Agent integrations | **Done** | MCP server + agent config targets (see `docs/integrations.md`) |
 
 ### Test coverage
 
@@ -91,14 +91,9 @@ Returns ranked docs relevant to the task description. Does NOT add to pins, does
 
 ### Agent integrations (Done)
 
-Two integration layers for AI coding agents:
+Two integration layers: MCP server (`chub mcp`) and agent config generation (`chub agent-config sync`). Claude Code also gets skills and a distributable plugin.
 
-1. **MCP server** (`chub mcp`) — 7 tools, works with any MCP client
-2. **Agent config** (`chub agent-config sync`) — generates static rules for 10 targets covering Claude Code, Cursor, Windsurf, Copilot, Gemini CLI, Kiro, Cline, Roo Code, Augment, and Codex
-
-Claude Code also gets: skills (`/docs`, `/annotate`, `/setup`), a distributable plugin (`claude-plugin/`), and a pre-commit freshness hook.
-
-See `docs/integrations.md` for full setup guide.
+See `docs/integrations.md` for the full setup guide, tool list, and supported targets.
 
 ### IDE extensions
 

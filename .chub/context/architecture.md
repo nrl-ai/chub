@@ -45,9 +45,26 @@ fetch::fetch_doc()                — cache → CDN fallback
 
 Three-tier config inheritance: `~/.chub/` → `.chub/` → `.chub/profiles/<name>.yaml`
 
+## Search Pipeline
+
+`search/tokenizer.rs` — shared tokenizer (52 stop words, punctuation stripping, `compact_identifier` strips all non-alphanumeric for fuzzy matching).
+
+`search/bm25.rs` — BM25 scoring (k1=1.5, b=0.75). Fields: `id`, `name`, `description`, `tags`.
+
+`search/index.rs` — inverted index built at load time from `search-index.json`. Only docs containing ≥1 query term are scored.
+
+`registry::search_entries()` layers BM25 with a lexical boost pass (Levenshtein distance, prefix/contains matching on compact identifiers). The lexical scan is global only when BM25 returns 0 results or a multi-word query has terms missing from the index.
+
+## MCP Server
+
+`chub mcp` runs an stdio server via the `rmcp` crate. It has its own `mcp::server::run_mcp_server()` entry point and loads the registry independently (not through the CLI flow).
+
+Tools: `chub_search`, `chub_get`, `chub_list`, `chub_context`, `chub_pins`, `chub_annotate`, `chub_feedback`. Tool parameter structs use `schemars::JsonSchema` for schema generation. Registry exposed as a resource at `chub://registry`.
+
 ## Key Design Decisions
 
-1. **Format compatibility**: All on-disk formats are byte-for-byte identical with JS Context Hub
+1. **Format compatibility**: All on-disk formats are byte-for-byte identical with JS Context Hub (`serde(rename)` enforces camelCase)
 2. **Search**: BM25 scoring + inverted index (not linear scan) for O(1) term lookup
 3. **MCP server**: Separate entry point via `rmcp` crate, not through CLI flow
 4. **Team features**: All git-tracked in `.chub/`, graceful degradation when absent
+5. **Incremental build**: SHA-256 manifest skips unchanged files during `chub build`

@@ -3,7 +3,7 @@
 Chub works with AI coding agents at two levels:
 
 1. **MCP server** (`chub mcp`) — runtime doc lookup, annotations, context. Works with any MCP client.
-2. **Agent config** (`chub agent-config sync`) — generates static rules files for 10 agent targets.
+2. **Agent config** (`chub agent-config sync`) — generates static rules files for multiple agent targets.
 
 ## Quick Start
 

@@ -151,7 +151,7 @@ Add to `.mcp.json` in your project root:
 }
 ```
 
-Claude Code now has access to 7 MCP tools:
+Claude Code now has access to these MCP tools:
 
 | Tool | What it does |
 |---|---|
@@ -265,7 +265,7 @@ chub get --pinned    # fetch all at once
 
 ## Supported dependency files
 
-Chub auto-detects from 9 file types:
+Chub auto-detects from all major package managers:
 
 | File | Language | Example |
 |---|---|---|

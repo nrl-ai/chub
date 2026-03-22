@@ -83,7 +83,7 @@ chub list                                      # browse everything
 
 ### Connect to Your AI Agent
 
-Add to `.mcp.json` (Claude Code), `.cursor/mcp.json` (Cursor), or the equivalent for your agent:
+Add to `.claude/settings.json` (Claude Code), `.cursor/mcp.json` (Cursor), or the equivalent for your agent:
 
 ```json
 {
@@ -96,9 +96,7 @@ Add to `.mcp.json` (Claude Code), `.cursor/mcp.json` (Cursor), or the equivalent
 }
 ```
 
-Your agent now has access to `chub_search`, `chub_get`, `chub_list`, `chub_annotate`, `chub_context`, `chub_pins`, and `chub_feedback` tools.
-
-Works with 12+ MCP-compatible agents: Claude Code, Cursor, Windsurf, GitHub Copilot, Gemini CLI, Kiro, Cline, Roo Code, Augment, Codex, Continue.dev, and Aider.
+Your agent now has access to tools for searching, fetching, annotating, and managing docs. See [Agent Integrations](docs/integrations.md) for the full tool list and setup guides for all supported agents.
 
 ---
 
@@ -178,14 +176,14 @@ chub check --fix                 # auto-update outdated pins
 
 ### Sync agent config files
 
-Generate rules files for 10 agent targets from a single `.chub/config.yaml`:
+Generate rules files for all configured agent targets from a single `.chub/config.yaml`:
 
 ```sh
 chub agent-config generate       # generate rules for all configured targets
 chub agent-config sync           # update only if changed
 ```
 
-Supported targets: `claude.md`, `cursorrules`, `windsurfrules`, `agents.md`, `copilot`, `gemini.md`, `clinerules`, `roorules`, `augmentrules`, `kiro`.
+See [Agent Integrations](docs/integrations.md) for the full list of supported targets.
 
 ---
 
@@ -236,7 +234,7 @@ chub detect                             # show detected deps with matching docs
 chub detect --pin                       # auto-pin all matches
 ```
 
-Supports: `package.json`, `requirements.txt`, `pyproject.toml`, `Cargo.toml`, `go.mod`, `Gemfile`, `Pipfile`, `pom.xml`, `build.gradle`.
+Supports all major package managers — see [CLI Reference](docs/cli-reference.md) for the full list.
 
 ### Agent Config Sync
 
@@ -245,8 +243,6 @@ chub agent-config generate              # generate rules for all configured targ
 chub agent-config sync                  # update only if changed
 chub agent-config diff                  # preview changes
 ```
-
-Targets: `claude.md`, `cursorrules`, `windsurfrules`, `agents.md`, `copilot`, `gemini.md`, `clinerules`, `roorules`, `augmentrules`, `kiro`.
 
 ### Snapshots and Freshness
 
@@ -309,41 +305,7 @@ Chub includes several security measures for safe use in team environments:
 
 ## Benchmarks
 
-Measured on the production corpus (1,561 docs, 7 skills). Median of 5 runs on Windows 11, Node.js v22, Rust release build.
-
-### Performance
-
-| Operation | Context Hub (JS) | Chub (Rust) | Speedup |
-|---|---|---|---|
-| `search "stripe payments"` | 1,060 ms | **56 ms** | **19x** |
-| `build --validate-only` | 1,920 ms | **380 ms** | **5x** |
-| `build` (1,560 entries) | 3,460 ms | **1,770 ms** | **2x** |
-| `get stripe/api` | 148 ms | **63 ms** | **2.3x** |
-| Cold start (`--help`) | 131 ms | **44 ms** | **3x** |
-
-### Resources
-
-| Metric | Context Hub (JS) | Chub (Rust) |
-|---|---|---|
-| Package size | ~22 MB (`node_modules`) | **10 MB** (single binary) |
-| Runtime dependency | Node.js 20+ | **None** |
-| Peak memory (build) | ~122 MB | **~23 MB** (5.3x less) |
-
-### Feature comparison
-
-| | Context Hub (JS) | Context7 | Chub (Rust) |
-|---|---|---|---|
-| CLI commands | 7 | — | **20** |
-| MCP tools | 5 | 2 | **7** |
-| Team features (pins, profiles, snapshots) | — | — | **Yes** |
-| Self-learning agents (structured annotations) | — | — | **Yes** |
-| 3-tier annotations (personal, team, org) | — | — | **Yes** |
-| Annotation policy in CLAUDE.md / AGENTS.md | — | — | **Yes** |
-| Agent config sync (10 targets) | — | — | **Yes** |
-| Content integrity verification | — | — | **Yes** |
-| Auto version detection (`--match-env`) | — | — | **Yes** |
-| Self-hosted registry | Yes | — | **Yes** |
-| Registry format compatibility | — | — | **Identical to Context Hub** |
+**19x faster search**, 5x faster validation, 5.3x less memory, 10 MB single binary with no runtime dependencies. See [Chub vs Context Hub](docs/chub-vs-context-hub.md) for full benchmark tables and feature comparison.
 
 ---
 
@@ -381,21 +343,7 @@ Add your private registry as an additional source in `~/.chub/config.yaml` — n
 
 ## Test Suite
 
-148 tests covering behavioral parity with Context Hub and all team features:
-
-| Suite | Tests | Coverage |
-|---|---|---|
-| Tokenizer | 6 | Stop words, punctuation, edge cases |
-| BM25 search | 7 | Scoring, ranking, limits, field weights |
-| Inverted index | 1 | Parity with linear scan |
-| Frontmatter parser | 9 | YAML, CRLF, BOM, empty, numeric |
-| Language normalization | 4 | Aliases, case, unknown |
-| Annotations | 4 | Kind validation, severity, tiers |
-| Agent config | 3 | Target generation, unknown target warnings |
-| Build integration | 15 | Output format, validation, structure |
-| Search parity | 20 | Multi-word, tags, descriptions |
-| Team features | 66 | Pins, profiles, annotations (3 tiers), snapshots, detect, freshness, org HTTP |
-| Utilities | 9 | Date helpers, path traversal guards, sanitization |
+Comprehensive test coverage including unit tests (search, BM25, frontmatter, annotations), build/search parity tests, and team feature integration tests.
 
 ```sh
 cargo test --all                     # run all tests

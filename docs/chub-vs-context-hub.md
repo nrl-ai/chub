@@ -54,7 +54,7 @@ Both implementations support all core functionality:
 | Context profiles | `chub profile` | Role-scoped context (backend, frontend, etc.) with inheritance |
 | Team annotations | `chub annotate --team` | Git-tracked annotations in `.chub/annotations/` |
 | Project context | `chub context` | Custom markdown docs in `.chub/context/` served via MCP |
-| Dep auto-detection | `chub detect` | Scan 9 file types (npm, Cargo, pip, Go, etc.) for matching docs |
+| Dep auto-detection | `chub detect` | Scan all major package managers for matching docs |
 | Agent config sync | `chub agent-config` | Generate CLAUDE.md, .cursorrules, AGENTS.md from one source |
 | Doc snapshots | `chub snapshot` | Point-in-time pin captures for reproducibility |
 | Freshness checks | `chub check` | Compare pinned vs installed versions, auto-update |
