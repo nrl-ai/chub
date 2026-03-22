@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "chub"
-version = "0.1.15"
+version = "0.1.16"
 description = "Chub: agent-agnostic context, tracking, and cost analytics for AI-assisted development"
 readme = "README.md"
 license = "MIT"
