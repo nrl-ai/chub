@@ -12,10 +12,11 @@ static STOP_WORDS: LazyLock<HashSet<&'static str>> = LazyLock::new(|| {
     ])
 });
 
-/// Check if a token is searchable: length > 1 (or all digits) and not a stop word.
+/// Check if a token is searchable: length > 1 char (or all digits) and not a stop word.
 /// Matches JS `isSearchableToken`.
 pub fn is_searchable_token(token: &str) -> bool {
-    (token.len() > 1 || token.chars().all(|c| c.is_ascii_digit())) && !STOP_WORDS.contains(token)
+    (token.chars().count() > 1 || token.chars().all(|c| c.is_ascii_digit()))
+        && !STOP_WORDS.contains(token)
 }
 
 /// Compact an identifier by lowercasing and removing all non-alphanumeric chars.

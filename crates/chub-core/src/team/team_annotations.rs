@@ -70,7 +70,10 @@ pub fn write_team_annotation(
     severity: Option<String>,
 ) -> Option<TeamAnnotation> {
     let dir = team_annotations_dir()?;
-    let _ = fs::create_dir_all(&dir);
+    if let Err(e) = fs::create_dir_all(&dir) {
+        eprintln!("Warning: failed to create annotations dir: {}", e);
+        return None;
+    }
 
     let mut ann = read_team_annotation(entry_id).unwrap_or(TeamAnnotation {
         id: entry_id.to_string(),
@@ -101,8 +104,21 @@ pub fn write_team_annotation(
     }
 
     let path = team_annotation_path(entry_id)?;
-    let yaml = serde_yaml::to_string(&ann).ok()?;
-    fs::write(&path, yaml).ok()?;
+    let yaml = match serde_yaml::to_string(&ann) {
+        Ok(y) => y,
+        Err(e) => {
+            eprintln!("Warning: failed to serialize annotation: {}", e);
+            return None;
+        }
+    };
+    if let Err(e) = fs::write(&path, yaml) {
+        eprintln!(
+            "Warning: failed to write annotation to {}: {}",
+            path.display(),
+            e
+        );
+        return None;
+    }
     Some(ann)
 }
 

@@ -231,14 +231,19 @@ impl ChubMcpServer {
         description = "Fetch the content of a doc or skill by ID from Context Hub"
     )]
     async fn handle_get(&self, Parameters(params): Parameters<GetParams>) -> String {
-        // Validate file parameter (path traversal) — normalize and reject suspicious paths
+        // Validate file parameter (path traversal) — reject suspicious paths
         if let Some(ref file) = params.file {
+            if file.contains("..") || file.contains('\\') {
+                return text_result(serde_json::json!({
+                    "error": format!("Invalid file path: \"{}\". Path traversal is not allowed.", file),
+                }));
+            }
             let normalized = std::path::Path::new("/")
                 .join(file)
                 .to_string_lossy()
                 .to_string();
             let normalized = normalized.trim_start_matches('/').to_string();
-            if normalized != *file || file.contains("..") {
+            if normalized != *file {
                 return text_result(serde_json::json!({
                     "error": format!("Invalid file path: \"{}\". Path traversal is not allowed.", file),
                 }));

@@ -71,6 +71,7 @@ pub fn create_snapshot(name: &str) -> Result<Snapshot> {
 }
 
 /// Restore pins from a snapshot.
+/// Automatically creates a backup snapshot of current pins before restoring.
 pub fn restore_snapshot(name: &str) -> Result<Snapshot> {
     validate_name(name)?;
     let dir =
@@ -84,6 +85,23 @@ pub fn restore_snapshot(name: &str) -> Result<Snapshot> {
     let raw = fs::read_to_string(&path)?;
     let snapshot: Snapshot =
         serde_yaml::from_str(&raw).map_err(|e| Error::Config(e.to_string()))?;
+
+    // Auto-backup current pins before overwriting
+    let current_pins = load_pins();
+    if !current_pins.pins.is_empty() {
+        let backup_name = format!("pre-restore-{}", name);
+        let backup_path = dir.join(format!("{}.yaml", backup_name));
+        if !backup_path.exists() {
+            let backup = Snapshot {
+                name: backup_name,
+                created_at: now_iso(),
+                pins: current_pins.pins,
+            };
+            if let Ok(yaml) = serde_yaml::to_string(&backup) {
+                let _ = fs::write(&backup_path, yaml);
+            }
+        }
+    }
 
     let pins_file = PinsFile {
         pins: snapshot.pins.clone(),

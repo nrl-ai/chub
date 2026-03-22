@@ -52,16 +52,29 @@ pub fn load_bundle_by_name(name: &str) -> Result<Bundle> {
 }
 
 /// Install a bundle: pin all its entries.
+/// On error, returns which entries were successfully pinned before the failure.
 pub fn install_bundle(bundle: &Bundle) -> Result<Vec<String>> {
     let mut pinned = Vec::new();
     for entry_id in &bundle.entries {
-        pins::add_pin(
+        if let Err(e) = pins::add_pin(
             entry_id,
             None,
             None,
             Some(format!("From bundle: {}", bundle.name)),
             None,
-        )?;
+        ) {
+            if pinned.is_empty() {
+                return Err(e);
+            }
+            eprintln!(
+                "Warning: failed to pin \"{}\": {}. {} of {} entries pinned.",
+                entry_id,
+                e,
+                pinned.len(),
+                bundle.entries.len()
+            );
+            return Ok(pinned);
+        }
         pinned.push(entry_id.clone());
     }
     Ok(pinned)

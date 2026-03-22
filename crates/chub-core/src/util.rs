@@ -49,9 +49,10 @@ pub fn today_date() -> String {
     format!("{:04}-{:02}-{:02}", y, m, d)
 }
 
-/// Sanitize an entry ID for use in filenames by replacing `/` with `--`.
+/// Sanitize an entry ID for use in filenames.
+/// Replaces `/` and `\` with `--` and strips `..` to prevent path traversal.
 pub fn sanitize_entry_id(entry_id: &str) -> String {
-    entry_id.replace('/', "--")
+    entry_id.replace(['/', '\\'], "--").replace("..", "")
 }
 
 /// Validate that a name is safe for use as a filename (no path traversal).

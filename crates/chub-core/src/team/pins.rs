@@ -36,10 +36,23 @@ pub fn load_pins() -> PinsFile {
         Some(p) if p.exists() => p,
         _ => return PinsFile::default(),
     };
-    fs::read_to_string(&path)
-        .ok()
-        .and_then(|s| serde_yaml::from_str(&s).ok())
-        .unwrap_or_default()
+    match fs::read_to_string(&path) {
+        Ok(s) => match serde_yaml::from_str(&s) {
+            Ok(pins) => pins,
+            Err(e) => {
+                eprintln!(
+                    "Warning: failed to parse {}: {}. Using empty pins.",
+                    path.display(),
+                    e
+                );
+                PinsFile::default()
+            }
+        },
+        Err(e) => {
+            eprintln!("Warning: failed to read {}: {}", path.display(), e);
+            PinsFile::default()
+        }
+    }
 }
 
 /// Save pins to `.chub/pins.yaml`.

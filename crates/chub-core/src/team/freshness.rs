@@ -114,7 +114,7 @@ pub fn auto_fix_freshness(results: &[FreshnessResult]) -> Vec<String> {
         }
         if let Some(ref installed) = result.installed_version {
             let clean = installed.trim_start_matches(|c: char| {
-                c == '^' || c == '~' || c == '=' || c == '>' || c == '<'
+                c == '^' || c == '~' || c == '=' || c == '>' || c == '<' || c == 'v'
             });
             if let Ok(()) = crate::team::pins::add_pin(
                 &result.pin_id,

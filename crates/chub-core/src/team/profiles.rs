@@ -61,6 +61,7 @@ pub fn resolve_profile(name: &str) -> Result<ResolvedProfile> {
     let mut chain = Vec::new();
     let mut current = name.to_string();
     let max_depth = 10;
+    let mut resolved_all = false;
 
     for _ in 0..max_depth {
         if chain.contains(&current) {
@@ -74,8 +75,17 @@ pub fn resolve_profile(name: &str) -> Result<ResolvedProfile> {
         if let Some(ref parent) = profile.extends {
             current = parent.clone();
         } else {
+            resolved_all = true;
             break;
         }
+    }
+
+    if !resolved_all {
+        return Err(Error::Config(format!(
+            "Profile inheritance chain exceeds maximum depth of {} ({})",
+            max_depth,
+            chain.join(" → ")
+        )));
     }
 
     // Resolve from root to leaf

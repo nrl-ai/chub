@@ -70,9 +70,13 @@ fn read_cache(entry_id: &str) -> Option<TeamAnnotation> {
 
 fn write_cache(ann: &TeamAnnotation) {
     let dir = org_cache_dir();
-    let _ = fs::create_dir_all(&dir);
+    if fs::create_dir_all(&dir).is_err() {
+        return;
+    }
     let path = org_cache_path(&ann.id);
-    let _ = fs::write(path, serde_json::to_string_pretty(ann).unwrap_or_default());
+    if let Ok(json) = serde_json::to_string_pretty(ann) {
+        let _ = fs::write(path, json);
+    }
 }
 
 fn invalidate_cache(entry_id: &str) {
