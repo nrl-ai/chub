@@ -105,6 +105,7 @@ fn parse_yaml_frontmatter(yaml_str: &str) -> Frontmatter {
         .map(|meta| FrontmatterMetadata {
             languages: yaml_get_str(meta, "languages"),
             versions: yaml_get_str(meta, "versions"),
+            revision: yaml_get_str(meta, "revision"),
             source: yaml_get_str(meta, "source"),
             tags: yaml_get_str(meta, "tags"),
             updated_on: yaml_get_str(meta, "updated-on"),
@@ -130,6 +131,7 @@ description: "A test library"
 metadata:
   languages: "javascript,python"
   versions: "1.0.0,2.0.0"
+  revision: 1
   source: official
   tags: "test,example"
   updated-on: "2025-01-01"
@@ -143,6 +145,7 @@ Some content here.
         assert_eq!(fm.description.as_deref(), Some("A test library"));
         assert_eq!(fm.metadata.languages.as_deref(), Some("javascript,python"));
         assert_eq!(fm.metadata.versions.as_deref(), Some("1.0.0,2.0.0"));
+        assert_eq!(fm.metadata.revision.as_deref(), Some("1"));
         assert_eq!(fm.metadata.source.as_deref(), Some("official"));
         assert_eq!(fm.metadata.tags.as_deref(), Some("test,example"));
         assert_eq!(fm.metadata.updated_on.as_deref(), Some("2025-01-01"));

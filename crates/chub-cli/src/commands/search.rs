@@ -80,7 +80,7 @@ fn format_entry_list(entries: &[TaggedEntry]) {
 }
 
 fn format_entry_detail(entry: &TaggedEntry) {
-    eprintln!("{}", entry.name().bold());
+    println!("{}", entry.name().bold());
     if is_multi_source() {
         println!("  Source: {}", entry.source_name);
     }
@@ -93,7 +93,7 @@ fn format_entry_detail(entry: &TaggedEntry) {
     if !entry.tags().is_empty() {
         println!("  Tags: {}", entry.tags().join(", "));
     }
-    eprintln!();
+    println!();
 
     if let Some(languages) = entry.languages() {
         for lang in languages {

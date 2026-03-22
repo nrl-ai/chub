@@ -477,14 +477,24 @@ fn print_output(results: &[FetchedEntry], args: &GetArgs, json: bool) {
             let json_out: Vec<serde_json::Value> = results
                 .iter()
                 .map(|r| {
-                    serde_json::json!({
+                    let mut obj = serde_json::json!({
                         "id": r.id,
                         "type": r.entry_type,
                         "path": r.path,
-                    })
+                    });
+                    if let Some(ref content) = r.content {
+                        obj["content"] = serde_json::json!(content);
+                    }
+                    if let Some(ref files) = r.files {
+                        obj["files"] = serde_json::json!(files);
+                    }
+                    obj
                 })
                 .collect();
-            println!("{}", serde_json::to_string(&json_out).unwrap_or_default());
+            println!(
+                "{}",
+                serde_json::to_string_pretty(&json_out).unwrap_or_default()
+            );
         } else {
             print!("{}", combined);
         }

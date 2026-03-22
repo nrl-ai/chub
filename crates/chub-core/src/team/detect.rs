@@ -532,16 +532,20 @@ pub fn match_deps_to_docs(
             continue;
         }
 
-        // Try partial match
-        for (key, (doc_id, doc_name)) in &id_by_name {
-            if key.contains(&dep_lower) || dep_lower.contains(key.as_str()) {
-                matches.push(DetectedMatch {
-                    dep: dep.clone(),
-                    doc_id: doc_id.clone(),
-                    doc_name: doc_name.clone(),
-                    confidence: 0.5,
-                });
-                break;
+        // Try partial match (require minimum 4 chars to avoid false positives
+        // like "tar" matching "starlette" or "ray" matching "rayon")
+        if dep_lower.len() >= 4 {
+            for (key, (doc_id, doc_name)) in &id_by_name {
+                if key.len() >= 4 && (key.contains(&dep_lower) || dep_lower.contains(key.as_str()))
+                {
+                    matches.push(DetectedMatch {
+                        dep: dep.clone(),
+                        doc_id: doc_id.clone(),
+                        doc_name: doc_name.clone(),
+                        confidence: 0.5,
+                    });
+                    break;
+                }
             }
         }
     }

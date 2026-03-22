@@ -98,7 +98,16 @@ pub fn run(args: CheckArgs, json: bool) {
 
     if args.fix && outdated_count > 0 {
         let fixed = freshness::auto_fix_freshness(&results);
-        if !json {
+        if json {
+            println!(
+                "{}",
+                serde_json::to_string_pretty(&serde_json::json!({
+                    "fixed": fixed.len(),
+                    "status": "updated",
+                }))
+                .unwrap_or_default()
+            );
+        } else {
             output::success(&format!("Updated {} pin(s).", fixed.len()));
         }
     }

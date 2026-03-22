@@ -9,6 +9,9 @@ pub struct VersionEntry {
     pub size: u64,
     #[serde(rename = "lastUpdated")]
     pub last_updated: String,
+    /// Content revision number (monotonically increasing, starts at 1).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub revision: Option<String>,
     /// SHA-256 hash of the entry-point file content for integrity verification.
     #[serde(
         rename = "contentHash",
@@ -51,6 +54,9 @@ pub struct SkillEntry {
     pub size: u64,
     #[serde(rename = "lastUpdated")]
     pub last_updated: String,
+    /// Content revision number (monotonically increasing, starts at 1).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub revision: Option<String>,
     /// SHA-256 hash of the skill file content for integrity verification.
     #[serde(
         rename = "contentHash",
@@ -175,6 +181,7 @@ pub struct Frontmatter {
 pub struct FrontmatterMetadata {
     pub languages: Option<String>,
     pub versions: Option<String>,
+    pub revision: Option<String>,
     pub source: Option<String>,
     pub tags: Option<String>,
     pub updated_on: Option<String>,

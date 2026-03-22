@@ -1,7 +1,9 @@
 ---
 name: Chub Workflow
 description: "Complete workflow for AI agents using Chub: how to query docs efficiently and how to write structured annotations back to build persistent team knowledge"
-tags: chub, docs, annotations, workflow, knowledge-management
+metadata:
+  source: maintainer
+  tags: chub, docs, annotations, workflow, knowledge-management
 ---
 
 # Chub Workflow

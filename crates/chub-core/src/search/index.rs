@@ -199,6 +199,7 @@ mod tests {
                     files: vec!["DOC.md".to_string()],
                     size: 100,
                     last_updated: "2025-01-01".to_string(),
+                    revision: None,
                     content_hash: None,
                 }],
                 recommended_version: "1.0.0".to_string(),

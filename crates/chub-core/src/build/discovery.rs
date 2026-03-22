@@ -127,6 +127,7 @@ pub fn discover_author(
             .map(|t| t.split(',').map(|s| s.trim().to_string()).collect())
             .unwrap_or_default();
         let updated_on = meta.updated_on.clone().unwrap_or_else(today_fallback);
+        let revision = meta.revision.clone();
 
         let entry_path = pathdiff(&ef.dir_key, content_dir);
         let dir_info = &dir_infos[&ef.dir_key];
@@ -160,6 +161,7 @@ pub fn discover_author(
                     files,
                     size,
                     last_updated: updated_on,
+                    revision,
                     content_hash,
                 },
             );
@@ -212,6 +214,7 @@ pub fn discover_author(
                         files: files.clone(),
                         size,
                         last_updated: updated_on.clone(),
+                        revision: revision.clone(),
                         content_hash: content_hash.clone(),
                     });
                 }
@@ -378,6 +381,7 @@ pub fn load_author_registry(
             files: skill.files.unwrap_or_default(),
             size: skill.size.unwrap_or(0),
             last_updated: skill.last_updated.unwrap_or_default(),
+            revision: None,
             content_hash: None,
         });
     }

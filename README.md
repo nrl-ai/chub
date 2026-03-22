@@ -235,7 +235,7 @@ chub detect                             # show detected deps with matching docs
 chub detect --pin                       # auto-pin all matches
 ```
 
-Supports: `package.json`, `requirements.txt`, `pyproject.toml`, `Cargo.toml`, `go.mod`, `Gemfile`, `Pipfile`, `pom.xml`, `build.gradle`.
+Supports: `package.json`, `requirements.txt`, `pyproject.toml`, `Cargo.toml`, `go.mod`, `Gemfile`, `Pipfile`, `pom.xml`, `build.gradle`, `build.gradle.kts`.
 
 ### Agent Config Sync
 
