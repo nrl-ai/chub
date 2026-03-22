@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Chub — Content Registry</title>
+<meta name="description" content="Browse {docs} curated API docs and {skills} skills for AI coding agents. Search, filter by language and tags.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+{style}
+</style>
+</head>
+<body>
+
+<nav class="navbar">
+<a href="/" class="navbar-brand">
+<svg viewBox="0 0 80 80" fill="none" xmlns="http://www.w3.org/2000/svg"><rect width="80" height="80" rx="16" fill="#0ea5e9"/><text x="40" y="55" text-anchor="middle" fill="white" font-size="40" font-weight="800" font-family="Inter,sans-serif">C</text></svg>
+Chub Registry
+</a>
+<div class="navbar-links">
+<a href="https://chub.nrl.ai">Docs</a>
+<a href="https://chub.nrl.ai/guide/getting-started">Get Started</a>
+<a href="https://chub.nrl.ai/reference/cli">CLI Reference</a>
+<a href="https://github.com/nrl-ai/chub">GitHub</a>
+<button class="theme-toggle" onclick="toggleTheme()" title="Toggle dark/light theme">
+  <svg class="icon-sun" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="5"/><path d="M12 1v2m0 18v2M4.22 4.22l1.42 1.42m12.72 12.72l1.42 1.42M1 12h2m18 0h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/></svg>
+  <svg class="icon-moon" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z"/></svg>
+</button>
+</div>
+</nav>
+
+<div class="wrap">
+<header>
+<h1><span>Chub</span> Content Registry</h1>
+<p>Curated API docs and skills for AI coding agents</p>
+</header>
+
+<div class="stats">
+<div class="stat"><b>{docs}</b><small>Docs</small></div>
+<div class="stat"><b>{skills}</b><small>Skills</small></div>
+<div class="stat"><b>{lang_count}</b><small>Languages</small></div>
+</div>
+
+<div class="search-bar">
+<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+<input type="text" id="q" placeholder="Search docs and skills..." autofocus autocomplete="off">
+</div>
+
+<div class="filters" id="filters"></div>
+
+<div class="results-info" id="info"></div>
+<div class="grid" id="grid"></div>
+<div class="pagination" id="pagination"></div>
+
+<div class="install-hint">
+<span class="prompt">$</span> <span class="cmd">npm install -g @nrl-ai/chub</span><br>
+<span class="prompt">$</span> <span class="cmd">chub search "stripe payments"</span><br>
+<span class="prompt">$</span> <span class="cmd">chub get openai/chat --lang python</span>
+</div>
+
+<footer>
+Registry built {generated}<br>
+<div class="links">
+<a href="https://chub.nrl.ai">Website</a> &middot;
+<a href="https://github.com/nrl-ai/chub">GitHub</a> &middot;
+<a href="https://www.npmjs.com/package/@nrl-ai/chub">npm</a> &middot;
+<a href="https://pypi.org/project/chub/">PyPI</a> &middot;
+<a href="https://crates.io/crates/chub">crates.io</a> &middot;
+<a href="/registry.json">API</a>
+</div>
+</footer>
+</div>
+
+<!-- Doc viewer modal -->
+<div class="modal-overlay" id="modal">
+<div class="modal">
+<div class="modal-header">
+<h2 id="modal-title">Loading...</h2>
+<select id="modal-lang" style="display:none"></select>
+<select id="modal-ver" style="display:none"></select>
+<button class="modal-close" id="modal-close">&times;</button>
+</div>
+<div class="modal-body" id="modal-body"><div class="loading">Loading...</div></div>
+</div>
+</div>
+
+<script>
+const CATALOG={catalog};
+{script}
+</script>
+</body>
+</html>
