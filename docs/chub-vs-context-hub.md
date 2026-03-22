@@ -4,7 +4,7 @@ Chub is a Rust rewrite of [Context Hub](https://github.com/andrewyng/context-hub
 
 ## Performance
 
-All benchmarks measured on the production corpus (1,560 docs, 7 skills) on Windows 11, Node.js v22, Rust release build. Median of 5 runs. Reproduce with `./scripts/benchmark.sh`.
+All benchmarks measured on the production corpus (1,553 docs, 8 skills) on Windows 11, Node.js v22, Rust release build. Median of 5 runs. Reproduce with `./scripts/benchmark.sh`.
 
 | Operation | Context Hub (JS) | Chub (Rust) | Speedup |
 |---|---|---|---|
@@ -88,7 +88,7 @@ Both implementations support all core functionality:
 | `feedback` | Yes | Yes |
 | `mcp` | — | **Yes** |
 | `init` | — | **Yes** |
-| `pin` / `unpin` / `pins` | — | **Yes** |
+| `pin add/remove/list/get` | — | **Yes** |
 | `profile` | — | **Yes** |
 | `detect` | — | **Yes** |
 | `agent-config` | — | **Yes** |

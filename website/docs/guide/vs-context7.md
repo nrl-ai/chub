@@ -7,7 +7,7 @@ They solve different problems. Run both.
 | | Context7 | Chub |
 |---|---|---|
 | **Best at** | Public library docs, always fresh | Team knowledge, private docs |
-| Public library docs | Auto-crawled, always current | 1,560+ curated entries |
+| Public library docs | Auto-crawled, always current | 1,553+ curated entries |
 | Private/internal docs | No | Yes (build + serve) |
 | Team annotations | No | Yes (git-tracked, 3 tiers) |
 | Version pinning | No | Yes (with reasons, freshness checks) |
@@ -71,7 +71,7 @@ The agent calls `chub_get` for your internal API docs, pinned versions, and team
 
 ## What Chub deliberately does not do
 
-Chub does not crawl upstream library repos. It cannot compete with Context7 on public library freshness, and it does not try to. The curated registry (1,560+ entries) covers the most common libraries at known-good versions — sufficient for most needs, and supplemented by Context7 when currency matters.
+Chub does not crawl upstream library repos. It cannot compete with Context7 on public library freshness, and it does not try to. The curated registry (1,553+ entries) covers the most common libraries at known-good versions — sufficient for most needs, and supplemented by Context7 when currency matters.
 
 **If you need always-fresh public docs**: use Context7.
 **If you need your team's knowledge in the agent's context**: use Chub.

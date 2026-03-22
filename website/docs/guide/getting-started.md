@@ -36,7 +36,7 @@ chub --version
 
 ## Search for docs
 
-Chub serves curated API documentation from a public registry of 1,560+ docs. Search for anything:
+Chub serves curated API documentation from a public registry of 1,553+ docs. Search for anything:
 
 ```sh
 chub search "stripe payments"
@@ -144,15 +144,15 @@ Commit `.chub/` to git so the whole team shares the same context. Personal setti
 Lock specific doc versions so every team member and AI agent uses the same reference:
 
 ```sh
-chub pin openai/chat --lang python --version 4.0 --reason "Use v4 streaming API"
-chub pin stripe/api --lang javascript
+chub pin add openai/chat --lang python --version 4.0 --reason "Use v4 streaming API"
+chub pin add stripe/api --lang javascript
 ```
 
 List and fetch pinned docs:
 
 ```sh
-chub pins              # list all pins
-chub get --pinned      # fetch all pinned docs at once
+chub pin list          # list all pins
+chub pin get           # fetch all pinned docs at once
 ```
 
 ## Config inheritance

@@ -8,7 +8,7 @@ Chub works with AI coding agents at two levels:
 ## Quick Start
 
 ```sh
-npm install -g chub          # install
+npm install -g @nrl-ai/chub  # install
 chub init --from-deps        # initialize project, detect deps
 chub agent-config sync       # generate rules for all configured targets
 ```

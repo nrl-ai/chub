@@ -168,7 +168,7 @@ For simple webhook-based integrations:
 ```python
 from slack_sdk.webhook import WebhookClient
 
-webhook = WebhookClient("https://hooks.slack.com/services/TXXXXXXXXX/BXXXXXXXXX/your-webhook-token")
+webhook = WebhookClient("https://hooks.slack.com/services/T00000000/B00000000/XXXXXXXXXXXXXXXXXXXXXXXX")
 
 response = webhook.send(
     text="Hello from webhook!",

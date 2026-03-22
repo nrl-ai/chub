@@ -4,7 +4,7 @@ Chub is a Rust rewrite of [Context Hub](https://github.com/andrewyng/context-hub
 
 ## Performance
 
-Measured on the production corpus (1,560 docs). Median of 5 runs.
+Measured on the production corpus (1,553 docs, 8 skills). Median of 5 runs.
 
 | Operation | Context Hub (JS) | Chub (Rust) | Speedup |
 |---|---|---|---|

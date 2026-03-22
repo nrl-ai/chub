@@ -79,13 +79,13 @@ The provider expects the Airflow connection to carry a `config` value in `extra`
 Single-service example from an environment variable:
 
 ```bash
-export AIRFLOW_CONN_APPRISE_DEFAULT='{"extra": {"config": {"path": "https://hooks.slack.com/services/TXXXXXXXXX/BXXXXXXXXX/your-webhook-token", "tag": "ops"}}}'
+export AIRFLOW_CONN_APPRISE_DEFAULT='{"extra": {"config": {"path": "https://hooks.slack.com/services/T00000000/B00000000/XXXXXXXXXXXXXXXXXXXXXXXX", "tag": "ops"}}}'
 ```
 
 Multiple-service example:
 
 ```bash
-export AIRFLOW_CONN_APPRISE_DEFAULT='{"extra": {"config": [{"path": "https://hooks.slack.com/services/TXXXXXXXXX/BXXXXXXXXX/your-webhook-token", "tag": "ops"}, {"path": "mailto://user:password@example.com", "tag": "email"}]}}'
+export AIRFLOW_CONN_APPRISE_DEFAULT='{"extra": {"config": [{"path": "https://hooks.slack.com/services/T00000000/B00000000/XXXXXXXXXXXXXXXXXXXXXXXX", "tag": "ops"}, {"path": "mailto://user:password@example.com", "tag": "email"}]}}'
 ```
 
 Important detail: use `tag`, not `tags`, inside each config object. The connection guide shows an environment-variable example with `tags`, but the provider hook reads the singular key `tag`.

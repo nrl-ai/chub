@@ -32,7 +32,7 @@ Our system uses an event-driven microservices architecture...
 chub get project/architecture
 
 # List project docs
-chub list --project
+chub context --list
 ```
 
 ## MCP access

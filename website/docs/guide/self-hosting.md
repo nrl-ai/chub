@@ -72,10 +72,10 @@ dist/
 For local development or testing, serve the output directory with any static file server:
 
 ```sh
-# Using chub serve (built-in)
-chub serve ./dist --port 4000
+# Using chub serve (built-in — takes a content dir, builds + serves)
+chub serve ./content --port 4000
 
-# Or with npx serve
+# Or serve the pre-built dist/ with any static server
 npx serve ./dist --listen 4000
 ```
 

@@ -35,7 +35,7 @@ Keep the raw secrets outside your DAG code:
 
 ```bash
 export SLACK_API_TOKEN='xoxb-your-bot-token'
-export SLACK_WEBHOOK_URL='https://hooks.slack.com/services/TXXXXXXXXX/BXXXXXXXXX/your-webhook-token'
+export SLACK_WEBHOOK_URL='https://hooks.slack.com/services/T00000000/B00000000/XXXXXXXXXXXXXXXXXXXXXXXX'
 ```
 
 In Airflow, create connections that hold those secrets and reference them by ID from the provider:

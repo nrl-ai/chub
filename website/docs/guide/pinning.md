@@ -5,9 +5,9 @@ Pin specific docs and versions so every team member and AI agent uses the same r
 ## Pin a doc
 
 ```sh
-chub pin openai/chat --lang python --version 4.0 --reason "Use v4 streaming API"
-chub pin stripe/api --lang javascript
-chub pin nextjs/app-router --version 15.0
+chub pin add openai/chat --lang python --version 4.0 --reason "Use v4 streaming API"
+chub pin add stripe/api --lang javascript
+chub pin add nextjs/app-router --version 15.0
 ```
 
 ## pins.yaml format
@@ -31,22 +31,22 @@ pins:
 ## Commands
 
 ```sh
-chub pin <id>          # Pin a doc
-chub unpin <id>        # Remove a pin
-chub pins              # List all pins
-chub get --pinned      # Fetch all pinned docs at once
+chub pin add <id>      # Pin a doc
+chub pin remove <id>   # Remove a pin
+chub pin list          # List all pins
+chub pin get           # Fetch all pinned docs at once
 ```
 
 ## Update a pin
 
-Running `chub pin` on an already-pinned ID updates it:
+Running `chub pin add` on an already-pinned ID updates it:
 
 ```sh
 # Update version
-chub pin openai/chat --version 4.5
+chub pin add openai/chat --version 4.5
 
 # Add a reason
-chub pin openai/chat --reason "Migrated to v4.5"
+chub pin add openai/chat --reason "Migrated to v4.5"
 ```
 
 ## Freshness checks

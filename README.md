@@ -47,7 +47,7 @@ Built on [Context Hub](https://github.com/andrewyng/context-hub) by Andrew Ng �
 │  (Claude,    │     │  Server     │     │  (CDN / local)   │
 │   Cursor)    │◀────│             │◀────│                  │
 └──────────────┘     └─────────────┘     └──────────────────┘
-   Gets accurate        Searches,             1,560+ curated
+   Gets accurate        Searches,             1,553+ curated
    API docs on          caches, and           docs covering
    demand               verifies docs         major APIs
 ```
@@ -306,7 +306,7 @@ Chub includes several security measures for safe use in team environments:
 
 ## Benchmarks
 
-Measured on the production corpus (1,560+ docs). Median of 5 runs. Full methodology in [Chub vs Context Hub](docs/chub-vs-context-hub.md).
+Measured on the production corpus (1,553 docs, 8 skills). Median of 5 runs. Full methodology in [Chub vs Context Hub](docs/chub-vs-context-hub.md).
 
 ### Performance
 

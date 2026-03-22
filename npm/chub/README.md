@@ -25,7 +25,7 @@ chub list
 
 ## Features
 
-- **1,560+ curated docs** — API references for popular libraries and frameworks
+- **1,553+ curated docs** — API references for popular libraries and frameworks
 - **~44ms cold start** — native Rust binary, no Node.js runtime needed
 - **10 MB binary** — vs ~22 MB node_modules
 - **MCP server** — AI agents search and fetch docs automatically
@@ -47,8 +47,8 @@ chub init
 chub init --from-deps
 
 # Pin doc versions for the team
-chub pin openai/chat --lang python --version 4.0
-chub pins
+chub pin add openai/chat --lang python --version 4.0
+chub pin list
 ```
 
 ### MCP server

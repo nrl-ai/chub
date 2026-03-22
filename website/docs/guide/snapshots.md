@@ -30,7 +30,7 @@ chub check --fix   # Auto-update outdated pins
 
 ```
 ⚠  openai/chat pinned to v4.0 docs, but openai==4.52.0 is installed
-   → chub pin openai/chat --version 4.52.0
+   → chub pin add openai/chat --version 4.52.0
 
 ✓  stripe/api docs are current
 ✓  redis/cache docs are current

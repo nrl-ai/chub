@@ -260,7 +260,7 @@ chub feedback <id> <rating> [<comment>] [OPTIONS]
 | `--label <label>` | Structured label, repeatable (e.g. `outdated`, `missing-example`) |
 | `--agent <name>` | AI coding tool name |
 | `--model <model>` | LLM model name |
-| `--entry-type <type>` | Explicit type: `doc` or `skill` |
+| `--type <type>` | Explicit type: `doc` or `skill` |
 | `--status` | Show feedback and telemetry status |
 
 ### chub detect
@@ -268,13 +268,12 @@ chub feedback <id> <rating> [<comment>] [OPTIONS]
 Scan dependency files and find matching docs.
 
 ```sh
-chub detect [--pin] [--diff]
+chub detect [--pin]
 ```
 
 | Flag | Description |
 |---|---|
 | `--pin` | Auto-pin all detected matches |
-| `--diff` | Show new deps since last detect |
 
 Supported dependency files: `package.json`, `Cargo.toml`, `requirements.txt`, `pyproject.toml`, `Pipfile`, `go.mod`, `Gemfile`, `pom.xml`, `build.gradle(.kts)`.
 
@@ -308,9 +307,9 @@ chub context [<query>] [--list]
 Generate and sync agent configuration files from `.chub/config.yaml`.
 
 ```sh
-chub agent-config generate   # generate all target files
-chub agent-config sync       # update only if source changed
-chub agent-config diff       # show what would change
+chub agent-config generate   # generate all target files (alias for sync)
+chub agent-config sync       # generate all target files
+chub agent-config diff       # show what would change without writing
 ```
 
 Supported targets: `CLAUDE.md`, `.cursorrules`, `.windsurfrules`, `AGENTS.md`, `.github/copilot-instructions.md`, `GEMINI.md`, `.clinerules`, `.roo/rules/chub-rules.md`, `.augment/rules/chub-rules.md`, `.kiro/steering/chub-rules.md`.
@@ -376,6 +375,7 @@ chub serve <content-dir> [-p <port>] [-o <output-dir>]
 | Flag | Description | Default |
 |---|---|---|
 | `-p, --port <n>` | HTTP port | 4242 |
+| `--host <host>` | Host to bind to | 127.0.0.1 |
 | `-o, --output <dir>` | Output directory for built content | temp dir |
 
 ## Build Commands

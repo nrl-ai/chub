@@ -57,8 +57,8 @@ chub list --json                        # JSON output
 ```sh
 chub init                               # create .chub/ project directory
 chub init --from-deps                   # auto-detect dependencies
-chub pin openai/chat --lang python      # pin a doc version
-chub pins                               # list pinned docs
+chub pin add openai/chat --lang python  # pin a doc version
+chub pin list                           # list pinned docs
 chub profile use backend                # activate a profile
 chub annotate openai/chat "note" --team # team annotation
 chub detect --pin                       # auto-pin from deps
