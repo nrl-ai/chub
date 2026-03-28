@@ -140,15 +140,9 @@ chub track dashboard       # local web dashboard
 
 Session data is stored on orphan git branches and pushed alongside your code — your whole team sees usage patterns, cost trends, and which agents are most effective for different tasks. Full transcripts stay local for privacy.
 
-```mermaid
-flowchart LR
-    A[Any AI Agent] -->|hooks| B[chub track]
-    B --> C[Session Summaries]
-    B --> D[Cost Analytics]
-    B --> E[Token & Reasoning Tracking]
-    C -->|git push| F[Team Visibility]
-    D -->|dashboard| G[Local Dashboard]
-```
+<p align="center">
+  <img src="/dataflow.svg" width="700" alt="Chub MCP Dataflow — Agent → Chub → Registry">
+</p>
 
 Key tracking features:
 - **Session lifecycle** — start, prompts, tool calls, commits, stop — all recorded automatically

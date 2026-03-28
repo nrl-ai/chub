@@ -122,6 +122,10 @@ chub agent-config sync                     # generate CLAUDE.md, .cursorrules
 
 ## MCP Setup
 
+<p align="center">
+  <img src="/dataflow.svg" width="700" alt="Chub MCP Dataflow — Agent → Chub → Registry">
+</p>
+
 Add to your MCP config and your AI agent gets instant access to context, tracking, and team knowledge:
 
 ```json

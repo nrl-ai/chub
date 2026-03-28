@@ -278,6 +278,10 @@ chub cache clear                        # clear local cache
 
 ## MCP Server
 
+<p align="center">
+  <img src="https://raw.githubusercontent.com/nrl-ai/chub/main/website/assets/dataflow.svg" width="700" alt="Chub MCP Dataflow — Agent → Chub → Registry">
+</p>
+
 ```sh
 chub mcp                                # start MCP stdio server
 ```

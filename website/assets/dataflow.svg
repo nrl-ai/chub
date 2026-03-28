@@ -1,0 +1,50 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 780 200" fill="none">
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 7" refX="10" refY="3.5" markerWidth="8" markerHeight="6" orient="auto">
+      <path d="M0 0.5 L10 3.5 L0 6.5z" fill="#0ea5e9"/>
+    </marker>
+  </defs>
+
+  <!-- Background -->
+  <rect width="780" height="200" rx="14" fill="#ffffff"/>
+  <rect width="780" height="200" rx="14" stroke="#e2e8f0" stroke-width="1.5" fill="none"/>
+
+  <!-- Box 1: AI Agent -->
+  <rect x="40" y="24" width="180" height="84" rx="10" fill="#f0f9ff" stroke="#38bdf8" stroke-width="1.5"/>
+  <text x="130" y="54" text-anchor="middle" font-family="system-ui, sans-serif" font-size="15" font-weight="600" fill="#0369a1">AI Agent</text>
+  <text x="130" y="74" text-anchor="middle" font-family="system-ui, sans-serif" font-size="11.5" fill="#64748b">(Claude, Cursor,</text>
+  <text x="130" y="89" text-anchor="middle" font-family="system-ui, sans-serif" font-size="11.5" fill="#64748b">Copilot, Gemini)</text>
+
+  <!-- Box 2: Chub MCP Server -->
+  <rect x="300" y="24" width="180" height="84" rx="10" fill="#f0f9ff" stroke="#0ea5e9" stroke-width="1.5"/>
+  <text x="390" y="54" text-anchor="middle" font-family="system-ui, sans-serif" font-size="15" font-weight="600" fill="#0369a1">Chub MCP</text>
+  <text x="390" y="74" text-anchor="middle" font-family="system-ui, sans-serif" font-size="11.5" fill="#64748b">Server</text>
+
+  <!-- Box 3: Doc Registry -->
+  <rect x="560" y="24" width="180" height="84" rx="10" fill="#f0f9ff" stroke="#7dd3fc" stroke-width="1.5"/>
+  <text x="650" y="54" text-anchor="middle" font-family="system-ui, sans-serif" font-size="15" font-weight="600" fill="#0369a1">Doc Registry</text>
+  <text x="650" y="74" text-anchor="middle" font-family="system-ui, sans-serif" font-size="11.5" fill="#64748b">(CDN / local /</text>
+  <text x="650" y="89" text-anchor="middle" font-family="system-ui, sans-serif" font-size="11.5" fill="#64748b">self-hosted)</text>
+
+  <!-- Arrow: Agent → Chub (top) -->
+  <line x1="224" y1="52" x2="296" y2="52" stroke="#0ea5e9" stroke-width="1.5" marker-end="url(#arrow)"/>
+  <!-- Arrow: Chub → Agent (bottom) -->
+  <line x1="296" y1="80" x2="224" y2="80" stroke="#0ea5e9" stroke-width="1.5" marker-end="url(#arrow)"/>
+
+  <!-- Arrow: Chub → Registry (top) -->
+  <line x1="484" y1="52" x2="556" y2="52" stroke="#0ea5e9" stroke-width="1.5" marker-end="url(#arrow)"/>
+  <!-- Arrow: Registry → Chub (bottom) -->
+  <line x1="556" y1="80" x2="484" y2="80" stroke="#0ea5e9" stroke-width="1.5" marker-end="url(#arrow)"/>
+
+  <!-- Captions -->
+  <text x="130" y="136" text-anchor="middle" font-family="system-ui, sans-serif" font-size="12" fill="#334155">Gets accurate</text>
+  <text x="130" y="153" text-anchor="middle" font-family="system-ui, sans-serif" font-size="12" fill="#334155">API docs on</text>
+  <text x="130" y="170" text-anchor="middle" font-family="system-ui, sans-serif" font-size="12" fill="#334155">demand</text>
+
+  <text x="390" y="136" text-anchor="middle" font-family="system-ui, sans-serif" font-size="12" fill="#334155">Searches, caches,</text>
+  <text x="390" y="153" text-anchor="middle" font-family="system-ui, sans-serif" font-size="12" fill="#334155">and verifies docs</text>
+
+  <text x="650" y="136" text-anchor="middle" font-family="system-ui, sans-serif" font-size="12" fill="#334155">1,553+ curated</text>
+  <text x="650" y="153" text-anchor="middle" font-family="system-ui, sans-serif" font-size="12" fill="#334155">docs covering</text>
+  <text x="650" y="170" text-anchor="middle" font-family="system-ui, sans-serif" font-size="12" fill="#334155">major APIs</text>
+</svg>
