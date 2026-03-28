@@ -10,11 +10,7 @@ use std::process::Command;
 
 /// Locate the `chub` binary built by cargo.
 fn chub_bin() -> PathBuf {
-    let mut path = std::env::current_exe().expect("cannot find test executable path");
-    path.pop();
-    if path.ends_with("deps") {
-        path.pop();
-    }
+    let mut path = chub_bin_dir();
     path.push(format!("chub{}", std::env::consts::EXE_SUFFIX));
     assert!(
         path.exists(),
@@ -22,6 +18,26 @@ fn chub_bin() -> PathBuf {
         path.display()
     );
     path
+}
+
+/// Directory containing the built `chub` binary (e.g. target/debug/).
+fn chub_bin_dir() -> PathBuf {
+    let mut path = std::env::current_exe().expect("cannot find test executable path");
+    path.pop(); // remove test binary name
+    if path.ends_with("deps") {
+        path.pop(); // leave deps/
+    }
+    path
+}
+
+/// Build a PATH value that prepends the chub binary directory so git hooks
+/// (which invoke bare `chub`) can find the locally-built binary.
+fn path_with_chub() -> std::ffi::OsString {
+    let bin_dir = chub_bin_dir();
+    let current = std::env::var_os("PATH").unwrap_or_default();
+    let mut dirs = vec![bin_dir];
+    dirs.extend(std::env::split_paths(&current));
+    std::env::join_paths(dirs).expect("failed to join PATH")
 }
 
 /// Create an isolated git repo with .chub/config.yaml in a temp dir.
@@ -42,9 +58,11 @@ fn create_test_repo(name: &str) -> PathBuf {
 }
 
 /// Run git in a directory and return stdout.
+/// PATH is augmented so git hooks that invoke `chub` find the built binary.
 fn git(dir: &Path, args: &[&str]) -> String {
     let output = Command::new("git")
         .current_dir(dir)
+        .env("PATH", path_with_chub())
         .args(args)
         .output()
         .expect("git command failed");
