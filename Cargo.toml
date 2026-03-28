@@ -3,7 +3,7 @@ members = ["crates/chub-core", "crates/chub-cli"]
 resolver = "2"
 
 [workspace.package]
-version = "0.1.20"
+version = "0.1.21"
 edition = "2021"
 license = "MIT"
 description = "Chub: agent-agnostic context, tracking, and cost analytics for AI-assisted development"
@@ -14,7 +14,7 @@ keywords = ["ai", "documentation", "mcp", "context", "coding-agent"]
 categories = ["command-line-utilities", "development-tools"]
 
 [workspace.dependencies]
-chub-core = { path = "crates/chub-core", version = "0.1.20" }
+chub-core = { path = "crates/chub-core", version = "0.1.21" }
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 serde_yaml = "0.9"
