@@ -1,6 +1,6 @@
 {
   "name": "@nrl-ai/chub-win32-x64",
-  "version": "0.1.21",
+  "version": "0.1.22",
   "description": "Chub native binary for Windows x64",
   "license": "MIT",
   "repository": {

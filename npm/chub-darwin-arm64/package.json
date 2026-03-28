@@ -1,6 +1,6 @@
 {
   "name": "@nrl-ai/chub-darwin-arm64",
-  "version": "0.1.21",
+  "version": "0.1.22",
   "description": "Chub native binary for macOS ARM64 (Apple Silicon)",
   "license": "MIT",
   "repository": {
