@@ -1,14 +1,40 @@
 # Why Chub
 
-## The problem we lived with
+## Three problems, one tool
+
+AI coding agents are transforming software development. But as teams adopt them, three problems emerge — and they're all connected:
+
+1. **Context** — Agents hallucinate APIs, use deprecated endpoints, and forget what they learned. You paste docs into chat; they get lost in context. Teammates paste different docs. Nobody's on the same page.
+
+2. **Visibility** — You have no idea how much AI is costing your team. Which agents are being used? How many tokens? What models? Is that $500/month worth it? Nobody knows, because there's no tracking.
+
+3. **Knowledge** — When an agent discovers a gotcha with a library, that knowledge evaporates when the session ends. Next week, a teammate's agent hits the exact same issue. The team never compounds what it learns.
+
+These aren't three separate problems. They're one problem: **there's no infrastructure layer for AI coding agents.**
+
+Chub is that layer.
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│                        Chub                                 │
+│                                                             │
+│   📚 Context          📊 Tracking         🧠 Learning       │
+│   Curated docs        Session lifecycle   Structured        │
+│   Version pinning     Token & cost        annotations       │
+│   Project context     analytics           that compound     │
+│   Profile scoping     Multi-agent         across the        │
+│   Dep detection       dashboards          entire team       │
+│                                                             │
+└─────────────────────────────────────────────────────────────┘
+```
+
+## The context problem
 
 We've all been there. You ask your AI coding agent to integrate Stripe webhooks. It writes confident, clean code — using an API that was deprecated two versions ago. You correct it. It apologizes, rewrites. This time it uses `express.json()` before the webhook signature check, which silently breaks verification. You fix it again. Next week, a teammate hits the exact same issue. The agent has no memory. It learned nothing.
 
 This is not a model problem. This is a context problem.
 
 AI coding agents are powerful reasoners, but they operate in a knowledge vacuum. They don't know which API version your team uses. They don't know about the gotcha your senior dev discovered last Tuesday. They apply general rules to specific codebases — and when those general rules are wrong, the whole team pays for it in wasted cycles, reverted PRs, and eroded trust.
-
-We've watched agents go in circles on problems that a single line of context would have prevented.
 
 ## Why we were excited about Context Hub
 
@@ -156,29 +182,34 @@ Chub      →  "How does our team use Stripe?"     (private, annotated, version-
 
 ## Where we're going
 
-We believe the best developer tools are the ones that compound. Every annotation an agent writes, every practice a team validates, every issue someone flags, every session tracked — it all adds up. A team that's been using Chub for six months has a knowledge base that a new team member (human or AI) can tap into on day one, and a clear picture of how AI is being used across the project.
+We believe the three pillars — context, tracking, and learning — belong in one tool because they reinforce each other:
 
-Our goal is simple: make Chub the agent-agnostic layer that gives AI coding agents the context they need to write correct code on the first try — and gives teams the visibility they need to use AI effectively. Not by replacing human judgment, but by making sure the lessons humans have already learned are never lost, and the costs and patterns of AI usage are always transparent.
+- **Context makes agents accurate.** When agents have the right docs and team knowledge, they write correct code on the first try.
+- **Tracking makes usage visible.** When you can see sessions, costs, and tool patterns across your team, you make better decisions about how and where to use AI.
+- **Learning makes agents smarter.** When agents write back what they discover, the knowledge compounds. A team that's been using Chub for six months has a knowledge base that a new team member (human or AI) can tap into on day one.
 
-The knowledge base should grow with you. The usage data should inform you. That's what we're building.
+Other tools solve one of these. Context Hub and Context7 serve docs. Entire.io tracks sessions. But nobody connects them. Chub does — because the agent that serves your docs is the same agent that tracks your sessions and stores your annotations. One tool, one config, one `chub mcp` command.
+
+Our goal: make Chub the agent-agnostic infrastructure layer for AI-assisted development. Not by replacing human judgment, but by making sure the lessons humans have already learned are never lost, the costs and patterns of AI usage are always transparent, and every agent on your team is as informed as your best engineer.
 
 ## Design Principles
 
-1. **Agent-agnostic** — works with any AI coding agent. Claude Code, Cursor, Copilot, Gemini CLI, Codex — same tools, same data, no lock-in.
-2. **Git-first** — team config lives in the repo. If it's not in git, it doesn't exist for the team.
-3. **Gradual adoption** — works for a solo developer today; adds team value when `.chub/` is committed.
-4. **Three-tier inheritance** — personal, project, profile. No tier is required.
-5. **Agent-native** — every feature is accessible via MCP. CLI is for humans, MCP is for agents.
-6. **Zero cloud dependency** — everything works offline and self-hosted.
-7. **Fast** — search in ~56ms, cold start in ~44ms. The tool should feel like it doesn't exist.
+1. **All-in-one** — context, tracking, and learning belong in one tool. They share config, share MCP, share git integration. No glue code needed.
+2. **Agent-agnostic** — works with any AI coding agent. Claude Code, Cursor, Copilot, Gemini CLI, Codex — same tools, same data, no lock-in.
+3. **Git-first** — team config, annotations, and session summaries live in the repo. If it's not in git, it doesn't exist for the team.
+4. **Gradual adoption** — works for a solo developer today; adds team value when `.chub/` is committed.
+5. **Three-tier inheritance** — personal → project → profile. No tier is required. Annotations, config, and pins all follow this pattern.
+6. **Agent-native** — every feature is accessible via MCP. CLI is for humans, MCP is for agents.
+7. **Zero cloud dependency** — everything works offline and self-hosted.
+8. **Fast** — search in ~56ms, cold start in ~44ms. The tool should feel like it doesn't exist.
 
 ## Who is it for
 
-- **Teams** where multiple developers and AI agents need consistent, accurate context and visibility into AI usage
-- **Projects** that are tired of agents applying wrong code practices and going in circles
-- **Organizations** that want git-tracked, reviewable, compounding knowledge with cost analytics
+- **Solo developers** who want their AI agents to stop hallucinating APIs and start using accurate docs
+- **Teams** where multiple developers and AI agents need consistent context, shared knowledge, and usage visibility
 - **Engineering leads** who need to understand how AI agents are being used, what they cost, and where they're most effective
-- **Anyone** who believes coding agents should get smarter over time, not start from zero every session
+- **Organizations** that want git-tracked, reviewable, compounding knowledge with cost analytics across projects
+- **Anyone** who believes the tools around AI coding agents should be as good as the agents themselves
 
 ## Detailed comparisons
 

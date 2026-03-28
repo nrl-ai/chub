@@ -15,7 +15,7 @@
   <a href="https://github.com/nrl-ai/chub/blob/main/LICENSE"><img src="https://img.shields.io/badge/license-MIT-0ea5e9" alt="License"></a>
 </p>
 
-Chub is a high-performance CLI + MCP server that serves curated, versioned API documentation to AI coding agents. Built in Rust, it is a drop-in replacement for [Context Hub](https://github.com/andrewyng/context-hub) with team-first features.
+Chub is the all-in-one agent layer: curated context, session tracking, cost analytics, and team knowledge for AI coding agents. Built in Rust, agent-agnostic, git-native.
 
 ## Installation
 
@@ -38,15 +38,27 @@ chub list
 
 ## Features
 
-- **1,553+ curated docs** — API references for popular libraries and frameworks
-- **~44ms cold start** — native Rust binary, no Node.js runtime needed
-- **10 MB binary** — vs ~22 MB node_modules
-- **MCP server** — AI agents search and fetch docs automatically
+### Context
+- **1,553+ curated docs** — API references served to agents via MCP and CLI
 - **Doc pinning** — lock versions so every agent uses the same reference
-- **Team annotations** — shared knowledge committed to git
 - **Context profiles** — role-scoped context with inheritance
-- **Agent config sync** — generate CLAUDE.md, .cursorrules from one source
+- **Project context** — custom architecture docs, conventions, runbooks
 - **Dep auto-detection** — scan package.json, Cargo.toml, requirements.txt and more
+
+### Tracking & Analytics
+- **Session tracking** — tokens, costs, models, tool calls across Claude Code, Cursor, Copilot, Gemini CLI, Codex
+- **Cost estimation** — built-in rates for Claude, GPT, Gemini, DeepSeek, o1/o3
+- **Web dashboard** — charts, breakdowns, session history at localhost:4243
+- **Budget alerts** — configurable thresholds with warnings
+
+### Self-Learning
+- **Team annotations** — structured bugs, fixes, practices committed to git
+- **Agent config sync** — generate CLAUDE.md, .cursorrules from one source
+- **8 MCP tools** — agents search, fetch, annotate, track, and query context automatically
+
+### Performance
+- **~44ms cold start** — native Rust binary, no runtime deps
+- **10 MB binary** — single binary, runs on Linux, macOS, Windows, ARM64
 
 ## Usage
 
@@ -83,6 +95,15 @@ Add to your MCP config (`.mcp.json` for Claude Code, `.cursor/mcp.json` for Curs
     }
   }
 }
+```
+
+### Track AI usage
+
+```sh
+chub track enable                        # install hooks (auto-detects agent)
+chub track status                        # see active session
+chub track report --days 7               # costs, tokens, models
+chub track dashboard                     # web dashboard
 ```
 
 ### More commands

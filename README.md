@@ -26,39 +26,36 @@
 
 ## The Problem
 
-AI coding agents (Claude, Cursor, Copilot) hallucinate API signatures, use deprecated endpoints, and forget what they learned between sessions. You paste docs into chat, but they get lost in context. Your teammates paste different docs. Nobody's on the same page.
+AI coding agents are powerful — but the infrastructure around them is missing:
+
+- **No context** — Agents hallucinate APIs, use deprecated endpoints, and forget what they learned between sessions
+- **No visibility** — You have no idea what AI is costing your team, which agents are being used, or how many tokens they consume
+- **No memory** — When an agent discovers a gotcha, that knowledge evaporates. Next week, a teammate's agent hits the same issue
+
+These aren't three separate problems. They're one: **there's no infrastructure layer for AI coding agents.**
 
 ## The Solution
 
-Chub is a CLI + MCP server that serves curated, versioned API documentation directly to your AI agents. Think of it as a package manager for AI context: you pin the docs you need, your agents fetch them on demand, and your whole team shares the same source of truth — tracked in git.
+Chub is the all-in-one agent layer — context, tracking, and analytics in a single CLI + MCP server. Built in Rust, agent-agnostic, git-native.
 
 ```
-You type:   chub get openai/chat --lang python
-Agent sees: The complete, accurate OpenAI Chat API reference for Python
-           + any bugs, fixes, and best practices your team has discovered
+┌─────────────────────────────────────────────────────────────┐
+│                        Chub                                 │
+│                                                             │
+│   📚 Context          📊 Tracking         🧠 Learning       │
+│   ─────────────       ─────────────       ─────────────     │
+│   1,553+ curated      Session lifecycle   Structured        │
+│   docs via MCP        Token & cost        annotations       │
+│   Version pinning     analytics           that compound     │
+│   Project context     Multi-agent         across the        │
+│   Profile scoping     dashboards          entire team       │
+│                                                             │
+│   Works with: Claude Code · Cursor · Copilot · Gemini CLI  │
+│               Codex · Windsurf · Cline · Roo · Augment     │
+└─────────────────────────────────────────────────────────────┘
 ```
 
-Built on [Context Hub](https://github.com/andrewyng/context-hub) by Andrew Ng — Chub is a high-performance Rust rewrite that extends the original with team features: shared doc pinning, git-tracked annotations, context profiles, agent config sync, content integrity verification, and **self-learning agents** that write back what they discover.
-
----
-
-## How It Works
-
-```
-┌──────────────┐     ┌─────────────┐     ┌──────────────────┐
-│  AI Agent    │────▶│  Chub MCP   │────▶│  Doc Registry    │
-│  (Claude,    │     │  Server     │     │  (CDN / local)   │
-│   Cursor)    │◀────│             │◀────│                  │
-└──────────────┘     └─────────────┘     └──────────────────┘
-   Gets accurate        Searches,             1,553+ curated
-   API docs on          caches, and           docs covering
-   demand               verifies docs         major APIs
-```
-
-1. **Agent needs API docs** — asks Chub via MCP (or you run `chub get`)
-2. **Chub searches the registry** — BM25 search with lexical boosting, 19x faster than the JS version
-3. **Returns the right version** — respects your team's pins, language preference, and version locks
-4. **Appends team knowledge** — annotations, project context, and profile rules travel with the doc
+Built on [Context Hub](https://github.com/andrewyng/context-hub) by Andrew Ng — Chub is a high-performance Rust rewrite that extends the original with team features, self-learning agents, session tracking, and cost analytics.
 
 ---
 
@@ -188,6 +185,29 @@ chub agent-config sync           # generate/update all configured targets
 ```
 
 Supported targets: `claude.md`, `cursorrules`, `windsurfrules`, `agents.md`, `copilot`, `gemini.md`, `clinerules`, `roorules`, `augmentrules`, `kiro`.
+
+---
+
+## AI Usage Tracking
+
+Track every AI coding session — tokens, costs, models, tool calls, reasoning — across all your agents. One command to enable, works with any supported agent.
+
+```sh
+chub track enable                        # auto-detect and install hooks
+# ... use your AI agent as normal ...
+chub track status                        # see active session
+chub track report --days 7               # last week's usage: costs, tokens, models
+chub track dashboard                     # web dashboard at localhost:4243
+```
+
+Supported agents: **Claude Code**, **Cursor**, **GitHub Copilot**, **Gemini CLI**, **Codex**.
+
+- **Session lifecycle** — start, prompts, tool calls, commits, stop — all recorded automatically
+- **Cost estimation** — built-in rates for Claude, GPT, Gemini, DeepSeek, o1/o3; custom rate overrides
+- **Budget alerts** — configurable thresholds with 80%/100% warnings
+- **Team visibility** — session summaries shared via git; full transcripts stay local
+- **Web dashboard** — charts, breakdowns, session history, transcript viewer
+- **entire.io compatible** — session states readable by `entire status`
 
 ---
 
@@ -334,14 +354,21 @@ Measured on the production corpus (1,553 docs, 8 skills). Median of 5 runs. Full
 
 | | Context Hub (JS) | Context7 | Chub (Rust) |
 |---|---|---|---|
+| **Context** | | | |
 | Team features (pins, profiles, snapshots) | — | — | **Yes** |
-| Self-learning agents (structured annotations) | — | — | **Yes** |
-| 3-tier annotations (personal, team, org) | — | — | **Yes** |
-| Agent config sync | — | — | **Yes** |
-| Content integrity verification | — | — | **Yes** |
+| Agent config sync (10 targets) | — | — | **Yes** |
 | Auto version detection (`--match-env`) | — | — | **Yes** |
+| Content integrity verification | — | — | **Yes** |
 | Self-hosted registry | Yes | — | **Yes** |
 | Registry format compatibility | — | — | **Identical** |
+| **Self-Learning** | | | |
+| Structured annotations (issue/fix/practice) | — | — | **Yes** |
+| 3-tier annotations (personal, team, org) | — | — | **Yes** |
+| **Tracking & Analytics** | | | |
+| Session tracking | — | — | **Yes** |
+| Cost estimation & budget alerts | — | — | **Yes** |
+| Web dashboard | — | — | **Yes** |
+| Multi-agent support (6+ agents) | — | — | **Yes** |
 
 ---
 
@@ -402,7 +429,7 @@ Full documentation at [chub.nrl.ai](https://chub.nrl.ai):
 
 - [Getting Started](https://chub.nrl.ai/guide/getting-started) — install and first commands
 - [Installation](https://chub.nrl.ai/guide/installation) — all platforms and package managers
-- [Why Chub](https://chub.nrl.ai/guide/why-chub) — comparison with Context Hub
+- [Why Chub](https://chub.nrl.ai/guide/why-chub) — the vision: context + tracking + learning
 - [Doc Pinning](https://chub.nrl.ai/guide/pinning) — lock doc versions
 - [Context Profiles](https://chub.nrl.ai/guide/profiles) — role-scoped context
 - [Team Annotations](https://chub.nrl.ai/guide/annotations) — shared knowledge
@@ -410,6 +437,7 @@ Full documentation at [chub.nrl.ai](https://chub.nrl.ai):
 - [CLI Reference](https://chub.nrl.ai/reference/cli) — all commands and flags
 - [Configuration](https://chub.nrl.ai/reference/configuration) — config file format
 - [MCP Server](https://chub.nrl.ai/reference/mcp-server) — agent integration
+- [AI Usage Tracking](https://chub.nrl.ai/guide/tracking) — session tracking and cost analytics
 - [Showcases](https://chub.nrl.ai/guide/showcases) — real-world usage examples
 
 ---

@@ -1,6 +1,6 @@
 # Getting Started
 
-Get up and running with Chub in under 5 minutes. This guide covers installation, basic commands, and setting up your project for team sharing.
+Get up and running with Chub in under 5 minutes. This guide covers the three pillars — context, tracking, and team knowledge — and how to set them all up.
 
 ## Install
 
@@ -155,6 +155,24 @@ chub pin list          # list all pins
 chub pin get           # fetch all pinned docs at once
 ```
 
+## Track your AI usage
+
+Enable session tracking to see tokens, costs, and tool usage across any AI agent:
+
+```sh
+chub track enable                  # auto-detects Claude Code, Cursor, Copilot, etc.
+```
+
+Then use your AI agent as normal. After a session:
+
+```sh
+chub track status                  # see active session
+chub track report                  # aggregate usage report (costs, tokens, models)
+chub track dashboard               # web dashboard at localhost:4243
+```
+
+Session summaries are shared with your team via git. Full transcripts stay local. See [AI Usage Tracking](/guide/tracking) for details.
+
 ## Config inheritance
 
 Chub uses a layered config file system — no layer is required. Settings cascade from personal defaults through project config to active role profiles:
@@ -173,14 +191,20 @@ Now that you have Chub installed, explore the features that matter to your workf
 
 | If you want to... | Read |
 |---|---|
-| Understand why Chub exists | [Why Chub](/guide/why-chub) |
+| Understand the vision | [Why Chub](/guide/why-chub) |
+| **Context** | |
 | Lock doc versions for your team | [Doc Pinning](/guide/pinning) |
 | Give different roles different context | [Context Profiles](/guide/profiles) |
-| Share team knowledge in git | [Annotations & Self-Learning](/guide/annotations) |
-| Rate doc quality for maintainers | [Feedback](/guide/feedback) |
 | Add custom project docs | [Project Context](/guide/project-context) |
 | Auto-detect deps and pin docs | [Dep Auto-Detection](/guide/detect) |
+| **Self-Learning** | |
+| Share team knowledge in git | [Annotations & Self-Learning](/guide/annotations) |
+| Rate doc quality for maintainers | [Feedback](/guide/feedback) |
 | Sync CLAUDE.md / .cursorrules | [Agent Config Sync](/guide/agent-config) |
+| **Tracking & Analytics** | |
+| Track sessions, tokens, and costs | [AI Usage Tracking](/guide/tracking) |
+| Monitor doc freshness | [Snapshots & Freshness](/guide/snapshots) |
+| **Reference** | |
 | See all CLI commands | [CLI Reference](/reference/cli) |
 | Configure Chub | [Configuration](/reference/configuration) |
 | Connect AI agents via MCP | [MCP Server](/reference/mcp-server) |

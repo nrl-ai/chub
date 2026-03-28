@@ -15,7 +15,7 @@
   <a href="https://github.com/nrl-ai/chub/blob/main/LICENSE"><img src="https://img.shields.io/badge/license-MIT-0ea5e9" alt="License"></a>
 </p>
 
-Chub is a high-performance CLI + MCP server that serves curated, versioned API documentation to AI coding agents. It is a Rust rewrite of [Context Hub](https://github.com/andrewyng/context-hub) with team-first features: shared doc pinning, git-tracked annotations, context profiles, and agent config sync.
+Chub is the all-in-one agent layer: curated context, session tracking, cost analytics, and team knowledge for AI coding agents. Built in Rust, agent-agnostic, git-native.
 
 ## Installation
 
@@ -76,6 +76,15 @@ chub profile use backend                # activate a profile
 chub annotate openai/chat "note" --team # team annotation
 chub detect --pin                       # auto-pin from deps
 chub agent-config generate              # generate CLAUDE.md, .cursorrules
+```
+
+### Tracking & analytics
+
+```sh
+chub track enable                       # install hooks (auto-detects agent)
+chub track status                       # see active session
+chub track report --days 7              # costs, tokens, models
+chub track dashboard                    # web dashboard at localhost:4243
 ```
 
 ### Cache management

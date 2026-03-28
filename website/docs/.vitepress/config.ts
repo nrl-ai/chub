@@ -3,7 +3,7 @@ import { withMermaid } from 'vitepress-plugin-mermaid'
 
 export default withMermaid(defineConfig({
   title: 'Chub',
-  description: 'Agent-agnostic context, tracking, and cost analytics for AI-assisted development teams. Git-native. Built in Rust.',
+  description: 'The all-in-one agent layer: curated context, session tracking, cost analytics, and team knowledge for AI coding agents. Agent-agnostic. Git-native. Built in Rust.',
   head: [
     ['link', { rel: 'icon', type: 'image/svg+xml', href: '/logo.svg' }],
   ],
@@ -40,6 +40,15 @@ export default withMermaid(defineConfig({
           ]
         },
         {
+          text: 'Context',
+          items: [
+            { text: 'Doc Pinning', link: '/guide/pinning' },
+            { text: 'Context Profiles', link: '/guide/profiles' },
+            { text: 'Project Context', link: '/guide/project-context' },
+            { text: 'Dep Auto-Detection', link: '/guide/detect' },
+          ]
+        },
+        {
           text: 'Self-Learning',
           items: [
             { text: 'Annotations', link: '/guide/annotations' },
@@ -48,13 +57,9 @@ export default withMermaid(defineConfig({
           ]
         },
         {
-          text: 'Team Features',
+          text: 'Tracking & Analytics',
           items: [
-            { text: 'Doc Pinning', link: '/guide/pinning' },
-            { text: 'Context Profiles', link: '/guide/profiles' },
-            { text: 'Project Context', link: '/guide/project-context' },
             { text: 'AI Usage Tracking', link: '/guide/tracking' },
-            { text: 'Dep Auto-Detection', link: '/guide/detect' },
             { text: 'Snapshots & Freshness', link: '/guide/snapshots' },
           ]
         },
