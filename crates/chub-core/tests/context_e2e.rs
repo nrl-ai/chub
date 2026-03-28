@@ -9,8 +9,28 @@
 //! in parallel, we use a mutex to serialize all tests that depend on it.
 
 use std::fs;
+use std::path::PathBuf;
 use std::process::Command;
 use std::sync::Mutex;
+
+/// Locate the `chub` binary built by cargo.
+/// Integration test binaries live in `target/<profile>/deps/`, so the main
+/// binary is one directory up at `target/<profile>/chub(.exe)`.
+fn chub_bin() -> PathBuf {
+    let mut path = std::env::current_exe().expect("cannot find test executable path");
+    // Go up from deps/ to the profile directory (e.g. target/debug/)
+    path.pop(); // remove test binary name
+    if path.ends_with("deps") {
+        path.pop(); // leave deps/
+    }
+    path.push(format!("chub{}", std::env::consts::EXE_SUFFIX));
+    assert!(
+        path.exists(),
+        "chub binary not found at {}. Build it first with `cargo build`.",
+        path.display()
+    );
+    path
+}
 
 /// Global mutex to serialize tests that use CHUB_PROJECT_DIR env var.
 static ENV_MUTEX: Mutex<()> = Mutex::new(());
@@ -75,7 +95,7 @@ fn setup_project() -> (tempfile::TempDir, std::sync::MutexGuard<'static, ()>) {
 /// Run a chub CLI command with current_dir set to temp dir.
 /// Returns combined stdout+stderr.
 fn chub(tmp: &std::path::Path, args: &[&str]) -> String {
-    let output = Command::new("chub")
+    let output = Command::new(chub_bin())
         .current_dir(tmp)
         .args(args)
         .env("CHUB_TELEMETRY", "0")
@@ -91,7 +111,7 @@ fn chub(tmp: &std::path::Path, args: &[&str]) -> String {
 fn chub_json(tmp: &std::path::Path, args: &[&str]) -> serde_json::Value {
     let mut full_args = vec!["--json"];
     full_args.extend_from_slice(args);
-    let output = Command::new("chub")
+    let output = Command::new(chub_bin())
         .current_dir(tmp)
         .args(&full_args)
         .env("CHUB_TELEMETRY", "0")

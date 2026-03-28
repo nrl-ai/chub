@@ -8,6 +8,22 @@ use std::fs;
 use std::path::{Path, PathBuf};
 use std::process::Command;
 
+/// Locate the `chub` binary built by cargo.
+fn chub_bin() -> PathBuf {
+    let mut path = std::env::current_exe().expect("cannot find test executable path");
+    path.pop();
+    if path.ends_with("deps") {
+        path.pop();
+    }
+    path.push(format!("chub{}", std::env::consts::EXE_SUFFIX));
+    assert!(
+        path.exists(),
+        "chub binary not found at {}. Build it first with `cargo build`.",
+        path.display()
+    );
+    path
+}
+
 /// Create an isolated git repo with .chub/config.yaml in a temp dir.
 /// Returns the path to the repo directory.
 fn create_test_repo(name: &str) -> PathBuf {
@@ -37,7 +53,7 @@ fn git(dir: &Path, args: &[&str]) -> String {
 
 /// Run chub track hook with piped stdin in a directory.
 fn chub_hook(dir: &Path, args: &[&str]) -> String {
-    let mut cmd = Command::new("chub");
+    let mut cmd = Command::new(chub_bin());
     cmd.current_dir(dir)
         .stdin(std::process::Stdio::piped())
         .stdout(std::process::Stdio::piped())
@@ -66,7 +82,7 @@ fn chub_hook(dir: &Path, args: &[&str]) -> String {
 
 /// Run chub track subcommand.
 fn chub_track(dir: &Path, args: &[&str]) -> String {
-    let mut cmd = Command::new("chub");
+    let mut cmd = Command::new(chub_bin());
     cmd.current_dir(dir)
         .stdin(std::process::Stdio::piped())
         .stdout(std::process::Stdio::piped())
@@ -487,20 +503,13 @@ fn list_sessions_deduplicates_across_sources() {
 
     // List sessions (JSON)
     let output = chub_track(&dir, &["log", "--days", "30"]);
-    // Count "sessions" mentions - should show 2
+    // Count session lines – each session line contains a timestamp like "2026-03-28T04-54-"
+    // followed by a short hex id. Match any line containing a "Txx-xx-" pattern.
     let session_count = output
         .lines()
         .filter(|l| {
-            l.contains("T13-")
-                || l.contains("T14-")
-                || l.contains("T12-")
-                || l.contains("T15-")
-                || l.contains("T16-")
-                || l.contains("T17-")
-                || l.contains("T18-")
-                || l.contains("T19-")
-                || l.contains("T20-")
-                || l.contains("T21-")
+            // Match timestamp-based session IDs: digits T digits - digits - hex
+            l.contains("claude-code") && l.contains("turns")
         })
         .count();
     assert!(
