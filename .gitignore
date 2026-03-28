@@ -43,4 +43,8 @@ __pycache__/
 # Ignore marketing content
 /marketing
 
+# Build + test artifacts
+/build/
 /target-install/
+/test-dist/
+/test-wheels/

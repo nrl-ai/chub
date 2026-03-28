@@ -15,10 +15,6 @@ readme = "../../README.md"
 name = "chub_cli"
 path = "src/lib.rs"
 
-[[bin]]
-name = "chub"
-path = "src/main.rs"
-
 [dependencies]
 chub-core = { workspace = true }
 clap = { workspace = true }

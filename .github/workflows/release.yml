@@ -84,8 +84,128 @@ jobs:
       - uses: dtolnay/rust-toolchain@stable
       - run: cargo test --all
 
+  smoke-test:
+    needs: [build]
+    strategy:
+      matrix:
+        include:
+          - target: x86_64-unknown-linux-gnu
+            os: ubuntu-latest
+            binary: chub
+          - target: x86_64-apple-darwin
+            os: macos-latest
+            binary: chub
+          - target: x86_64-pc-windows-msvc
+            os: windows-latest
+            binary: chub.exe
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Download binary artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: binary-${{ matrix.target }}
+          path: bin
+
+      - name: Set executable permission
+        if: runner.os != 'Windows'
+        run: chmod +x bin/${{ matrix.binary }}
+
+      - name: Verify --version output
+        shell: bash
+        run: |
+          VERSION="${GITHUB_REF_NAME#v}"
+          OUTPUT=$(bin/${{ matrix.binary }} --version)
+          echo "Binary output: $OUTPUT"
+          if [[ "$OUTPUT" != *"$VERSION"* ]]; then
+            echo "ERROR: Version mismatch — expected '$VERSION' in output"
+            exit 1
+          fi
+
+      - name: Verify --help runs
+        shell: bash
+        run: bin/${{ matrix.binary }} --help
+
+      - name: Verify build --validate-only works
+        shell: bash
+        run: bin/${{ matrix.binary }} build ./content --validate-only
+
+      - name: Verify search runs against built registry
+        shell: bash
+        run: |
+          bin/${{ matrix.binary }} build ./content -o ./test-dist
+          CHUB_BUNDLE_URL="file://$PWD/test-dist" bin/${{ matrix.binary }} search "stripe" --json | head -5
+
+  package-test:
+    needs: [build]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - uses: dtolnay/rust-toolchain@stable
+
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+
+      - name: Test npm package structure
+        run: |
+          for pkg in chub-linux-x64 chub-linux-arm64 chub-darwin-x64 chub-darwin-arm64 chub-win32-x64; do
+            echo "Checking $pkg..."
+            cp -r artifacts/$pkg/* npm/$pkg/
+            cd npm/$pkg
+            npm pack --dry-run
+            cd $GITHUB_WORKSPACE
+          done
+          cd npm/chub
+          npm pack --dry-run
+
+      - name: Test npm local install
+        run: |
+          chmod +x npm/chub-linux-x64/chub
+          cd npm/chub-linux-x64 && npm pack && cd $GITHUB_WORKSPACE
+          cd npm/chub && npm pack && cd $GITHUB_WORKSPACE
+          npm install -g ./npm/chub-linux-x64/*.tgz ./npm/chub/*.tgz
+          chub --version
+          chub --help
+
+      - name: Extract version from tag
+        id: version
+        run: echo "VERSION=${GITHUB_REF_NAME#v}" >> $GITHUB_OUTPUT
+
+      - name: Test Python wheel build and install
+        run: |
+          binary="artifacts/binary-x86_64-unknown-linux-gnu/chub"
+          chmod +x "$binary"
+          python python/build_wheel.py \
+            --binary "$binary" \
+            --target x86_64-unknown-linux-gnu \
+            --version "${{ steps.version.outputs.VERSION }}" \
+            --output test-dist/
+          pip install twine
+          twine check test-dist/*.whl
+          pip install test-dist/*.whl
+          chub --version
+          chub --help
+
+      - name: Test cargo package (dry-run)
+        run: |
+          cargo package -p chub-core --allow-dirty
+          cargo package -p chub-cli --allow-dirty
+          cargo package -p chub --allow-dirty
+
   publish-npm:
-    needs: [build, test]
+    needs: [build, test, smoke-test, package-test]
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -145,7 +265,7 @@ jobs:
           npm publish --access public --provenance
 
   publish-crates:
-    needs: [test]
+    needs: [test, smoke-test, package-test]
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -174,7 +294,7 @@ jobs:
         run: cargo publish -p chub
 
   publish-pypi:
-    needs: [build, test]
+    needs: [build, test, smoke-test, package-test]
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
