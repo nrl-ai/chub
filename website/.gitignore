@@ -1,3 +1,10 @@
 node_modules/
 docs/.vitepress/dist/
 docs/.vitepress/cache/
+
+# Content synced from /docs at build time — do not edit here
+docs/index.md
+docs/guide/
+docs/reference/
+docs/internal/
+docs/public/

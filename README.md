@@ -99,9 +99,9 @@ Add to `.claude/settings.json` (Claude Code), `.cursor/mcp.json` (Cursor), or th
 }
 ```
 
-Your agent now has access to `chub_search`, `chub_get`, `chub_list`, `chub_annotate`, `chub_context`, `chub_pins`, and `chub_feedback` tools.
+Your agent now has access to `chub_search`, `chub_get`, `chub_list`, `chub_annotate`, `chub_context`, `chub_pins`, `chub_feedback`, and `chub_track` tools.
 
-Works with Claude Code, Cursor, Windsurf, GitHub Copilot, Gemini CLI, Kiro, Cline, Roo Code, Augment, Codex, Continue.dev, and Aider. See [Agent Integrations](docs/integrations.md) for setup guides.
+Works with Claude Code, Cursor, Windsurf, GitHub Copilot, Gemini CLI, Kiro, Cline, Roo Code, Augment, Codex, Continue.dev, and Aider. See [Agent Integrations](docs/guide/agent-config.md) for setup guides.
 
 ---
 
@@ -288,6 +288,7 @@ To scope the session to a profile, activate it first: `chub profile use backend 
 | `chub_context` | Get optimal context for a task (pins + annotations + profile) |
 | `chub_pins` | List, add, or remove pinned docs |
 | `chub_feedback` | Submit quality feedback for a doc |
+| `chub_track` | Query AI usage tracking data (sessions, costs, tokens) |
 
 Registry resource: `chub://registry`
 
@@ -309,7 +310,7 @@ Chub includes several security measures for safe use in team environments:
 
 ## Benchmarks
 
-Measured on the production corpus (1,553 docs, 8 skills). Median of 5 runs. Full methodology in [Chub vs Context Hub](docs/chub-vs-context-hub.md).
+Measured on the production corpus (1,553 docs, 8 skills). Median of 5 runs. Full methodology in [Chub vs Context Hub](docs/guide/vs-context-hub.md).
 
 ### Performance
 
@@ -372,7 +373,7 @@ content/
 chub serve ./dist --port 4242        # serve as HTTP registry
 ```
 
-Add your private registry as an additional source in `~/.chub/config.yaml` — no cloud required. See [Private Content](docs/private-content.md) for details.
+Add your private registry as an additional source in `~/.chub/config.yaml` — no cloud required. See [Self-Hosting a Registry](docs/guide/self-hosting.md) for details.
 
 ---
 

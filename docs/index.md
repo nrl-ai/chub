@@ -141,8 +141,8 @@ Measured on the production corpus (1,553 docs, 8 skills). Median of 5 runs. Repr
 | Capability | Context Hub | Context7 | Chub |
 |---|---|---|---|
 | Curated docs | 1,600+ | hosted | 1,553+ |
-| MCP server | 5 tools | 2 tools | **7 tools** |
-| CLI commands | 7 | — | **20** |
+| MCP server | 5 tools | 2 tools | **8 tools** |
+| CLI commands | 7 | — | **22** |
 | Self-learning agents | No | **No** | **Yes** |
 | Structured annotations (issue/fix/practice) | No | **No** | **Yes** |
 | Annotation policy in CLAUDE.md | No | **No** | **Yes** |

@@ -2,7 +2,7 @@
 
 Deep comparison of Chub (Rust) and Context Hub (JS) implementations. Covers algorithm parity, serialization format compatibility, interface contracts, and known divergences.
 
-For performance benchmarks and feature-level comparison, see [chub-vs-context-hub.md](chub-vs-context-hub.md).
+For performance benchmarks and feature-level comparison, see [Chub vs Context Hub](/guide/vs-context-hub).
 
 ## Search Algorithm
 
@@ -292,6 +292,7 @@ All five original MCP tools are fully compatible. Parameter names, types, and re
 |---|---|
 | `chub_context` | Returns pinned docs, profile rules, project context, and annotations scoped to a task |
 | `chub_pins` | Manage pinned doc versions (add, remove, list) |
+| `chub_track` | Query AI usage tracking data (sessions, costs, tokens) |
 
 These are additive — they don't conflict with existing tools or change their behavior.
 
@@ -321,9 +322,9 @@ Both wrap results in MCP-compatible format:
 
 ### Commands only in Chub
 
-`init`, `pin`, `profile`, `detect`, `agent-config`, `check`, `context`, `stats`, `serve`, `bundle`, `snapshot`, `mcp`, `list`.
+`init`, `pin`, `profile`, `detect`, `agent-config`, `check`, `context`, `stats`, `serve`, `bundle`, `snapshot`, `mcp`, `list`, `track`, `telemetry`.
 
-See [cli-reference.md](cli-reference.md) for full documentation.
+See [CLI Reference](/reference/cli) for full documentation.
 
 ## Known Divergences
 

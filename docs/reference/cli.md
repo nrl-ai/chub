@@ -395,6 +395,22 @@ chub track report --days 7              # last week's usage
 chub track dashboard --port 8080        # custom port
 ```
 
+### chub telemetry
+
+View and manage local usage telemetry data.
+
+```sh
+chub telemetry status                    # show telemetry status
+chub telemetry clear                     # clear local telemetry data
+```
+
+| Subcommand | Description |
+|---|---|
+| `status` | Show telemetry collection status |
+| `clear` | Clear local telemetry data |
+
+Telemetry is opt-in and anonymous. Disable via `telemetry: false` in `~/.chub/config.yaml` or `CHUB_TELEMETRY=0`.
+
 ## Server Commands
 
 ### chub mcp

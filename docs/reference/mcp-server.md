@@ -337,6 +337,43 @@ Send quality feedback (thumbs up/down) for a doc or skill to help authors improv
 
 ---
 
+### chub_track
+
+Query AI usage tracking data — session status, cost reports, session history, and session details.
+
+**Parameters:**
+
+| Parameter | Type | Description |
+|---|---|---|
+| `action` | string | `"status"`, `"report"`, `"log"`, or `"show"` |
+| `days` | number? | Time range in days (default 30) |
+| `session_id` | string? | Session ID for `action="show"` |
+
+**Examples:**
+
+```json
+{ "action": "status" }
+{ "action": "report", "days": 7 }
+{ "action": "log", "days": 14 }
+{ "action": "show", "session_id": "2026-03-22T10-05-abc123" }
+```
+
+**Response (status):**
+
+```json
+{
+  "active_session": {
+    "session_id": "2026-03-22T10-05-abc123",
+    "agent": "claude-code",
+    "model": "claude-opus-4-6",
+    "turns": 14,
+    "tokens": { "input": 45000, "output": 12000 }
+  }
+}
+```
+
+---
+
 ## MCP Resources
 
 | URI | Description |

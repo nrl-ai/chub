@@ -162,6 +162,7 @@ Claude Code now has access to these MCP tools:
 | `chub_pins` | Manage pinned doc versions |
 | `chub_annotate` | Read/write agent notes |
 | `chub_feedback` | Rate doc quality |
+| `chub_track` | Query AI usage tracking data |
 
 When Claude asks "how do I set up Stripe webhooks?", it can search, find the right doc, read your team's annotations, and follow your project conventions — all automatically.
 

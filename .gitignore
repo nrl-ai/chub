@@ -48,3 +48,6 @@ __pycache__/
 /target-install/
 /test-dist/
 /test-wheels/
+
+# Doc build
+/docs/.vitepress/

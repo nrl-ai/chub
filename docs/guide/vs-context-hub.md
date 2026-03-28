@@ -39,6 +39,8 @@ Search is the largest improvement (19x) because Chub uses a BM25 inverted index 
 | Usage analytics | `chub stats` | Local opt-in fetch tracking |
 | HTTP serving | `chub serve` | Serve a content directory |
 | Doc bundles | `chub bundle` | Shareable doc collections |
+| AI usage tracking | `chub track` | Sessions, tokens, costs, dashboard |
+| Usage telemetry | `chub telemetry` | View and manage local telemetry data |
 
 ## MCP tools
 
@@ -51,14 +53,15 @@ Search is the largest improvement (19x) because Chub uses a BM25 inverted index 
 | `chub_feedback` | Yes | Yes |
 | `chub_context` | — | **Yes** (pins, annotations, profiles, project context) |
 | `chub_pins` | — | **Yes** (manage pinned docs) |
+| `chub_track` | — | **Yes** (query AI usage tracking data) |
 
-**Total: 5 tools (JS) vs 7 tools (Rust)**
+**Total: 5 tools (JS) vs 8 tools (Rust)**
 
 ## CLI commands
 
-**7 commands (JS) vs 20 commands (Rust)**
+**7 commands (JS) vs 22 commands (Rust)**
 
-Chub adds: `init`, `pin`, `profile`, `detect`, `agent-config`, `check`, `context`, `stats`, `serve`, `bundle`, `snapshot`, `mcp`, `list`.
+Chub adds: `init`, `pin`, `profile`, `detect`, `agent-config`, `check`, `context`, `stats`, `serve`, `bundle`, `snapshot`, `mcp`, `list`, `track`, `telemetry`.
 
 ## Format Compatibility
 

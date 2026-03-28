@@ -24,7 +24,7 @@
 | Offline telemetry | No | **Yes** (local JSONL journal, no external deps) |
 | Self-hosted registry | Yes | Yes + `chub serve` |
 | MCP server | 5 tools | **8 tools** (+ team + tracking) |
-| CLI commands | 7 | **24** |
+| CLI commands | 7 | **22** |
 | Cold start | ~131 ms | **~44 ms** |
 | Binary size | ~22 MB (node_modules) | **10 MB** (native) |
 
@@ -42,8 +42,8 @@
 | P1 | Org annotation server (Tier 3) | **Done** | REST API, bearer auth, TTL cache, auto-push, graceful degradation |
 | P0 | Context profiles with inheritance | **Done** | `extends:` inheritance, circular detection, active profile |
 | P1 | Custom project context | **Done** | Frontmatter parsing, `chub get project/<name>` |
-| P1 | Dependency auto-detection | **Done** | All major package managers (see `docs/cli-reference.md` for list) |
-| P1 | AGENTS.md / CLAUDE.md generation | **Done** | All targets listed in `docs/integrations.md` |
+| P1 | Dependency auto-detection | **Done** | All major package managers (see `docs/reference/cli.md` for list) |
+| P1 | AGENTS.md / CLAUDE.md generation | **Done** | All targets listed in `docs/guide/agent-config.md` |
 | P1 | Private registry + `chub serve` | **Done** | HTTP server via axum |
 | P2 | Doc freshness monitoring | **Done** | `chub check` + `chub check --fix` |
 | P2 | Doc bundles | **Partial** | Bundle struct + `create`/`install`/`list` commands; `publish` not wired |
@@ -56,7 +56,7 @@
 | P3 | CI/CD integration | **Planned** | GitHub Actions, freshness checks, pin validation |
 | P3 | Python/npm SDKs | **Partial** | npm wrapper done; Python CLI wrapper done; native Python API not started |
 | P3 | IDE extensions | **Planned** | VS Code, JetBrains, Neovim |
-| P2 | Agent integrations | **Done** | MCP server + agent config targets (see `docs/integrations.md`) |
+| P2 | Agent integrations | **Done** | MCP server + agent config targets (see `docs/guide/agent-config.md`) |
 
 ### Test coverage
 
@@ -127,7 +127,7 @@ Returns ranked docs relevant to the task description. Does NOT add to pins, does
 
 Two integration layers: MCP server (`chub mcp`) and agent config generation (`chub agent-config sync`). Claude Code also gets skills and a distributable plugin.
 
-See `docs/integrations.md` for the full setup guide, tool list, and supported targets.
+See `docs/guide/agent-config.md` for the full setup guide, tool list, and supported targets.
 
 ### IDE extensions
 

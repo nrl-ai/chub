@@ -4,8 +4,9 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "vitepress dev docs",
-    "build": "vitepress build docs",
+    "sync-docs": "node -e \"const fs=require('fs');const p=require('path');function cp(s,d){fs.mkdirSync(d,{recursive:true});for(const f of fs.readdirSync(s)){const sp=p.join(s,f),dp=p.join(d,f);if(f==='.vitepress')continue;fs.statSync(sp).isDirectory()?cp(sp,dp):fs.copyFileSync(sp,dp)}}cp(p.resolve(__dirname,'../docs'),p.resolve(__dirname,'docs'))\"",
+    "dev": "npm run sync-docs && vitepress dev docs",
+    "build": "npm run sync-docs && vitepress build docs",
     "preview": "vitepress preview docs"
   },
   "devDependencies": {

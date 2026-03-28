@@ -63,7 +63,7 @@ cargo run --release -- build ./content --base-url https://cdn.aichub.org/v1
 
 ## Architecture
 
-Two crates: `chub-core` (library — all business logic) and `chub-cli` (binary — CLI, MCP server, output). `chub-cli` depends on `chub-core`; nothing else crosses crate boundaries.
+Three crates: `chub-core` (library — all business logic), `chub-cli` (library — CLI commands, MCP server, output), and `chub` (thin binary wrapper — the `cargo install chub` entry point). `chub` → `chub-cli` → `chub-core`.
 
 For detailed architecture, data flow, conventions, and team feature design, use chub's own project context:
 - `chub get project/architecture` — crate layout, data flow, design decisions
@@ -104,15 +104,15 @@ All on-disk formats (`registry.json`, `search-index.json`, annotation JSONs) are
 
 ## Integrations
 
-Chub integrates with AI agents via MCP (runtime tools) and agent config generation (static rules). See `docs/integrations.md` for full setup guides.
+Chub integrates with AI agents via MCP (runtime tools) and agent config generation (static rules). See `docs/guide/agent-config.md` and `docs/reference/mcp-server.md` for full setup guides.
 
 ### MCP tools
 
-Available via `chub mcp` (stdio server): `chub_search`, `chub_get`, `chub_list`, `chub_context`, `chub_pins`, `chub_annotate`, `chub_feedback`.
+Available via `chub mcp` (stdio server): `chub_search`, `chub_get`, `chub_list`, `chub_context`, `chub_pins`, `chub_annotate`, `chub_feedback`, `chub_track`.
 
 ### Agent config generation
 
-`chub agent-config sync` generates rules files from `.chub/config.yaml`. See `docs/integrations.md` for the full target list and setup guides.
+`chub agent-config sync` generates rules files from `.chub/config.yaml`. See `docs/guide/agent-config.md` for the full target list and setup guides.
 
 ### Skills (slash commands)
 
@@ -134,11 +134,11 @@ When asked to review docs, verify claims against source code. Hard numbers (coun
 
 | Fact | Source of truth | Canonical doc |
 |---|---|---|
-| MCP tool names | `crates/chub-cli/src/mcp/tools.rs` | `docs/integrations.md` |
-| CLI commands | `crates/chub-cli/src/main.rs` (`Commands` enum) | `docs/cli-reference.md` |
-| Agent config targets | `crates/chub-core/src/team/agent_config.rs` | `docs/integrations.md` |
-| Dep detection file types | `crates/chub-core/src/team/detect.rs` | `docs/cli-reference.md` |
+| MCP tool names | `crates/chub-cli/src/mcp/tools.rs` | `docs/reference/mcp-server.md` |
+| CLI commands | `crates/chub-cli/src/lib.rs` (`Commands` enum) | `docs/reference/cli.md` |
+| Agent config targets | `crates/chub-core/src/team/agent_config.rs` | `docs/guide/agent-config.md` |
+| Dep detection file types | `crates/chub-core/src/team/detect.rs` | `docs/reference/cli.md` |
 | BM25 params, search fields | `crates/chub-core/src/search/bm25.rs` | `.chub/context/architecture.md` |
-| Frontmatter schema | `crates/chub-core/src/frontmatter.rs` | `docs/content-guide.md` |
-| Benchmark numbers | `scripts/benchmark.sh` output | `docs/chub-vs-context-hub.md` |
+| Frontmatter schema | `crates/chub-core/src/frontmatter.rs` | `docs/guide/content-guide.md` |
+| Benchmark numbers | `scripts/benchmark.sh` output | `docs/guide/vs-context-hub.md` |
 | Version string | `Cargo.toml` workspace version | (use `./scripts/set-version.sh`) |
