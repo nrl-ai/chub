@@ -38,22 +38,9 @@ These aren't three separate problems. They're one: **there's no infrastructure l
 
 Chub is the all-in-one agent layer — context, tracking, and analytics in a single CLI + MCP server. Built in Rust, agent-agnostic, git-native.
 
-```
-┌─────────────────────────────────────────────────────────────┐
-│                        Chub                                 │
-│                                                             │
-│   📚 Context          📊 Tracking         🧠 Learning       │
-│   ─────────────       ─────────────       ─────────────     │
-│   1,553+ curated      Session lifecycle   Structured        │
-│   docs via MCP        Token & cost        annotations       │
-│   Version pinning     analytics           that compound     │
-│   Project context     Multi-agent         across the        │
-│   Profile scoping     dashboards          entire team       │
-│                                                             │
-│   Works with: Claude Code · Cursor · Copilot · Gemini CLI  │
-│               Codex · Windsurf · Cline · Roo · Augment     │
-└─────────────────────────────────────────────────────────────┘
-```
+<p align="center">
+  <img src="https://raw.githubusercontent.com/nrl-ai/chub/main/website/assets/architecture.svg" width="700" alt="Chub Architecture — Context, Tracking, Learning">
+</p>
 
 Built on [Context Hub](https://github.com/andrewyng/context-hub) by Andrew Ng — Chub is a high-performance Rust rewrite that extends the original with team features, self-learning agents, session tracking, and cost analytics.
 

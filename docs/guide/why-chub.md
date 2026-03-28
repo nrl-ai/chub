@@ -14,19 +14,9 @@ These aren't three separate problems. They're one problem: **there's no infrastr
 
 Chub is that layer.
 
-```
-┌─────────────────────────────────────────────────────────────┐
-│                        Chub                                 │
-│                                                             │
-│   📚 Context          📊 Tracking         🧠 Learning       │
-│   Curated docs        Session lifecycle   Structured        │
-│   Version pinning     Token & cost        annotations       │
-│   Project context     analytics           that compound     │
-│   Profile scoping     Multi-agent         across the        │
-│   Dep detection       dashboards          entire team       │
-│                                                             │
-└─────────────────────────────────────────────────────────────┘
-```
+<p align="center">
+  <img src="/architecture.svg" width="700" alt="Chub Architecture — Context, Tracking, Learning">
+</p>
 
 ## The context problem
 

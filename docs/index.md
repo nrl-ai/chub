@@ -63,23 +63,9 @@ features:
 
 Most tools do one thing: serve docs, or track usage, or sync configs. Chub does all three — because context, tracking, and team knowledge are one problem, not three.
 
-```
-┌─────────────────────────────────────────────────────────────┐
-│                        Chub                                 │
-│                                                             │
-│   📚 Context          📊 Tracking         🧠 Learning       │
-│   ─────────────       ─────────────       ─────────────     │
-│   Curated docs        Sessions            Annotations       │
-│   Version pinning     Token counting      Bug reports       │
-│   Project context     Cost estimation     Fix records       │
-│   Profile scoping     Model tracking      Best practices    │
-│   Dep detection       Tool call logs      Team knowledge    │
-│   MCP server          Web dashboard       Org sharing       │
-│                                                             │
-│   Works with: Claude Code · Cursor · Copilot · Gemini CLI  │
-│               Codex · Windsurf · Cline · Roo · Augment     │
-└─────────────────────────────────────────────────────────────┘
-```
+<p align="center">
+  <img src="/architecture.svg" width="700" alt="Chub Architecture — Context, Tracking, Learning">
+</p>
 
 ## Install
 

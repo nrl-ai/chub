@@ -1,0 +1,71 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 420" fill="none">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="800" y2="420">
+      <stop offset="0%" stop-color="#0f172a"/>
+      <stop offset="100%" stop-color="#1e293b"/>
+    </linearGradient>
+    <linearGradient id="context" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#0ea5e9" stop-opacity="0.15"/>
+      <stop offset="100%" stop-color="#0ea5e9" stop-opacity="0.05"/>
+    </linearGradient>
+    <linearGradient id="tracking" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#8b5cf6" stop-opacity="0.15"/>
+      <stop offset="100%" stop-color="#8b5cf6" stop-opacity="0.05"/>
+    </linearGradient>
+    <linearGradient id="learning" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#10b981" stop-opacity="0.15"/>
+      <stop offset="100%" stop-color="#10b981" stop-opacity="0.05"/>
+    </linearGradient>
+  </defs>
+
+  <!-- Main container -->
+  <rect x="0" y="0" width="800" height="420" rx="16" fill="url(#bg)"/>
+  <rect x="0" y="0" width="800" height="420" rx="16" stroke="#334155" stroke-width="1.5" fill="none"/>
+
+  <!-- Title -->
+  <text x="400" y="48" text-anchor="middle" font-family="system-ui, -apple-system, sans-serif" font-size="28" font-weight="700" fill="#f8fafc">Chub</text>
+  <text x="400" y="74" text-anchor="middle" font-family="system-ui, -apple-system, sans-serif" font-size="13" fill="#94a3b8">The all-in-one agent layer</text>
+
+  <!-- Context pillar -->
+  <rect x="30" y="100" width="236" height="260" rx="12" fill="url(#context)" stroke="#0ea5e9" stroke-width="1" stroke-opacity="0.4"/>
+  <text x="52" y="134" font-family="system-ui, sans-serif" font-size="22">📚</text>
+  <text x="78" y="135" font-family="system-ui, sans-serif" font-size="18" font-weight="600" fill="#0ea5e9">Context</text>
+
+  <text x="52" y="170" font-family="system-ui, sans-serif" font-size="13" fill="#e2e8f0">1,553+ curated docs</text>
+  <text x="52" y="195" font-family="system-ui, sans-serif" font-size="13" fill="#e2e8f0">Version pinning</text>
+  <text x="52" y="220" font-family="system-ui, sans-serif" font-size="13" fill="#e2e8f0">Project context</text>
+  <text x="52" y="245" font-family="system-ui, sans-serif" font-size="13" fill="#e2e8f0">Profile scoping</text>
+  <text x="52" y="270" font-family="system-ui, sans-serif" font-size="13" fill="#e2e8f0">Dep auto-detection</text>
+  <text x="52" y="295" font-family="system-ui, sans-serif" font-size="13" fill="#e2e8f0">BM25 search (56ms)</text>
+  <text x="52" y="320" font-family="system-ui, sans-serif" font-size="13" fill="#e2e8f0">MCP + CLI</text>
+
+  <!-- Tracking pillar -->
+  <rect x="282" y="100" width="236" height="260" rx="12" fill="url(#tracking)" stroke="#8b5cf6" stroke-width="1" stroke-opacity="0.4"/>
+  <text x="304" y="134" font-family="system-ui, sans-serif" font-size="22">📊</text>
+  <text x="332" y="135" font-family="system-ui, sans-serif" font-size="18" font-weight="600" fill="#8b5cf6">Tracking</text>
+
+  <text x="304" y="170" font-family="system-ui, sans-serif" font-size="13" fill="#e2e8f0">Session lifecycle</text>
+  <text x="304" y="195" font-family="system-ui, sans-serif" font-size="13" fill="#e2e8f0">Token &amp; cost analytics</text>
+  <text x="304" y="220" font-family="system-ui, sans-serif" font-size="13" fill="#e2e8f0">Multi-agent support</text>
+  <text x="304" y="245" font-family="system-ui, sans-serif" font-size="13" fill="#e2e8f0">Web dashboard</text>
+  <text x="304" y="270" font-family="system-ui, sans-serif" font-size="13" fill="#e2e8f0">Budget alerts</text>
+  <text x="304" y="295" font-family="system-ui, sans-serif" font-size="13" fill="#e2e8f0">Reasoning capture</text>
+  <text x="304" y="320" font-family="system-ui, sans-serif" font-size="13" fill="#e2e8f0">entire.io compatible</text>
+
+  <!-- Learning pillar -->
+  <rect x="534" y="100" width="236" height="260" rx="12" fill="url(#learning)" stroke="#10b981" stroke-width="1" stroke-opacity="0.4"/>
+  <text x="556" y="134" font-family="system-ui, sans-serif" font-size="22">🧠</text>
+  <text x="584" y="135" font-family="system-ui, sans-serif" font-size="18" font-weight="600" fill="#10b981">Learning</text>
+
+  <text x="556" y="170" font-family="system-ui, sans-serif" font-size="13" fill="#e2e8f0">Structured annotations</text>
+  <text x="556" y="195" font-family="system-ui, sans-serif" font-size="13" fill="#e2e8f0">Issue / Fix / Practice</text>
+  <text x="556" y="220" font-family="system-ui, sans-serif" font-size="13" fill="#e2e8f0">3-tier storage</text>
+  <text x="556" y="245" font-family="system-ui, sans-serif" font-size="13" fill="#e2e8f0">Git-tracked sharing</text>
+  <text x="556" y="270" font-family="system-ui, sans-serif" font-size="13" fill="#e2e8f0">Agent config sync</text>
+  <text x="556" y="295" font-family="system-ui, sans-serif" font-size="13" fill="#e2e8f0">Annotation policy</text>
+  <text x="556" y="320" font-family="system-ui, sans-serif" font-size="13" fill="#e2e8f0">Compounding knowledge</text>
+
+  <!-- Agent bar -->
+  <rect x="30" y="376" width="740" height="32" rx="8" fill="#1e293b" stroke="#334155" stroke-width="1"/>
+  <text x="400" y="397" text-anchor="middle" font-family="system-ui, sans-serif" font-size="12" fill="#94a3b8">Claude Code · Cursor · Copilot · Gemini CLI · Codex · Windsurf · Cline · Roo · Augment · Kiro</text>
+</svg>
