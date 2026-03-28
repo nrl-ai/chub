@@ -13,8 +13,8 @@
       <stop offset="100%" stop-color="#0ea5e9" stop-opacity="0.05"/>
     </linearGradient>
     <linearGradient id="learning" x1="0" y1="0" x2="0" y2="1">
-      <stop offset="0%" stop-color="#0284c7" stop-opacity="0.18"/>
-      <stop offset="100%" stop-color="#0284c7" stop-opacity="0.05"/>
+      <stop offset="0%" stop-color="#7dd3fc" stop-opacity="0.15"/>
+      <stop offset="100%" stop-color="#7dd3fc" stop-opacity="0.04"/>
     </linearGradient>
   </defs>
 
@@ -53,7 +53,7 @@
   <text x="304" y="320" font-family="system-ui, sans-serif" font-size="13" fill="#e2e8f0">entire.io compatible</text>
 
   <!-- Learning pillar -->
-  <rect x="534" y="100" width="236" height="260" rx="12" fill="url(#learning)" stroke="#0284c7" stroke-width="1" stroke-opacity="0.4"/>
+  <rect x="534" y="100" width="236" height="260" rx="12" fill="url(#learning)" stroke="#7dd3fc" stroke-width="1" stroke-opacity="0.4"/>
   <text x="556" y="134" font-family="system-ui, sans-serif" font-size="22">🧠</text>
   <text x="584" y="135" font-family="system-ui, sans-serif" font-size="18" font-weight="600" fill="#7dd3fc">Learning</text>
 
