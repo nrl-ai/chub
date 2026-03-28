@@ -95,7 +95,7 @@ jobs:
 
       - uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 22
           registry-url: https://registry.npmjs.org
 
       - name: Download all artifacts
@@ -129,8 +129,6 @@ jobs:
           done
 
       - name: Publish platform packages
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
         run: |
           for dir in npm/chub-linux-x64 npm/chub-linux-arm64 npm/chub-darwin-x64 npm/chub-darwin-arm64 npm/chub-win32-x64; do
             cd $dir
@@ -139,8 +137,6 @@ jobs:
           done
 
       - name: Publish wrapper package
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
         run: |
           cd npm/chub
           npm publish --access public --provenance
