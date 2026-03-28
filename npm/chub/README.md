@@ -1,6 +1,19 @@
-# @nrl-ai/chub
+<p align="center">
+  <img src="https://raw.githubusercontent.com/nrl-ai/chub/main/website/assets/logo.svg" width="80" height="80" alt="Chub">
+</p>
 
-> The missing context layer for AI-assisted development teams.
+<h1 align="center">@nrl-ai/chub</h1>
+
+<p align="center">
+  <strong>Agent-agnostic context, tracking, and cost analytics for AI-assisted development.</strong>
+</p>
+
+<p align="center">
+  <a href="https://www.npmjs.com/package/@nrl-ai/chub"><img src="https://img.shields.io/npm/v/@nrl-ai/chub?color=0ea5e9&label=npm" alt="npm"></a>
+  <a href="https://pypi.org/project/chub/"><img src="https://img.shields.io/pypi/v/chub?color=0ea5e9&label=pypi" alt="PyPI"></a>
+  <a href="https://crates.io/crates/chub"><img src="https://img.shields.io/crates/v/chub?color=0ea5e9&label=crates.io" alt="crates.io"></a>
+  <a href="https://github.com/nrl-ai/chub/blob/main/LICENSE"><img src="https://img.shields.io/badge/license-MIT-0ea5e9" alt="License"></a>
+</p>
 
 Chub is a high-performance CLI + MCP server that serves curated, versioned API documentation to AI coding agents. Built in Rust, it is a drop-in replacement for [Context Hub](https://github.com/andrewyng/context-hub) with team-first features.
 

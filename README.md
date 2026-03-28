@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="website/assets/logo.svg" width="80" height="80" alt="Chub">
+  <img src="https://raw.githubusercontent.com/nrl-ai/chub/main/website/assets/logo.svg" width="80" height="80" alt="Chub">
 </p>
 
 <h1 align="center">Chub</h1>
