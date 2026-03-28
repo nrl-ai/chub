@@ -381,4 +381,223 @@ mod tests {
         assert!(json.contains("\"outputTokens\""));
         assert!(json.contains("\"apiCallCount\""));
     }
+
+    // --- Agent type parsing ---
+
+    #[test]
+    fn agent_type_canonical_names() {
+        assert_eq!(AgentType::from_str("claude-code"), AgentType::ClaudeCode);
+        assert_eq!(AgentType::from_str("cursor"), AgentType::Cursor);
+        assert_eq!(AgentType::from_str("gemini-cli"), AgentType::GeminiCli);
+        assert_eq!(AgentType::from_str("copilot"), AgentType::Copilot);
+        assert_eq!(AgentType::from_str("codex"), AgentType::Codex);
+        assert_eq!(AgentType::from_str("windsurf"), AgentType::Windsurf);
+        assert_eq!(AgentType::from_str("cline"), AgentType::Cline);
+        assert_eq!(AgentType::from_str("aider"), AgentType::Aider);
+        assert_eq!(AgentType::from_str("opencode"), AgentType::OpenCode);
+    }
+
+    #[test]
+    fn agent_type_aliases() {
+        assert_eq!(AgentType::from_str("claude"), AgentType::ClaudeCode);
+        assert_eq!(AgentType::from_str("claudecode"), AgentType::ClaudeCode);
+        assert_eq!(AgentType::from_str("gemini"), AgentType::GeminiCli);
+        assert_eq!(AgentType::from_str("github-copilot"), AgentType::Copilot);
+    }
+
+    #[test]
+    fn agent_type_case_insensitive() {
+        assert_eq!(AgentType::from_str("CLAUDE-CODE"), AgentType::ClaudeCode);
+        assert_eq!(AgentType::from_str("Cursor"), AgentType::Cursor);
+        assert_eq!(AgentType::from_str("GEMINI-CLI"), AgentType::GeminiCli);
+    }
+
+    #[test]
+    fn agent_type_unknown_inputs() {
+        assert_eq!(AgentType::from_str(""), AgentType::Unknown);
+        assert_eq!(AgentType::from_str("my-custom-agent"), AgentType::Unknown);
+        assert_eq!(AgentType::from_str("   "), AgentType::Unknown);
+    }
+
+    #[test]
+    fn agent_type_name_roundtrip() {
+        for agent in &[
+            AgentType::ClaudeCode,
+            AgentType::Cursor,
+            AgentType::GeminiCli,
+            AgentType::Copilot,
+            AgentType::Codex,
+            AgentType::Windsurf,
+            AgentType::Cline,
+            AgentType::Aider,
+            AgentType::OpenCode,
+            AgentType::Unknown,
+        ] {
+            let name = agent.name();
+            assert!(!name.is_empty(), "name() should never be empty");
+            // Canonical name should round-trip through from_str
+            let parsed = AgentType::from_str(name);
+            assert_eq!(
+                &parsed, agent,
+                "from_str(name()) should round-trip for {:?}",
+                agent
+            );
+        }
+    }
+
+    #[test]
+    fn agent_type_serde_roundtrip() {
+        let agent = AgentType::ClaudeCode;
+        let json = serde_json::to_string(&agent).unwrap();
+        assert_eq!(json, "\"claude-code\"");
+        let parsed: AgentType = serde_json::from_str(&json).unwrap();
+        assert_eq!(parsed, agent);
+    }
+
+    #[test]
+    fn agent_type_unknown_serde() {
+        // Unknown JSON values deserialize to Unknown via serde(other)
+        let parsed: AgentType = serde_json::from_str("\"some-future-agent\"").unwrap();
+        assert_eq!(parsed, AgentType::Unknown);
+    }
+
+    // --- Checkpoint ID ---
+
+    #[test]
+    fn checkpoint_id_uniqueness() {
+        let ids: Vec<CheckpointID> = (0..100).map(|_| CheckpointID::generate()).collect();
+        let unique: std::collections::HashSet<String> = ids.iter().map(|id| id.0.clone()).collect();
+        assert_eq!(unique.len(), 100, "100 checkpoint IDs should all be unique");
+    }
+
+    #[test]
+    fn checkpoint_id_always_hex() {
+        for _ in 0..50 {
+            let id = CheckpointID::generate();
+            assert_eq!(id.0.len(), 12, "ID length must be 12");
+            assert!(
+                id.0.chars().all(|c| c.is_ascii_hexdigit()),
+                "non-hex char in ID: {}",
+                id.0
+            );
+        }
+    }
+
+    #[test]
+    fn checkpoint_id_short_string_shard() {
+        let short = CheckpointID("ab".to_string());
+        assert_eq!(short.shard_path(), "ab", "short IDs should not panic");
+        let tiny = CheckpointID("a".to_string());
+        assert_eq!(tiny.shard_path(), "a");
+        let empty = CheckpointID(String::new());
+        assert_eq!(empty.shard_path(), "");
+    }
+
+    #[test]
+    fn checkpoint_id_display() {
+        let id = CheckpointID("a3b2c4d5e6f7".to_string());
+        assert_eq!(format!("{}", id), "a3b2c4d5e6f7");
+    }
+
+    // --- Token usage edge cases ---
+
+    #[test]
+    fn token_usage_default_is_empty() {
+        let t = TokenUsage::default();
+        assert!(t.is_empty());
+        assert_eq!(t.total(), 0);
+    }
+
+    #[test]
+    fn token_usage_total_includes_reasoning() {
+        let t = TokenUsage {
+            input_tokens: 100,
+            output_tokens: 50,
+            cache_read_tokens: 10,
+            cache_creation_tokens: 5,
+            reasoning_tokens: 200,
+            api_call_count: 1,
+            subagent_tokens: None,
+        };
+        assert_eq!(t.total(), 365);
+    }
+
+    #[test]
+    fn token_usage_is_empty_with_only_reasoning() {
+        let t = TokenUsage {
+            reasoning_tokens: 100,
+            ..Default::default()
+        };
+        assert!(!t.is_empty());
+    }
+
+    #[test]
+    fn token_usage_subagent_accumulates() {
+        let mut main = TokenUsage::default();
+        let sub1 = TokenUsage {
+            input_tokens: 100,
+            ..Default::default()
+        };
+        let sub2 = TokenUsage {
+            input_tokens: 200,
+            output_tokens: 50,
+            ..Default::default()
+        };
+        main.add_subagent(&sub1);
+        main.add_subagent(&sub2);
+        let sub = main.subagent_tokens.unwrap();
+        assert_eq!(sub.input_tokens, 300);
+        assert_eq!(sub.output_tokens, 50);
+    }
+
+    #[test]
+    fn token_usage_reasoning_skipped_when_zero() {
+        let t = TokenUsage {
+            input_tokens: 100,
+            ..Default::default()
+        };
+        let json = serde_json::to_string(&t).unwrap();
+        assert!(
+            !json.contains("reasoningTokens"),
+            "zero reasoning should be skipped"
+        );
+    }
+
+    #[test]
+    fn token_usage_reasoning_present_when_nonzero() {
+        let t = TokenUsage {
+            reasoning_tokens: 500,
+            ..Default::default()
+        };
+        let json = serde_json::to_string(&t).unwrap();
+        assert!(json.contains("\"reasoningTokens\":500"));
+    }
+
+    #[test]
+    fn token_usage_subagent_skipped_when_none() {
+        let t = TokenUsage::default();
+        let json = serde_json::to_string(&t).unwrap();
+        assert!(!json.contains("subagentTokens"));
+    }
+
+    // --- Phase ---
+
+    #[test]
+    fn phase_default_is_idle() {
+        assert_eq!(Phase::default(), Phase::Idle);
+    }
+
+    #[test]
+    fn phase_all_variants_serde() {
+        for (variant, expected_json) in &[
+            (Phase::Idle, "\"idle\""),
+            (Phase::Active, "\"active\""),
+            (Phase::Ended, "\"ended\""),
+        ] {
+            let json = serde_json::to_string(variant).unwrap();
+            assert_eq!(&json, expected_json);
+            let parsed: Phase = serde_json::from_str(expected_json).unwrap();
+            assert_eq!(&parsed, variant);
+        }
+    }
 }

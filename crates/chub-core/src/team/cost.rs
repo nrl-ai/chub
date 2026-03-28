@@ -195,4 +195,167 @@ mod tests {
         // total = 0.6
         assert!((cost - 0.6).abs() < 0.01, "cost was {}", cost);
     }
+
+    #[test]
+    fn haiku_cost() {
+        let tokens = TokenUsage {
+            input: 50000,
+            output: 10000,
+            ..Default::default()
+        };
+        let cost = estimate_cost(Some("claude-haiku-4-5"), &tokens).unwrap();
+        // input: 50000 * 0.80 / 1M = 0.04
+        // output: 10000 * 4.0 / 1M = 0.04
+        assert!((cost - 0.08).abs() < 0.01, "haiku cost was {}", cost);
+    }
+
+    #[test]
+    fn gpt4o_cost() {
+        let tokens = TokenUsage {
+            input: 10000,
+            output: 5000,
+            ..Default::default()
+        };
+        let cost = estimate_cost(Some("gpt-4o-2024-08-06"), &tokens).unwrap();
+        // input: 10000 * 2.5 / 1M = 0.025
+        // output: 5000 * 10 / 1M = 0.05
+        assert!(cost > 0.07 && cost < 0.08, "gpt-4o cost was {}", cost);
+    }
+
+    #[test]
+    fn gpt4o_mini_cost() {
+        let tokens = TokenUsage {
+            input: 100000,
+            output: 50000,
+            ..Default::default()
+        };
+        let cost = estimate_cost(Some("gpt-4o-mini"), &tokens).unwrap();
+        // input: 100000 * 0.15 / 1M = 0.015
+        // output: 50000 * 0.60 / 1M = 0.03
+        assert!(cost > 0.04 && cost < 0.05, "gpt-4o-mini cost was {}", cost);
+    }
+
+    #[test]
+    fn o3_cost() {
+        let tokens = TokenUsage {
+            input: 10000,
+            output: 5000,
+            reasoning: 20000,
+            ..Default::default()
+        };
+        let cost = estimate_cost(Some("o3-2025-01-31"), &tokens).unwrap();
+        // input: 10000 * 10 / 1M = 0.1
+        // output: 5000 * 40 / 1M = 0.2
+        // reasoning: 20000 * 40 / 1M = 0.8
+        assert!((cost - 1.1).abs() < 0.01, "o3 cost was {}", cost);
+    }
+
+    #[test]
+    fn gemini_pro_cost() {
+        let tokens = TokenUsage {
+            input: 50000,
+            output: 10000,
+            ..Default::default()
+        };
+        let cost = estimate_cost(Some("gemini-2.5-pro"), &tokens).unwrap();
+        assert!(cost > 0.0, "gemini pro should have a cost");
+    }
+
+    #[test]
+    fn gemini_flash_cost() {
+        let tokens = TokenUsage {
+            input: 100000,
+            output: 20000,
+            ..Default::default()
+        };
+        let cost = estimate_cost(Some("gemini-2.0-flash"), &tokens).unwrap();
+        assert!(cost > 0.0, "gemini flash should have a cost");
+        // Flash should be cheaper than pro
+        let pro_cost = estimate_cost(Some("gemini-2.5-pro"), &tokens).unwrap();
+        assert!(
+            cost < pro_cost,
+            "flash ({}) should be cheaper than pro ({})",
+            cost,
+            pro_cost
+        );
+    }
+
+    #[test]
+    fn deepseek_cost() {
+        let tokens = TokenUsage {
+            input: 100000,
+            output: 50000,
+            ..Default::default()
+        };
+        let cost = estimate_cost(Some("deepseek-coder"), &tokens).unwrap();
+        assert!(cost > 0.0, "deepseek should have a cost");
+    }
+
+    #[test]
+    fn reasoning_tokens_priced() {
+        let tokens = TokenUsage {
+            reasoning: 10000,
+            ..Default::default()
+        };
+        let cost = estimate_cost(Some("claude-opus-4-6"), &tokens).unwrap();
+        // reasoning: 10000 * 75 / 1M = 0.75
+        assert!((cost - 0.75).abs() < 0.01, "reasoning cost was {}", cost);
+    }
+
+    #[test]
+    fn cache_tokens_priced_correctly() {
+        let tokens = TokenUsage {
+            cache_read: 1000000,
+            ..Default::default()
+        };
+        let cost = estimate_cost(Some("claude-opus-4-6"), &tokens).unwrap();
+        // cache_read: 1M * 1.5 / 1M = 1.5
+        assert!((cost - 1.5).abs() < 0.01, "cache read cost was {}", cost);
+
+        let tokens2 = TokenUsage {
+            cache_write: 1000000,
+            ..Default::default()
+        };
+        let cost2 = estimate_cost(Some("claude-opus-4-6"), &tokens2).unwrap();
+        // cache_write: 1M * 18.75 / 1M = 18.75
+        assert!(
+            (cost2 - 18.75).abs() < 0.01,
+            "cache write cost was {}",
+            cost2
+        );
+    }
+
+    #[test]
+    fn zero_tokens_zero_cost() {
+        let tokens = TokenUsage::default();
+        let cost = estimate_cost(Some("claude-opus-4-6"), &tokens).unwrap();
+        assert_eq!(cost, 0.0);
+    }
+
+    #[test]
+    fn model_matching_is_case_insensitive() {
+        let tokens = TokenUsage {
+            input: 10000,
+            output: 5000,
+            ..Default::default()
+        };
+        let lower = estimate_cost(Some("claude-opus-4-6"), &tokens).unwrap();
+        let upper = estimate_cost(Some("Claude-OPUS-4-6"), &tokens).unwrap();
+        assert_eq!(lower, upper, "model matching should be case-insensitive");
+    }
+
+    #[test]
+    fn cost_rounded_to_three_decimals() {
+        // A cost that would have more than 3 decimal places
+        let tokens = TokenUsage {
+            input: 1,
+            output: 1,
+            ..Default::default()
+        };
+        let cost = estimate_cost(Some("claude-opus-4-6"), &tokens).unwrap();
+        // Very small: (1 * 15 + 1 * 75) / 1_000_000 = 0.00009 → rounds to 0.0
+        let s = format!("{}", cost);
+        let decimals = s.split('.').nth(1).unwrap_or("").len();
+        assert!(decimals <= 3, "cost should be rounded to 3 decimals: {}", s);
+    }
 }

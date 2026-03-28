@@ -724,7 +724,7 @@ mod tests {
                 branch: Some("main".to_string()),
                 repo: Some("my-project".to_string()),
                 git_user: Some("Jane".to_string()),
-                git_email: Some("jane@example.com".to_string()),
+                git_email: Some("jane@chub.nrl.ai".to_string()),
                 chub_version: Some("0.1.15".to_string()),
                 extended_thinking: Some(true),
             }),
@@ -740,5 +740,170 @@ mod tests {
         assert_eq!(env.branch.as_deref(), Some("main"));
         assert_eq!(env.repo.as_deref(), Some("my-project"));
         assert_eq!(env.extended_thinking, Some(true));
+    }
+
+    // --- Session shard ---
+
+    #[test]
+    fn session_shard_normal_id() {
+        // "2026-03-22T10-05-abc123" → shard = "ab" (chars at [-6..-4])
+        assert_eq!(session_shard("2026-03-22T10-05-abc123"), "ab");
+    }
+
+    #[test]
+    fn session_shard_various_ids() {
+        assert_eq!(session_shard("2026-03-28T04-54-9e3efd"), "9e");
+        assert_eq!(session_shard("2026-03-28T04-54-64bd27"), "64");
+        assert_eq!(session_shard("2026-03-28T11-22-ff0011"), "ff");
+    }
+
+    #[test]
+    fn session_shard_short_id() {
+        assert_eq!(session_shard("abc"), "00", "short IDs should return 00");
+        assert_eq!(session_shard(""), "00");
+    }
+
+    // --- parse_iso_to_secs edge cases ---
+
+    #[test]
+    fn parse_iso_missing_time() {
+        assert!(parse_iso_to_secs("2026-03-22").is_none());
+    }
+
+    #[test]
+    fn parse_iso_garbage() {
+        assert!(parse_iso_to_secs("").is_none());
+        assert!(parse_iso_to_secs("not-a-date").is_none());
+        assert!(parse_iso_to_secs("T10:00:00").is_none());
+    }
+
+    #[test]
+    fn parse_iso_with_z_suffix() {
+        let with_z = parse_iso_to_secs("2026-03-22T10:05:30.000Z");
+        let without_z = parse_iso_to_secs("2026-03-22T10:05:30.000");
+        assert_eq!(with_z, without_z, "Z suffix should not affect parsing");
+    }
+
+    #[test]
+    fn parse_iso_with_milliseconds() {
+        let result = parse_iso_to_secs("2026-03-22T10:05:30.123Z");
+        assert!(result.is_some());
+    }
+
+    // --- calc_duration_s ---
+
+    #[test]
+    fn duration_same_time_is_zero() {
+        let d = calc_duration_s("2026-03-22T10:00:00.000Z", "2026-03-22T10:00:00.000Z");
+        assert_eq!(d, Some(0));
+    }
+
+    #[test]
+    fn duration_one_hour() {
+        let d = calc_duration_s("2026-03-22T10:00:00.000Z", "2026-03-22T11:00:00.000Z");
+        assert_eq!(d, Some(3600));
+    }
+
+    #[test]
+    fn duration_end_before_start_is_zero() {
+        let d = calc_duration_s("2026-03-22T11:00:00.000Z", "2026-03-22T10:00:00.000Z");
+        assert_eq!(d, Some(0), "saturating_sub should prevent underflow");
+    }
+
+    // --- ActiveSession finalize ---
+
+    #[test]
+    fn active_session_finalize_sorts_fields() {
+        let active = ActiveSession {
+            session_id: "test-123".to_string(),
+            agent: "claude-code".to_string(),
+            model: Some("opus".to_string()),
+            started_at: "2026-03-22T10:00:00.000Z".to_string(),
+            turns: 5,
+            tokens: TokenUsage {
+                input: 1000,
+                output: 500,
+                ..Default::default()
+            },
+            tool_calls: 3,
+            tools_used: ["Edit", "Read", "Bash"]
+                .iter()
+                .map(|s| s.to_string())
+                .collect(),
+            files_changed: ["z.rs", "a.rs", "m.rs"]
+                .iter()
+                .map(|s| s.to_string())
+                .collect(),
+            commits: vec!["abc".to_string(), "def".to_string()],
+            env: None,
+        };
+
+        let session = active.finalize();
+        assert_eq!(session.agent, "claude-code");
+        assert!(session.ended_at.is_some());
+        assert!(session.duration_s.is_some());
+        // tools_used and files_changed should be sorted
+        assert_eq!(session.tools_used, vec!["Bash", "Edit", "Read"]);
+        assert_eq!(session.files_changed, vec!["a.rs", "m.rs", "z.rs"]);
+        assert_eq!(session.commits, vec!["abc", "def"]);
+    }
+
+    // --- Token usage ---
+
+    #[test]
+    fn token_usage_total_with_reasoning() {
+        let t = TokenUsage {
+            input: 100,
+            output: 50,
+            cache_read: 10,
+            cache_write: 5,
+            reasoning: 200,
+        };
+        assert_eq!(t.total(), 365);
+    }
+
+    // --- Environment ---
+
+    #[test]
+    fn environment_default_all_none() {
+        let env = Environment::default();
+        assert!(env.os.is_none());
+        assert!(env.arch.is_none());
+        assert!(env.branch.is_none());
+        assert!(env.repo.is_none());
+        assert!(env.git_user.is_none());
+        assert!(env.git_email.is_none());
+        assert!(env.chub_version.is_none());
+        assert!(env.extended_thinking.is_none());
+    }
+
+    #[test]
+    fn environment_none_fields_skipped_in_yaml() {
+        let session = Session {
+            session_id: "test".to_string(),
+            agent: "test".to_string(),
+            model: None,
+            started_at: "2026-01-01T00:00:00.000Z".to_string(),
+            ended_at: None,
+            duration_s: None,
+            turns: 0,
+            tokens: TokenUsage::default(),
+            tool_calls: 0,
+            tools_used: vec![],
+            files_changed: vec![],
+            commits: vec![],
+            est_cost_usd: None,
+            env: None,
+        };
+        let yaml = serde_yaml::to_string(&session).unwrap();
+        assert!(!yaml.contains("env:"), "env should be omitted when None");
+        assert!(
+            !yaml.contains("model:"),
+            "model should be omitted when None"
+        );
+        assert!(
+            !yaml.contains("est_cost_usd:"),
+            "cost should be omitted when None"
+        );
     }
 }

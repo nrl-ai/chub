@@ -451,4 +451,223 @@ mod tests {
         assert_eq!(state.files_touched.len(), 2);
         assert!(state.files_touched.contains(&"src/lib.rs".to_string()));
     }
+
+    // --- Phase transition coverage ---
+
+    #[test]
+    fn invalid_transitions_rejected() {
+        // IDLE → TurnEnd should be invalid
+        let mut state = SessionState::new("test", None);
+        state.phase = Phase::Idle;
+        assert!(!state.apply_event(SessionEvent::TurnEnd));
+        assert_eq!(state.phase, Phase::Idle, "phase should not change");
+
+        // IDLE → Compaction should be invalid
+        let mut state2 = SessionState::new("test", None);
+        state2.phase = Phase::Idle;
+        assert!(!state2.apply_event(SessionEvent::Compaction));
+
+        // ENDED → TurnEnd should be invalid
+        let mut state3 = SessionState::new("test", None);
+        state3.phase = Phase::Ended;
+        assert!(!state3.apply_event(SessionEvent::TurnEnd));
+
+        // ENDED → SessionStop should be invalid
+        let mut state4 = SessionState::new("test", None);
+        state4.phase = Phase::Ended;
+        assert!(!state4.apply_event(SessionEvent::SessionStop));
+
+        // ENDED → Compaction should be invalid
+        let mut state5 = SessionState::new("test", None);
+        state5.phase = Phase::Ended;
+        assert!(!state5.apply_event(SessionEvent::Compaction));
+    }
+
+    #[test]
+    fn idle_git_commit_stays_idle() {
+        let mut state = SessionState::new("test", None);
+        state.phase = Phase::Idle;
+        assert!(state.apply_event(SessionEvent::GitCommit));
+        assert_eq!(state.phase, Phase::Idle);
+    }
+
+    #[test]
+    fn active_git_commit_stays_active() {
+        let mut state = SessionState::new("test", None);
+        assert!(state.apply_event(SessionEvent::GitCommit));
+        assert_eq!(state.phase, Phase::Active);
+    }
+
+    #[test]
+    fn active_compaction_stays_active() {
+        let mut state = SessionState::new("test", None);
+        assert!(state.apply_event(SessionEvent::Compaction));
+        assert_eq!(state.phase, Phase::Active);
+    }
+
+    #[test]
+    fn ended_turn_start_reactivates() {
+        let mut state = SessionState::new("test", None);
+        state.apply_event(SessionEvent::SessionStop);
+        assert_eq!(state.phase, Phase::Ended);
+        assert!(state.ended_at.is_some());
+
+        // Re-activate
+        assert!(state.apply_event(SessionEvent::TurnStart));
+        assert_eq!(state.phase, Phase::Active);
+        assert!(state.ended_at.is_none(), "ended_at should be cleared");
+    }
+
+    #[test]
+    fn ended_git_commit_with_files_stays_ended() {
+        let mut state = SessionState::new("test", None);
+        state.files_touched.push("src/main.rs".to_string());
+        state.apply_event(SessionEvent::SessionStop);
+
+        // GitCommit on Ended with files should succeed and stay Ended
+        assert!(state.apply_event(SessionEvent::GitCommit));
+        assert_eq!(state.phase, Phase::Ended, "should stay Ended");
+        // last_interaction_time should be set (may or may not differ within same second)
+        assert!(state.last_interaction_time.is_some());
+    }
+
+    #[test]
+    fn step_count_increments_on_turn_start() {
+        let mut state = SessionState::new("test", None);
+        assert_eq!(state.step_count, 0);
+
+        // Active → TurnEnd → Idle → TurnStart → Active
+        state.apply_event(SessionEvent::TurnEnd);
+        state.apply_event(SessionEvent::TurnStart);
+        assert_eq!(state.step_count, 1);
+
+        state.apply_event(SessionEvent::TurnEnd);
+        state.apply_event(SessionEvent::TurnStart);
+        assert_eq!(state.step_count, 2);
+    }
+
+    // --- Touch file edge cases ---
+
+    #[test]
+    fn touch_file_normalizes_backslashes() {
+        let mut state = SessionState::new("test", None);
+        state.touch_file("src\\nested\\deep\\file.rs");
+        assert!(state
+            .files_touched
+            .contains(&"src/nested/deep/file.rs".to_string()));
+    }
+
+    #[test]
+    fn touch_file_empty_string() {
+        let mut state = SessionState::new("test", None);
+        state.touch_file("");
+        // Empty should still be added (it's a relative path)
+        assert_eq!(state.files_touched.len(), 1);
+    }
+
+    // --- Token addition ---
+
+    #[test]
+    fn add_tokens_creates_usage_if_none() {
+        let mut state = SessionState::new("test", None);
+        state.token_usage = None;
+        let tokens = super::TokenUsage {
+            input_tokens: 500,
+            output_tokens: 200,
+            ..Default::default()
+        };
+        state.add_tokens(&tokens);
+        assert!(state.token_usage.is_some());
+        assert_eq!(state.token_usage.as_ref().unwrap().input_tokens, 500);
+    }
+
+    #[test]
+    fn add_tokens_accumulates() {
+        let mut state = SessionState::new("test", None);
+        let t1 = super::TokenUsage {
+            input_tokens: 100,
+            ..Default::default()
+        };
+        let t2 = super::TokenUsage {
+            input_tokens: 200,
+            ..Default::default()
+        };
+        state.add_tokens(&t1);
+        state.add_tokens(&t2);
+        assert_eq!(state.token_usage.as_ref().unwrap().input_tokens, 300);
+    }
+
+    // --- Staleness ---
+
+    #[test]
+    fn is_stale_recent_date_not_stale() {
+        let now_secs = std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .unwrap()
+            .as_secs();
+        // A date from today should not be stale
+        assert!(!is_stale("2026-03-28T12:00:00.000Z", now_secs, 7 * 86400));
+    }
+
+    #[test]
+    fn is_stale_malformed_date() {
+        assert!(!is_stale("not-a-date", 1000000, 86400));
+        assert!(!is_stale("", 1000000, 86400));
+        assert!(!is_stale("2026", 1000000, 86400));
+    }
+
+    // --- Session state JSON field names ---
+
+    #[test]
+    fn session_state_entire_io_field_names() {
+        let mut state = SessionState::new("claude-code", None);
+        // Add a file so filesTouched is not empty (empty vecs are skipped)
+        state.touch_file("src/main.rs");
+
+        let json = serde_json::to_string(&state).unwrap();
+
+        // Must use entire.io's capital-ID convention
+        assert!(
+            json.contains("\"sessionID\""),
+            "must be sessionID not sessionId"
+        );
+        assert!(json.contains("\"baseCommit\""));
+        assert!(json.contains("\"startedAt\""));
+        assert!(json.contains("\"filesTouched\""));
+        assert!(json.contains("\"stepCount\""));
+        assert!(json.contains("\"agentType\""));
+
+        // These should only appear when set
+        assert!(
+            !json.contains("\"endedAt\""),
+            "endedAt should be skipped when None"
+        );
+        assert!(
+            !json.contains("\"worktreeID\""),
+            "worktreeID should be skipped"
+        );
+        assert!(!json.contains("\"turnID\""), "turnID should be skipped");
+    }
+
+    #[test]
+    fn session_state_roundtrip_with_all_fields() {
+        let mut state = SessionState::new("cursor", Some("gpt-4o"));
+        state.touch_file("src/app.tsx");
+        state.tool_calls = 5;
+        state.tools_used.insert("Read".to_string());
+        state.tools_used.insert("Edit".to_string());
+        state.commits.push("abc1234".to_string());
+        state.est_cost_usd = Some(1.23);
+
+        let json = serde_json::to_string_pretty(&state).unwrap();
+        let parsed: SessionState = serde_json::from_str(&json).unwrap();
+
+        assert_eq!(parsed.session_id, state.session_id);
+        assert_eq!(parsed.tool_calls, 5);
+        assert!(parsed.tools_used.contains("Read"));
+        assert!(parsed.tools_used.contains("Edit"));
+        assert_eq!(parsed.commits, vec!["abc1234"]);
+        assert_eq!(parsed.est_cost_usd, Some(1.23));
+        assert_eq!(parsed.files_touched, vec!["src/app.tsx"]);
+    }
 }

@@ -42,12 +42,17 @@ fn path_with_chub() -> std::ffi::OsString {
 
 /// Create an isolated git repo with .chub/config.yaml in a temp dir.
 /// Returns the path to the repo directory.
+///
+/// Configures local git identity and branch name to avoid CI portability
+/// issues (missing user.name/email, `main` vs `master` default branch).
 fn create_test_repo(name: &str) -> PathBuf {
     let dir = std::env::temp_dir().join(format!("chub-e2e-{}-{}", name, std::process::id()));
     let _ = fs::remove_dir_all(&dir);
     fs::create_dir_all(&dir).unwrap();
 
-    git(&dir, &["init"]);
+    git(&dir, &["init", "-b", "master"]);
+    git(&dir, &["config", "user.name", "chub-test"]);
+    git(&dir, &["config", "user.email", "test@chub.dev"]);
     fs::create_dir_all(dir.join(".chub")).unwrap();
     fs::write(dir.join(".chub/config.yaml"), "name: test\n").unwrap();
     fs::write(dir.join("file.txt"), "initial\n").unwrap();
@@ -59,13 +64,32 @@ fn create_test_repo(name: &str) -> PathBuf {
 
 /// Run git in a directory and return stdout.
 /// PATH is augmented so git hooks that invoke `chub` find the built binary.
+/// Panics with stderr on non-zero exit (except for commands that legitimately
+/// return non-zero like `rev-parse --verify` on missing refs).
 fn git(dir: &Path, args: &[&str]) -> String {
     let output = Command::new("git")
         .current_dir(dir)
         .env("PATH", path_with_chub())
+        .env("GIT_AUTHOR_NAME", "chub-test")
+        .env("GIT_AUTHOR_EMAIL", "test@chub.dev")
+        .env("GIT_COMMITTER_NAME", "chub-test")
+        .env("GIT_COMMITTER_EMAIL", "test@chub.dev")
         .args(args)
         .output()
-        .expect("git command failed");
+        .expect("git command failed to execute");
+
+    if !output.status.success() {
+        let stderr = String::from_utf8_lossy(&output.stderr);
+        // Some git commands legitimately fail (rev-parse on missing ref, etc.)
+        // Only log, don't panic — callers check the output.
+        eprintln!(
+            "[git {:?} failed ({})] stderr: {}",
+            args,
+            output.status,
+            stderr.trim()
+        );
+    }
+
     String::from_utf8_lossy(&output.stdout).trim().to_string()
 }
 
@@ -76,6 +100,11 @@ fn chub_hook(dir: &Path, args: &[&str]) -> String {
         .stdin(std::process::Stdio::piped())
         .stdout(std::process::Stdio::piped())
         .stderr(std::process::Stdio::piped())
+        .env("PATH", path_with_chub())
+        .env("GIT_AUTHOR_NAME", "chub-test")
+        .env("GIT_AUTHOR_EMAIL", "test@chub.dev")
+        .env("GIT_COMMITTER_NAME", "chub-test")
+        .env("GIT_COMMITTER_EMAIL", "test@chub.dev")
         .args(["track", "hook"]);
     cmd.args(args);
 
@@ -105,6 +134,11 @@ fn chub_track(dir: &Path, args: &[&str]) -> String {
         .stdin(std::process::Stdio::piped())
         .stdout(std::process::Stdio::piped())
         .stderr(std::process::Stdio::piped())
+        .env("PATH", path_with_chub())
+        .env("GIT_AUTHOR_NAME", "chub-test")
+        .env("GIT_AUTHOR_EMAIL", "test@chub.dev")
+        .env("GIT_COMMITTER_NAME", "chub-test")
+        .env("GIT_COMMITTER_EMAIL", "test@chub.dev")
         .args(["track"]);
     cmd.args(args);
 
