@@ -19,7 +19,7 @@ chub mcp
 
 ::: code-group
 
-```json [Claude Code (.claude/settings.json)]
+```json [Claude Code (.mcp.json)]
 {
   "mcpServers": {
     "chub": { "command": "chub", "args": ["mcp"] }

@@ -151,6 +151,34 @@ notes:
 
 Annotation kinds: `issues` (known problems), `fixes` (workarounds), `practices` (team conventions), `notes` (general observations). All three tiers (org + team + personal) are merged and appended to the doc when fetched via `chub get` or MCP.
 
+## Tracking configuration
+
+```yaml
+# .chub/config.yaml
+tracking:
+  cost_rates:
+    - model: "custom-model"
+      input_per_m: 5.0
+      output_per_m: 20.0
+      reasoning_per_m: 20.0
+      cache_read_per_m: 0.5
+      cache_write_per_m: 6.25
+  budget_alert_usd: 50.0    # show warnings at 80% and 100% of this threshold
+```
+
+| Field | Type | Default | Description |
+|---|---|---|---|
+| `tracking.cost_rates` | array | — | Custom per-model cost rates (override built-in rates) |
+| `tracking.cost_rates[].model` | string | — | Model name substring to match (e.g. `"claude-opus"`) |
+| `tracking.cost_rates[].input_per_m` | float | — | Cost per 1M input tokens (USD) |
+| `tracking.cost_rates[].output_per_m` | float | — | Cost per 1M output tokens (USD) |
+| `tracking.cost_rates[].reasoning_per_m` | float | — | Cost per 1M reasoning tokens (USD) |
+| `tracking.cost_rates[].cache_read_per_m` | float | — | Cost per 1M cache read tokens (USD) |
+| `tracking.cost_rates[].cache_write_per_m` | float | — | Cost per 1M cache write tokens (USD) |
+| `tracking.budget_alert_usd` | float | — | Budget threshold — `chub track report` shows warnings at 80% and 100% |
+
+Custom rates match by model name substring. The first matching rate wins. If no custom rate matches, built-in rates are used (Claude, GPT, Gemini, DeepSeek, o1/o3 families). See [AI Usage Tracking](/guide/tracking) for the full built-in rate table.
+
 ## Context doc frontmatter
 
 ```yaml

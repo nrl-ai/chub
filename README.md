@@ -86,7 +86,7 @@ chub list                                      # browse everything
 
 ### Connect to Your AI Agent
 
-Add to `.claude/settings.json` (Claude Code), `.cursor/mcp.json` (Cursor), or the equivalent for your agent:
+Add to `.mcp.json` (Claude Code), `.cursor/mcp.json` (Cursor), or the equivalent for your agent:
 
 ```json
 {

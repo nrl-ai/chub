@@ -115,7 +115,7 @@ chub --version
 You should see output like:
 
 ```
-chub 0.1.13
+chub 0.1.x
 ```
 
 ## Uninstall
