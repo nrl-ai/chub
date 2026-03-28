@@ -1,5 +1,6 @@
 import { defineConfig } from 'vitepress'
 import { withMermaid } from 'vitepress-plugin-mermaid'
+import { buildEndGenerateOgImages, transformHeadOgMeta } from './og-image'
 
 export default withMermaid(defineConfig({
   title: 'Chub',
@@ -9,6 +10,9 @@ export default withMermaid(defineConfig({
   ],
 
   appearance: 'dark',
+
+  transformHead: transformHeadOgMeta,
+  buildEnd: buildEndGenerateOgImages,
 
   themeConfig: {
     logo: '/logo.svg',
