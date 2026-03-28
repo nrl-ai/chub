@@ -8,6 +8,7 @@ pub mod frontmatter;
 pub mod identity;
 pub mod normalize;
 pub mod registry;
+pub mod scan;
 pub mod search;
 pub mod team;
 pub mod telemetry;

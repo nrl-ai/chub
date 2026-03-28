@@ -11,6 +11,7 @@ pub mod get;
 pub mod init;
 pub mod pin;
 pub mod profile;
+pub mod scan;
 pub mod search;
 pub mod serve;
 pub mod snapshot;

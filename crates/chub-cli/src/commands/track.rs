@@ -698,7 +698,19 @@ fn run_hook(args: HookArgs, json: bool) {
                             } else {
                                 None
                             };
-                            checkpoint::create_checkpoint(&state, t_path.as_deref(), attr);
+                            // Load redaction config from .chub/config.yaml
+                            let redact_cfg = {
+                                let cfg = chub_core::config::load_config();
+                                chub_core::team::tracking::redact::RedactConfig::from(
+                                    &cfg.tracking.redaction,
+                                )
+                            };
+                            checkpoint::create_checkpoint_with_config(
+                                &state,
+                                t_path.as_deref(),
+                                attr,
+                                Some(&redact_cfg),
+                            );
 
                             session_state::save_state(&state);
                         }

@@ -8,6 +8,8 @@ use std::fs;
 use std::path::{Path, PathBuf};
 use std::process::Command;
 
+use chub_core::team::tracking::redact::{RedactConfig, Redactor};
+
 // ---------------------------------------------------------------------------
 // Helpers (same pattern as tracking_e2e.rs)
 // ---------------------------------------------------------------------------
@@ -615,4 +617,202 @@ fn session_start_in_non_git_dir_is_graceful() {
     );
 
     let _ = fs::remove_dir_all(&dir);
+}
+
+// ===========================================================================
+// Secret redaction in transcripts
+// ===========================================================================
+
+#[test]
+fn redact_transcript_removes_secrets() {
+    let r = Redactor::new();
+
+    // Simulated JSONL transcript with embedded secrets
+    let transcript = r#"{"type":"user","uuid":"u1","message":{"role":"user","content":"deploy to prod"}}
+{"type":"assistant","uuid":"a1","message":{"id":"msg_1","role":"assistant","content":[{"type":"tool_use","name":"Bash","input":{"command":"export AWS_ACCESS_KEY_ID=AKIAK4JM7NR2PX6SWT3B && aws s3 sync . s3://bucket"}}],"usage":{"input_tokens":500,"output_tokens":200}}}
+{"type":"assistant","uuid":"a2","message":{"id":"msg_2","role":"assistant","content":[{"type":"tool_use","name":"Bash","input":{"command":"curl -H 'Authorization: Bearer eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiIxMjM0NTY3ODkwIn0.dozjgNryP4J3jVmNHl0w5N_XgL0n3I9PlFUP0THsR8U' https://api.example.com"}}],"usage":{"input_tokens":600,"output_tokens":300}}}
+{"type":"assistant","uuid":"a3","message":{"id":"msg_3","role":"assistant","content":[{"type":"text","text":"I see your .env has DATABASE_URL=postgres://admin:s3cretP4ss@db.example.com:5432/prod"}],"usage":{"input_tokens":400,"output_tokens":150}}}
+"#;
+
+    let result = r.redact(transcript);
+
+    // Secrets should be gone
+    assert!(
+        !result.text.contains("AKIAK4JM7NR2PX6SWT3B"),
+        "AWS key should be redacted"
+    );
+    assert!(
+        !result.text.contains("eyJhbGciOiJIUzI1NiJ9"),
+        "JWT should be redacted"
+    );
+    assert!(
+        !result.text.contains("postgres://admin:s3cretP4ss"),
+        "DB URL should be redacted"
+    );
+
+    // Redaction markers should be present
+    assert!(result.text.contains("[REDACTED:aws-access-token]"));
+    assert!(result.text.contains("[REDACTED:jwt]"));
+    assert!(result.text.contains("[REDACTED:database-url]"));
+
+    // Should have found at least 3 secrets
+    assert!(
+        result.findings.len() >= 3,
+        "expected >=3 findings, got {}",
+        result.findings.len()
+    );
+
+    // Non-secret content should be preserved
+    assert!(result.text.contains("deploy to prod"));
+    assert!(result.text.contains("aws s3 sync"));
+    assert!(result.text.contains("msg_1"));
+}
+
+#[test]
+fn redact_prompt_with_secrets() {
+    let r = Redactor::new();
+
+    let prompt = "Set up Stripe with sk_live_aBcDeFgHiJkLmNoPqRsTuVwX and deploy to production";
+    let result = r.redact(prompt);
+
+    assert!(
+        !result.text.contains("sk_live_"),
+        "Stripe key should be redacted"
+    );
+    assert!(result.text.contains("[REDACTED:stripe-access-token]"));
+    assert!(result.text.contains("deploy to production")); // non-secret preserved
+}
+
+#[test]
+fn redact_config_disables_redaction() {
+    let config = RedactConfig {
+        disabled: true,
+        ..Default::default()
+    };
+    let r = Redactor::from_config(&config);
+
+    let text = "AKIAK4JM7NR2PX6SWT3B ghp_k4Jm8nR2pX6sW9vB3fH7aT1qY5uE0cD8gLw2";
+    let result = r.redact(text);
+    assert_eq!(result.text, text, "disabled redactor should pass through");
+    assert!(result.findings.is_empty());
+}
+
+#[test]
+fn redact_config_extra_patterns() {
+    let config = RedactConfig {
+        extra_patterns: vec![(
+            "internal-token".to_string(),
+            r"INTERNAL_[A-Z0-9]{20}".to_string(),
+        )],
+        ..Default::default()
+    };
+    let r = Redactor::from_config(&config);
+
+    let text = "token: INTERNAL_ABCDEFGHIJ1234567890";
+    let result = r.redact(text);
+    assert!(
+        result
+            .findings
+            .iter()
+            .any(|f| f.rule_id == "internal-token"),
+        "custom pattern should match: {:?}",
+        result.findings
+    );
+}
+
+#[test]
+fn redact_config_allowlist() {
+    let config = RedactConfig {
+        allowlist_regexes: vec!["K4JM7".to_string()],
+        ..Default::default()
+    };
+    let r = Redactor::from_config(&config);
+
+    // AWS key with K4JM7 in it should be allowlisted by the regex
+    let text = "key: AKIAK4JM7NR2PX6SWT3B";
+    let result = r.redact(text);
+    assert!(
+        result.findings.is_empty(),
+        "allowlisted key should not be flagged: {:?}",
+        result.findings
+    );
+
+    // A different key without the allowlist pattern should still be caught
+    let text2 = "key: AKIAVNR2PX6SWT3BK4JM";
+    let result2 = r.redact(text2);
+    assert!(!result2.findings.is_empty(), "real key should be detected");
+}
+
+#[test]
+fn redact_preserves_jsonl_structure() {
+    let r = Redactor::new();
+
+    let line = r#"{"type":"assistant","message":{"content":[{"type":"text","text":"Here is your key: sk_live_aBcDeFgHiJkLmNoPqRsTuVwX"}]}}"#;
+    let result = r.redact(line);
+
+    // Should still be valid JSON after redaction
+    let parsed: Result<serde_json::Value, _> = serde_json::from_str(&result.text);
+    assert!(
+        parsed.is_ok(),
+        "redacted JSON should still parse: {}",
+        result.text
+    );
+}
+
+#[test]
+fn redact_multiple_secrets_same_line() {
+    let r = Redactor::new();
+
+    let text = "keys: sk_live_aBcDeFgHiJkLmNoPqRsTuVwX and sk_test_xYzAbCdEfGhIjKlMnOpQr";
+    let result = r.redact(text);
+
+    assert!(
+        result.findings.len() >= 2,
+        "should find both Stripe keys: {:?}",
+        result.findings
+    );
+    assert!(!result.text.contains("sk_live_"));
+    assert!(!result.text.contains("sk_test_"));
+}
+
+#[test]
+fn redact_private_key_block() {
+    let r = Redactor::new();
+
+    let text = r#"Found in config:
+-----BEGIN RSA PRIVATE KEY-----
+MIIEowIBAAKCAQEA0Z3VS5JJcds3xfn/ygWyF068wFxKSg5
+-----END RSA PRIVATE KEY-----
+Rest of message"#;
+
+    let result = r.redact(text);
+    assert!(result.text.contains("[REDACTED:private-key]"));
+    assert!(result.text.contains("Rest of message")); // non-secret preserved
+}
+
+#[test]
+fn redact_from_config_struct_conversion() {
+    use chub_core::config::{RedactionConfig, RedactionPattern};
+
+    let cfg = RedactionConfig {
+        disabled: false,
+        extra_patterns: vec![RedactionPattern {
+            id: "my-secret".to_string(),
+            pattern: r"MYSECRET_\w{10}".to_string(),
+        }],
+        allowlist: vec!["DUMMY".to_string()],
+    };
+
+    let redact_cfg = RedactConfig::from(&cfg);
+    assert!(!redact_cfg.disabled);
+    assert_eq!(redact_cfg.extra_patterns.len(), 1);
+    assert_eq!(redact_cfg.extra_patterns[0].0, "my-secret");
+    assert_eq!(redact_cfg.allowlist_regexes.len(), 1);
+
+    let r = Redactor::from_config(&redact_cfg);
+    let result = r.redact("key: MYSECRET_abcdefghij");
+    assert!(
+        result.findings.iter().any(|f| f.rule_id == "my-secret"),
+        "config-based custom rule should work"
+    );
 }

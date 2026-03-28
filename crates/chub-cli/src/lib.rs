@@ -68,6 +68,8 @@ enum Commands {
     Telemetry(commands::telemetry_cmd::TelemetryArgs),
     /// Track AI coding agent usage (sessions, tokens, costs)
     Track(commands::track::TrackArgs),
+    /// Scan for secrets, vulnerabilities, and compliance issues
+    Scan(commands::scan::ScanArgs),
 }
 
 pub async fn run() {
@@ -159,6 +161,13 @@ pub async fn run() {
             commands::track::run(args, cli.json).await;
             return;
         }
+        Commands::Scan(args) => {
+            if let Err(e) = commands::scan::run(args, cli.json).await {
+                output::error(&e.to_string(), cli.json);
+                std::process::exit(1);
+            }
+            return;
+        }
         _ => {}
     }
 
@@ -209,6 +218,7 @@ pub async fn run() {
         | Commands::Snapshot(_)
         | Commands::Telemetry(_)
         | Commands::Track(_)
+        | Commands::Scan(_)
         | Commands::Mcp => unreachable!(),
     }
 }

@@ -9,6 +9,7 @@ use std::process::Command;
 
 use serde::{Deserialize, Serialize};
 
+use super::redact::{RedactConfig, Redactor};
 use super::session_state::SessionState;
 use super::types::{CheckpointID, InitialAttribution, Summary, TokenUsage};
 use crate::util::now_iso8601;
@@ -57,6 +58,13 @@ pub struct CommittedMetadata {
     pub summary: Option<Summary>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub initial_attribution: Option<InitialAttribution>,
+    /// Number of secrets redacted from the transcript and prompt.
+    #[serde(default, skip_serializing_if = "is_zero_i32")]
+    pub redacted_secrets_count: i32,
+}
+
+fn is_zero_i32(v: &i32) -> bool {
+    *v == 0
 }
 
 // ---------------------------------------------------------------------------
@@ -104,10 +112,21 @@ const CHECKPOINT_BRANCH: &str = "entire/checkpoints/v1";
 
 /// Create a checkpoint from the current session state.
 /// Stores metadata and transcript on the orphan checkpoint branch.
+/// Secrets are automatically redacted using the provided config (or defaults).
 pub fn create_checkpoint(
     state: &SessionState,
     transcript_path: Option<&Path>,
     attribution: Option<InitialAttribution>,
+) -> Option<CheckpointID> {
+    create_checkpoint_with_config(state, transcript_path, attribution, None)
+}
+
+/// Create a checkpoint with explicit redaction config.
+pub fn create_checkpoint_with_config(
+    state: &SessionState,
+    transcript_path: Option<&Path>,
+    attribution: Option<InitialAttribution>,
+    redact_config: Option<&RedactConfig>,
 ) -> Option<CheckpointID> {
     let checkpoint_id = CheckpointID::generate();
 
@@ -119,8 +138,8 @@ pub fn create_checkpoint(
     let session_dir = tmp_dir.join(&shard_path).join("0");
     let _ = fs::create_dir_all(&session_dir);
 
-    // Write committed metadata
-    let metadata = CommittedMetadata {
+    // Build metadata (redacted_secrets_count set after transcript/prompt redaction)
+    let mut metadata = CommittedMetadata {
         cli_version: Some(env!("CARGO_PKG_VERSION").to_string()),
         checkpoint_id: checkpoint_id.clone(),
         session_id: state.session_id.clone(),
@@ -138,22 +157,41 @@ pub fn create_checkpoint(
         token_usage: state.token_usage.clone(),
         summary: None,
         initial_attribution: attribution,
+        redacted_secrets_count: 0, // updated after redaction
     };
 
-    let meta_json = serde_json::to_string_pretty(&metadata).unwrap_or_default() + "\n";
-    let _ = fs::write(session_dir.join("metadata.json"), &meta_json);
+    // Redact secrets from transcript and prompt before writing
+    let redactor = match redact_config {
+        Some(cfg) => Redactor::from_config(cfg),
+        None => Redactor::new(),
+    };
+    let mut redacted_count: i32 = 0;
 
-    // Copy transcript if available
+    // Copy transcript if available (redacting secrets)
     let transcript_rel = if let Some(tp) = transcript_path {
         if tp.exists() {
             let dest = session_dir.join("full.jsonl");
-            let _ = fs::copy(tp, &dest);
 
-            // Write content hash
-            if let Ok(content) = fs::read(tp) {
+            // Read, redact, then write
+            if let Ok(content) = fs::read_to_string(tp) {
+                let result = redactor.redact(&content);
+                redacted_count += result.findings.len() as i32;
+                let redacted = result.text;
+
+                let _ = fs::write(&dest, &redacted);
+
+                // Content hash of redacted content
                 use sha2::{Digest, Sha256};
-                let hash = format!("{:x}", Sha256::digest(&content));
+                let hash = format!("{:x}", Sha256::digest(redacted.as_bytes()));
                 let _ = fs::write(session_dir.join("content_hash.txt"), &hash);
+            } else {
+                // Binary or unreadable — copy as-is
+                let _ = fs::copy(tp, &dest);
+                if let Ok(content) = fs::read(tp) {
+                    use sha2::{Digest, Sha256};
+                    let hash = format!("{:x}", Sha256::digest(&content));
+                    let _ = fs::write(session_dir.join("content_hash.txt"), &hash);
+                }
             }
             "0/full.jsonl".to_string()
         } else {
@@ -163,10 +201,17 @@ pub fn create_checkpoint(
         String::new()
     };
 
-    // Write prompt
+    // Write prompt (redacted)
     if let Some(ref prompt) = state.first_prompt {
-        let _ = fs::write(session_dir.join("prompt.txt"), prompt);
+        let result = redactor.redact(prompt);
+        redacted_count += result.findings.len() as i32;
+        let _ = fs::write(session_dir.join("prompt.txt"), &result.text);
     }
+
+    // Write committed metadata (after redaction so count is accurate)
+    metadata.redacted_secrets_count = redacted_count;
+    let meta_json = serde_json::to_string_pretty(&metadata).unwrap_or_default() + "\n";
+    let _ = fs::write(session_dir.join("metadata.json"), &meta_json);
 
     // Write root checkpoint summary
     let summary = CheckpointSummary {
@@ -575,6 +620,7 @@ mod tests {
             }),
             summary: None,
             initial_attribution: None,
+            redacted_secrets_count: 0,
         };
 
         let json = serde_json::to_string_pretty(&meta).unwrap();
@@ -584,9 +630,41 @@ mod tests {
         assert!(json.contains("\"filesTouched\""));
         assert!(json.contains("\"Claude Code\""));
         assert!(json.contains("\"inputTokens\""));
+        // redacted_secrets_count=0 should be skipped
+        assert!(!json.contains("redactedSecretsCount"));
 
         // Roundtrip
         let parsed: CommittedMetadata = serde_json::from_str(&json).unwrap();
         assert_eq!(parsed.checkpoint_id.0, "a3b2c4d5e6f7");
+    }
+
+    #[test]
+    fn committed_metadata_with_redaction_count() {
+        let meta = CommittedMetadata {
+            cli_version: Some("0.1.22".to_string()),
+            checkpoint_id: CheckpointID("aabb11223344".to_string()),
+            session_id: "2026-03-28-test".to_string(),
+            strategy: "chub-track".to_string(),
+            created_at: "2026-03-28T10:00:00.000Z".to_string(),
+            branch: None,
+            checkpoints_count: 1,
+            files_touched: vec![],
+            agent: None,
+            turn_id: None,
+            is_task: false,
+            tool_use_id: None,
+            transcript_identifier_at_start: None,
+            checkpoint_transcript_start: 0,
+            token_usage: None,
+            summary: None,
+            initial_attribution: None,
+            redacted_secrets_count: 5,
+        };
+
+        let json = serde_json::to_string_pretty(&meta).unwrap();
+        assert!(json.contains("\"redactedSecretsCount\": 5"));
+
+        let parsed: CommittedMetadata = serde_json::from_str(&json).unwrap();
+        assert_eq!(parsed.redacted_secrets_count, 5);
     }
 }

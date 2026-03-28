@@ -1,0 +1,99 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 480" fill="none">
+  <defs>
+    <linearGradient id="chub-fill" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#0ea5e9" stop-opacity="0.08"/>
+      <stop offset="100%" stop-color="#0ea5e9" stop-opacity="0.02"/>
+    </linearGradient>
+  </defs>
+
+  <!-- Background -->
+  <rect x="0" y="0" width="800" height="480" rx="16" fill="#ffffff"/>
+  <rect x="0" y="0" width="800" height="480" rx="16" stroke="#e2e8f0" stroke-width="1.5" fill="none"/>
+
+  <!-- Title -->
+  <text x="400" y="38" text-anchor="middle" font-family="system-ui, -apple-system, sans-serif" font-size="22" font-weight="700" fill="#0f172a">Secret Scanner Comparison</text>
+
+  <!-- Table header -->
+  <rect x="30" y="56" width="740" height="36" rx="8" fill="#f1f5f9"/>
+  <text x="185" y="80" text-anchor="middle" font-family="system-ui, -apple-system, sans-serif" font-size="13" font-weight="700" fill="#0f172a">Feature</text>
+  <text x="420" y="80" text-anchor="middle" font-family="system-ui, -apple-system, sans-serif" font-size="13" font-weight="700" fill="#0ea5e9">Chub</text>
+  <text x="560" y="80" text-anchor="middle" font-family="system-ui, -apple-system, sans-serif" font-size="13" font-weight="700" fill="#475569">Gitleaks</text>
+  <text x="700" y="80" text-anchor="middle" font-family="system-ui, -apple-system, sans-serif" font-size="13" font-weight="700" fill="#7c3aed">Betterleaks</text>
+
+  <!-- Highlight chub column -->
+  <rect x="355" y="56" width="130" height="410" rx="0" fill="url(#chub-fill)"/>
+
+  <!-- Rows -->
+  <!-- Row 1: Language -->
+  <line x1="30" y1="102" x2="770" y2="102" stroke="#f1f5f9" stroke-width="1"/>
+  <text x="40" y="122" font-family="system-ui, -apple-system, sans-serif" font-size="12" fill="#475569">Language</text>
+  <text x="420" y="122" text-anchor="middle" font-family="system-ui, -apple-system, sans-serif" font-size="12" font-weight="600" fill="#0ea5e9">Rust</text>
+  <text x="560" y="122" text-anchor="middle" font-family="system-ui, -apple-system, sans-serif" font-size="12" fill="#475569">Go</text>
+  <text x="700" y="122" text-anchor="middle" font-family="system-ui, -apple-system, sans-serif" font-size="12" fill="#475569">Go</text>
+
+  <!-- Row 2: Binary size -->
+  <line x1="30" y1="138" x2="770" y2="138" stroke="#f1f5f9" stroke-width="1"/>
+  <text x="40" y="158" font-family="system-ui, -apple-system, sans-serif" font-size="12" fill="#475569">Binary size</text>
+  <text x="420" y="158" text-anchor="middle" font-family="system-ui, -apple-system, sans-serif" font-size="12" font-weight="600" fill="#0ea5e9">14 MB</text>
+  <text x="560" y="158" text-anchor="middle" font-family="system-ui, -apple-system, sans-serif" font-size="12" fill="#475569">21 MB</text>
+  <text x="700" y="158" text-anchor="middle" font-family="system-ui, -apple-system, sans-serif" font-size="12" fill="#475569">50 MB</text>
+
+  <!-- Row 3: Built-in rules -->
+  <line x1="30" y1="174" x2="770" y2="174" stroke="#f1f5f9" stroke-width="1"/>
+  <text x="40" y="194" font-family="system-ui, -apple-system, sans-serif" font-size="12" fill="#475569">Built-in rules</text>
+  <text x="420" y="194" text-anchor="middle" font-family="system-ui, -apple-system, sans-serif" font-size="12" font-weight="600" fill="#0ea5e9">78</text>
+  <text x="560" y="194" text-anchor="middle" font-family="system-ui, -apple-system, sans-serif" font-size="12" fill="#475569">~170</text>
+  <text x="700" y="194" text-anchor="middle" font-family="system-ui, -apple-system, sans-serif" font-size="12" fill="#475569">261</text>
+
+  <!-- Row 4: Dir scan speed -->
+  <line x1="30" y1="210" x2="770" y2="210" stroke="#f1f5f9" stroke-width="1"/>
+  <text x="40" y="230" font-family="system-ui, -apple-system, sans-serif" font-size="12" fill="#475569">Dir scan (102 files)</text>
+  <text x="420" y="230" text-anchor="middle" font-family="system-ui, -apple-system, sans-serif" font-size="12" font-weight="700" fill="#0ea5e9">62 ms</text>
+  <text x="560" y="230" text-anchor="middle" font-family="system-ui, -apple-system, sans-serif" font-size="12" fill="#475569">303 ms</text>
+  <text x="700" y="230" text-anchor="middle" font-family="system-ui, -apple-system, sans-serif" font-size="12" fill="#475569">73 ms</text>
+
+  <!-- Row 5: Dir scan large -->
+  <line x1="30" y1="246" x2="770" y2="246" stroke="#f1f5f9" stroke-width="1"/>
+  <text x="40" y="266" font-family="system-ui, -apple-system, sans-serif" font-size="12" fill="#475569">Dir scan (1,002 files)</text>
+  <text x="420" y="266" text-anchor="middle" font-family="system-ui, -apple-system, sans-serif" font-size="12" font-weight="700" fill="#0ea5e9">116 ms</text>
+  <text x="560" y="266" text-anchor="middle" font-family="system-ui, -apple-system, sans-serif" font-size="12" fill="#475569">287 ms</text>
+  <text x="700" y="266" text-anchor="middle" font-family="system-ui, -apple-system, sans-serif" font-size="12" fill="#475569">72 ms</text>
+
+  <!-- Row 6: Git scan -->
+  <line x1="30" y1="282" x2="770" y2="282" stroke="#f1f5f9" stroke-width="1"/>
+  <text x="40" y="302" font-family="system-ui, -apple-system, sans-serif" font-size="12" fill="#475569">Git scan (84 commits)</text>
+  <text x="420" y="302" text-anchor="middle" font-family="system-ui, -apple-system, sans-serif" font-size="12" fill="#475569">795 ms</text>
+  <text x="560" y="302" text-anchor="middle" font-family="system-ui, -apple-system, sans-serif" font-size="12" fill="#475569">300 ms</text>
+  <text x="700" y="302" text-anchor="middle" font-family="system-ui, -apple-system, sans-serif" font-size="12" font-weight="600" fill="#7c3aed">65 ms</text>
+
+  <!-- Section: Unique features -->
+  <line x1="30" y1="322" x2="770" y2="322" stroke="#e2e8f0" stroke-width="1.5"/>
+  <text x="40" y="345" font-family="system-ui, -apple-system, sans-serif" font-size="11" font-weight="700" fill="#94a3b8" letter-spacing="1">UNIQUE TO CHUB</text>
+
+  <!-- Row 7: AI transcript scanning -->
+  <line x1="30" y1="354" x2="770" y2="354" stroke="#f1f5f9" stroke-width="1"/>
+  <text x="40" y="374" font-family="system-ui, -apple-system, sans-serif" font-size="12" fill="#475569">AI transcript scanning</text>
+  <text x="420" y="374" text-anchor="middle" font-family="system-ui, -apple-system, sans-serif" font-size="14" font-weight="700" fill="#0ea5e9">&#x2713;</text>
+  <text x="560" y="374" text-anchor="middle" font-family="system-ui, -apple-system, sans-serif" font-size="14" fill="#cbd5e1">&#x2717;</text>
+  <text x="700" y="374" text-anchor="middle" font-family="system-ui, -apple-system, sans-serif" font-size="14" fill="#cbd5e1">&#x2717;</text>
+
+  <!-- Row 8: Transcript redaction -->
+  <line x1="30" y1="390" x2="770" y2="390" stroke="#f1f5f9" stroke-width="1"/>
+  <text x="40" y="410" font-family="system-ui, -apple-system, sans-serif" font-size="12" fill="#475569">Auto transcript redaction</text>
+  <text x="420" y="410" text-anchor="middle" font-family="system-ui, -apple-system, sans-serif" font-size="14" font-weight="700" fill="#0ea5e9">&#x2713;</text>
+  <text x="560" y="410" text-anchor="middle" font-family="system-ui, -apple-system, sans-serif" font-size="14" fill="#cbd5e1">&#x2717;</text>
+  <text x="700" y="410" text-anchor="middle" font-family="system-ui, -apple-system, sans-serif" font-size="14" fill="#cbd5e1">&#x2717;</text>
+
+  <!-- Row 9: MCP integration -->
+  <line x1="30" y1="426" x2="770" y2="426" stroke="#f1f5f9" stroke-width="1"/>
+  <text x="40" y="446" font-family="system-ui, -apple-system, sans-serif" font-size="12" fill="#475569">MCP agent integration</text>
+  <text x="420" y="446" text-anchor="middle" font-family="system-ui, -apple-system, sans-serif" font-size="14" font-weight="700" fill="#0ea5e9">&#x2713;</text>
+  <text x="560" y="446" text-anchor="middle" font-family="system-ui, -apple-system, sans-serif" font-size="14" fill="#cbd5e1">&#x2717;</text>
+  <text x="700" y="446" text-anchor="middle" font-family="system-ui, -apple-system, sans-serif" font-size="14" fill="#cbd5e1">&#x2717;</text>
+
+  <!-- Row 10: All-in-one -->
+  <line x1="30" y1="462" x2="770" y2="462" stroke="#f1f5f9" stroke-width="1"/>
+
+  <!-- Footer note -->
+  <text x="400" y="478" text-anchor="middle" font-family="system-ui, -apple-system, sans-serif" font-size="10" fill="#94a3b8">Benchmarked on Windows 11 — median of 5 runs. Chub 0.1.22, Gitleaks 8.30.1, Betterleaks dev build.</text>
+</svg>

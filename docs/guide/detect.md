@@ -39,7 +39,47 @@ Detected 6 dependencies with available docs:
 Pin all? chub detect --pin
 ```
 
-## Version matching
+## How matching works
+
+Detection uses **name-based matching** against the Chub registry:
+
+1. **Exact match** — dependency name matches the first segment of an entry ID (e.g. `openai` matches `openai/chat`) — confidence 1.0
+2. **Full ID match** — dependency name matches the full entry ID
+3. **Partial match** — substring match (minimum 4 characters to avoid false positives) — confidence 0.5
+
+Detection does not resolve versions — it identifies which docs are available for your dependencies. Use `--pin` to pin them, then set specific versions with `chub pin add ... --version`.
+
+### Unmatched dependencies
+
+Not every dependency has a matching doc in the registry. This is normal:
+
+```
+Detected 12 dependencies:
+  openai (python)     → openai/chat [pinnable]
+  stripe (python)     → stripe/api [pinnable]
+  fastapi (python)    → fastapi/app [pinnable]
+  ✗ python-dotenv     → no match
+  ✗ custom-lib        → no match
+```
+
+Unmatched dependencies are skipped silently with `--pin`. You can author docs for internal libraries and host them on a [private registry](/guide/self-hosting).
+
+## Workspace and monorepo support
+
+Detection scans dependency files at the project root. Specific ecosystem support:
+
+| Ecosystem | Workspace support |
+|---|---|
+| **Cargo** | Reads `[workspace.dependencies]` from root `Cargo.toml` |
+| **npm / pnpm** | Reads root `package.json` only |
+| **Python** | Reads root `requirements.txt`, `pyproject.toml`, `Pipfile` |
+| **Go** | Reads root `go.mod` |
+| **Ruby** | Reads root `Gemfile` |
+| **Java** | Reads root `pom.xml`, `build.gradle`, `build.gradle.kts` |
+
+For monorepos with per-package dependency files, run `chub detect` from each package directory, or consolidate shared dependencies in the root manifest.
+
+## Version matching with `--match-env`
 
 Use `chub get --match-env` to auto-detect the version of a dependency from your project's dep files and fetch the matching doc version:
 
@@ -51,13 +91,18 @@ chub get openai/chat --lang python --match-env
 
 This is especially useful when upgrading a library — you get the doc that matches what's actually installed, not what's pinned.
 
-## Freshness
-
-After pinning, use `chub check` to detect when pinned doc versions lag behind the library version installed in your project:
+## Combining with other features
 
 ```sh
-chub check         # Compare pinned vs installed versions
-chub check --fix   # Auto-update outdated pins
+# Detect and pin in one step
+chub detect --pin
+
+# Then check freshness as dependencies are updated
+chub check
+chub check --fix
+
+# Or install a bundle for deps that detection misses
+chub bundle install project-extras
 ```
 
 See [Snapshots & Freshness](/guide/snapshots) for the full freshness and auditing workflow.

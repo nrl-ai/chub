@@ -10,11 +10,17 @@ useDefault = true
 [allowlist]
 description = "Global allowlist"
 
-# Ignore test fixture files that may contain dummy keys
+# Ignore test fixture files and source files that intentionally contain test tokens
 paths = [
   '''tests/fixtures/''',
   '''target/''',
   '''content/''',
+  # Integration tests and unit tests contain intentional test secrets for validation
+  '''crates/chub-core/tests/''',
+  '''crates/chub-core/src/team/tracking/redact\.rs''',
+  '''crates/chub-core/src/scan/scanner\.rs''',
+  # Benchmark script corpus uses realistic-looking tokens for timing
+  '''scripts/benchmark-scan\.sh''',
 ]
 
 # Ignore committed placeholder / example values in config examples

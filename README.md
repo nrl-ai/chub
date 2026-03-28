@@ -5,8 +5,8 @@
 <h1 align="center">Chub</h1>
 
 <p align="center">
-  <strong>Agent-agnostic context, tracking, and cost analytics for AI-assisted development.</strong><br>
-  <em>Curated docs · Session tracking · Cost analytics · Team knowledge — all git-native.</em>
+  <strong>The all-in-one infrastructure layer for AI-assisted development.</strong><br>
+  <em>Context · Tracking · Security · Team knowledge — agent-agnostic, git-native, built in Rust.</em>
 </p>
 
 <p align="center">
@@ -31,12 +31,13 @@ AI coding agents are powerful — but the infrastructure around them is missing:
 - **No context** — Agents hallucinate APIs, use deprecated endpoints, and forget what they learned between sessions
 - **No visibility** — You have no idea what AI is costing your team, which agents are being used, or how many tokens they consume
 - **No memory** — When an agent discovers a gotcha, that knowledge evaporates. Next week, a teammate's agent hits the same issue
+- **No guardrails** — Agents generate code with hardcoded secrets, paste API keys into transcripts, and commit credentials. Traditional scanners miss secrets buried in AI chat logs and agent transcripts
 
-These aren't three separate problems. They're one: **there's no infrastructure layer for AI coding agents.**
+These aren't four separate problems. They're one: **there's no infrastructure layer for AI coding agents.**
 
 ## The Solution
 
-Chub is the all-in-one agent layer — context, tracking, and analytics in a single CLI + MCP server. Built in Rust, agent-agnostic, git-native.
+Chub is the all-in-one agent layer — context, tracking, security, and analytics in a single CLI + MCP server. Built in Rust, agent-agnostic, git-native.
 
 <p align="center">
   <img src="https://raw.githubusercontent.com/nrl-ai/chub/main/website/assets/architecture.svg" width="700" alt="Chub Architecture — Context, Tracking, Learning">
@@ -198,6 +199,60 @@ Supported agents: **Claude Code**, **Cursor**, **GitHub Copilot**, **Gemini CLI*
 
 ---
 
+## Security Scanning
+
+Drop-in replacement for gitleaks and betterleaks — with built-in strength for AI agent transcript scanning. 73+ secret detection rules, Shannon entropy analysis, stopword filtering, and structured output.
+
+```sh
+chub scan secrets git                        # scan git history for secrets
+chub scan secrets git --staged               # pre-commit hook mode
+chub scan secrets dir ./src                  # scan a directory
+echo "$CONTENT" | chub scan secrets stdin    # scan from stdin
+```
+
+### Why another scanner?
+
+AI coding agents introduce a new class of secret leak: keys pasted into prompts, API tokens in agent transcripts, credentials in chat logs. Traditional scanners focus on source files and git commits — they miss the AI layer entirely. Chub scans all of it.
+
+### Features
+
+- **73+ built-in rules** — AWS, GCP, Azure, GitHub, GitLab, Anthropic, OpenAI, Stripe, and dozens more
+- **AI transcript-aware** — detects secrets in agent chat logs, prompts, and tool call outputs
+- **Shannon entropy** — reduces false positives by measuring randomness of captured secrets
+- **Stopword filtering** — ignores placeholders like `your_api_key_here` and `${VARIABLE}`
+- **Gitleaks-compatible output** — JSON, SARIF, CSV formats; same Finding schema
+- **Gitleaks-compatible config** — reads `.gitleaks.toml`, `.betterleaks.toml`, `.chub-scan.toml`
+- **Baseline management** — filter out known findings with `--baseline-path`
+- **Pre-commit integration** — `--staged` flag for git pre-commit hooks
+
+### Output formats
+
+```sh
+chub scan secrets git -f json -r report.json     # JSON (default)
+chub scan secrets git -f sarif -r report.sarif    # SARIF (for CI/CD)
+chub scan secrets git -f csv -r report.csv        # CSV
+chub scan secrets git --redact                     # redact secrets in output
+```
+
+### Config file
+
+Create `.chub-scan.toml` (or `.gitleaks.toml`) in your repo:
+
+```toml
+title = "My project scan config"
+
+[allowlist]
+paths = ["test/fixtures/.*", ".*_test\\.go"]
+regexes = ["EXAMPLE"]
+
+[[rules]]
+id = "custom-internal-token"
+regex = '''myco-tk-[a-zA-Z0-9]{32}'''
+keywords = ["myco-tk-"]
+```
+
+---
+
 ## CLI Reference
 
 ### Search and Fetch
@@ -266,6 +321,19 @@ chub check                              # check pinned vs installed versions
 chub check --fix                        # auto-update outdated pins
 ```
 
+### Security Scanning
+
+```sh
+chub scan secrets git                           # scan git history
+chub scan secrets git --staged                  # scan staged files (pre-commit)
+chub scan secrets dir ./src                     # scan directory
+chub scan secrets stdin --label "transcript"    # scan stdin
+chub scan secrets git -f sarif -r report.sarif  # SARIF output for CI
+chub scan secrets git --redact                  # redact secrets in output
+chub scan secrets git -c .gitleaks.toml         # use custom config
+chub scan secrets git --baseline-path known.json # filter known findings
+```
+
 ### Cache Management
 
 ```sh
@@ -309,8 +377,11 @@ Works with any MCP-compatible agent: Claude Code, Cursor, Windsurf, and others. 
 
 ## Security
 
-Chub includes several security measures for safe use in team environments:
+Chub includes proactive security scanning and defensive measures for AI-assisted development:
 
+- **Secret scanning** — 73+ rules detect leaked credentials in source code, git history, directories, and stdin. Shannon entropy and stopword filtering reduce false positives. Drop-in replacement for gitleaks/betterleaks with native AI transcript awareness.
+- **Agent transcript protection** — Secrets pasted into AI agent prompts, chat logs, and tool outputs are detected — a blind spot for traditional scanners.
+- **Automatic redaction** — Session tracking automatically redacts secrets from stored transcripts using the same 73-rule engine.
 - **Content integrity verification** — `chub build` computes SHA-256 hashes of all doc content, stored in the registry. Fetched content is verified against these hashes to detect CDN tampering.
 - **Annotation trust framing** — User-contributed annotations are clearly marked as non-official content when served to agents, mitigating prompt injection risks.
 - **Annotation length limits** — Notes are capped at 4,000 characters to prevent context flooding.
@@ -360,6 +431,12 @@ Measured on the production corpus (1,553 docs, 8 skills). Median of 5 runs. Full
 | Cost estimation & budget alerts | — | — | **Yes** |
 | Web dashboard | — | — | **Yes** |
 | Multi-agent support (6+ agents) | — | — | **Yes** |
+| **Security** | | | |
+| Secret scanning (git/dir/stdin) | — | — | **Yes** |
+| AI transcript scanning | — | — | **Yes** |
+| Gitleaks/betterleaks compatible | — | — | **Drop-in** |
+| SARIF output for CI/CD | — | — | **Yes** |
+| Pre-commit hook support | — | — | **Yes** |
 
 ---
 
@@ -407,6 +484,7 @@ Comprehensive test coverage across unit, parity, and integration tests:
 | Build parity | Output format matches JS Context Hub byte-for-byte |
 | Search parity | Multi-word, tags, descriptions match JS results |
 | Team features | Pins, profiles, snapshots, detect, freshness, org HTTP |
+| Secret scanning | 73+ rules, entropy, false positives, AI transcripts, git/dir/stdin, SARIF/CSV/JSON output, baseline filtering |
 
 ```sh
 cargo test --all                     # run all tests
@@ -429,6 +507,7 @@ Full documentation at [chub.nrl.ai](https://chub.nrl.ai):
 - [Configuration](https://chub.nrl.ai/reference/configuration) — config file format
 - [MCP Server](https://chub.nrl.ai/reference/mcp-server) — agent integration
 - [AI Usage Tracking](https://chub.nrl.ai/guide/tracking) — session tracking and cost analytics
+- [Secret Scanning](https://chub.nrl.ai/guide/scanning) — security scanning for secrets in code, git, and AI transcripts
 - [Showcases](https://chub.nrl.ai/guide/showcases) — real-world usage examples
 
 ---

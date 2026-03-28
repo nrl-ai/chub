@@ -1,16 +1,18 @@
 # Why Chub
 
-## Three problems, one tool
+## Four problems, one tool
 
-AI coding agents are transforming software development. But as teams adopt them, three problems emerge — and they're all connected:
+AI coding agents are transforming software development. But as teams adopt them, four problems emerge — and they're all connected:
 
 1. **Context** — Agents hallucinate APIs, use deprecated endpoints, and forget what they learned. You paste docs into chat; they get lost in context. Teammates paste different docs. Nobody's on the same page.
 
 2. **Visibility** — You have no idea how much AI is costing your team. Which agents are being used? How many tokens? What models? Is that $500/month worth it? Nobody knows, because there's no tracking.
 
-3. **Knowledge** — When an agent discovers a gotcha with a library, that knowledge evaporates when the session ends. Next week, a teammate's agent hits the exact same issue. The team never compounds what it learns.
+3. **Security** — Agents generate code with hardcoded secrets, paste API keys into prompts, and commit credentials into transcripts. Traditional secret scanners focus on source code — they miss the entire AI layer.
 
-These aren't three separate problems. They're one problem: **there's no infrastructure layer for AI coding agents.**
+4. **Knowledge** — When an agent discovers a gotcha with a library, that knowledge evaporates when the session ends. Next week, a teammate's agent hits the exact same issue. The team never compounds what it learns.
+
+These aren't four separate problems. They're one problem: **there's no infrastructure layer for AI coding agents.**
 
 Chub is that layer.
 
@@ -124,6 +126,26 @@ Individual developers can get by with ad-hoc context. Teams cannot. When five de
 
 All of this lives in `.chub/` inside your repo. If it's not in git, it doesn't exist for the team.
 
+### Stop secrets from leaking through the AI layer
+
+AI coding agents introduce a new class of secret leak. A developer pastes an API key into a prompt. An agent includes credentials in a tool call output. A transcript gets committed with hardcoded tokens. Traditional scanners like gitleaks focus on source files and git diffs — they miss secrets flowing through the AI layer.
+
+Chub's scanner is built for this world. It uses the same 73-rule detection engine that powers automatic transcript redaction, extended with:
+
+- **Shannon entropy analysis** — measures randomness to separate real secrets from placeholder strings
+- **Stopword filtering** — ignores `your_api_key_here`, `${VARIABLE}`, and other obvious placeholders
+- **AI transcript awareness** — scans agent chat logs, prompts, and tool outputs where traditional scanners have blind spots
+- **Gitleaks compatibility** — reads `.gitleaks.toml` configs, outputs the same JSON/SARIF/CSV formats, supports `--staged` for pre-commit hooks
+
+```sh
+chub scan secrets git                  # scan git history
+chub scan secrets git --staged         # pre-commit hook mode
+chub scan secrets dir ./src            # scan a directory
+echo "$TRANSCRIPT" | chub scan secrets stdin  # scan agent output
+```
+
+This isn't a bolt-on feature. The scanner shares its rule engine with tracking's automatic redaction — the same rules that protect your stored transcripts also scan your codebase. One engine, two applications.
+
 ### Track what your agents actually do
 
 You can't improve what you can't measure. Chub tracks AI coding agent activity across your entire team — sessions, tool calls, models, tokens, reasoning effort, and estimated costs — all stored alongside your code.
@@ -166,19 +188,20 @@ Chub      →  "How does our team use Stripe?"     (private, annotated, version-
 
 ## Where we're going
 
-We believe the three pillars — context, tracking, and learning — belong in one tool because they reinforce each other:
+We believe the four pillars — context, tracking, security, and learning — belong in one tool because they reinforce each other:
 
 - **Context makes agents accurate.** When agents have the right docs and team knowledge, they write correct code on the first try.
 - **Tracking makes usage visible.** When you can see sessions, costs, and tool patterns across your team, you make better decisions about how and where to use AI.
+- **Security keeps agents safe.** The same rules that scan your codebase for secrets also redact credentials from stored transcripts. One engine protects both your code and your AI workflow.
 - **Learning makes agents smarter.** When agents write back what they discover, the knowledge compounds. A team that's been using Chub for six months has a knowledge base that a new team member (human or AI) can tap into on day one.
 
-Other tools solve one of these. Context Hub and Context7 serve docs. Entire.io tracks sessions. But nobody connects them. Chub does — because the agent that serves your docs is the same agent that tracks your sessions and stores your annotations. One tool, one config, one `chub mcp` command.
+Other tools solve one of these. Context Hub and Context7 serve docs. Entire.io tracks sessions. Gitleaks scans for secrets. But nobody connects them. Chub does — because the tool that serves your docs is the same tool that tracks your sessions, scans for secrets, and stores your annotations. One tool, one config, one `chub mcp` command.
 
-Our goal: make Chub the agent-agnostic infrastructure layer for AI-assisted development. Not by replacing human judgment, but by making sure the lessons humans have already learned are never lost, the costs and patterns of AI usage are always transparent, and every agent on your team is as informed as your best engineer.
+Our goal: make Chub the agent-agnostic infrastructure layer for AI-assisted development. Not by replacing human judgment, but by making sure the lessons humans have already learned are never lost, the costs and patterns of AI usage are always transparent, secrets never leak through the AI layer, and every agent on your team is as informed as your best engineer.
 
 ## Design Principles
 
-1. **All-in-one** — context, tracking, and learning belong in one tool. They share config, share MCP, share git integration. No glue code needed.
+1. **All-in-one** — context, tracking, security, and learning belong in one tool. They share config, share MCP, share git integration. No glue code needed.
 2. **Agent-agnostic** — works with any AI coding agent. Claude Code, Cursor, Copilot, Gemini CLI, Codex — same tools, same data, no lock-in.
 3. **Git-first** — team config, annotations, and session summaries live in the repo. If it's not in git, it doesn't exist for the team.
 4. **Gradual adoption** — works for a solo developer today; adds team value when `.chub/` is committed.

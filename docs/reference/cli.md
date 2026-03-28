@@ -354,6 +354,96 @@ chub stats [--days <n>] [--json]
 |---|---|---|
 | `--days <n>` | Number of days to include | 30 |
 
+## Scanning Commands
+
+### chub scan
+
+Scan for secrets in git history, directories, or stdin. Drop-in replacement for gitleaks and betterleaks.
+
+```sh
+chub scan secrets git [<path>] [OPTIONS]     # scan git repository
+chub scan secrets dir [<path>] [OPTIONS]     # scan directory or file
+chub scan secrets stdin [OPTIONS]            # scan from stdin
+```
+
+#### Subcommands
+
+| Subcommand | Description |
+|---|---|
+| `secrets git [path]` | Scan git repository history (default: current directory) |
+| `secrets dir [path]` | Scan a directory or file (aliases: `file`, `directory`) |
+| `secrets stdin` | Scan from standard input |
+
+#### Global Options (apply to all subcommands)
+
+| Flag | Description | Default |
+|---|---|---|
+| `-c, --config <path>` | Config file path (`.gitleaks.toml` / `.betterleaks.toml` / `.chub-scan.toml`) | auto-detect |
+| `-b, --baseline-path <path>` | Baseline report to filter known findings | — |
+| `-f, --report-format <fmt>` | Output format: `json`, `sarif`, `csv` | `json` |
+| `-r, --report-path <path>` | Write report to file (use `-` for stdout) | stdout |
+| `--redact [<pct>]` | Redact secrets in output (0-100%, default 100% if no value) | off |
+| `--exit-code <n>` | Exit code when secrets are found | 1 |
+| `--max-target-megabytes <n>` | Skip files larger than this | 10 |
+| `--enable-rule <id>` | Only enable specific rule IDs (repeatable) | all rules |
+| `-v, --verbose` | Verbose output | off |
+| `--no-banner` | Suppress banner | off |
+| `--no-color` | Suppress colored output | off |
+
+#### Git-specific Options
+
+| Flag | Description |
+|---|---|
+| `--staged` | Scan only staged files (pre-commit mode) |
+| `--pre-commit` | Alias for `--staged` |
+| `--log-opts <opts>` | Custom git log options (e.g., `"--all HEAD~10..HEAD"`) |
+| `--follow-symlinks` | Follow symbolic links |
+
+#### Stdin-specific Options
+
+| Flag | Description | Default |
+|---|---|---|
+| `--label <name>` | Label for the input source | `stdin` |
+
+**Examples:**
+
+```sh
+# Scan git history
+chub scan secrets git
+
+# Pre-commit hook
+chub scan secrets git --staged --exit-code 1
+
+# Scan with SARIF output for CI
+chub scan secrets git -f sarif -r results.sarif
+
+# Scan directory with custom config
+chub scan secrets dir ./src -c .gitleaks.toml
+
+# Scan agent transcript from stdin
+cat transcript.log | chub scan secrets stdin --label "claude-session"
+
+# Redact secrets in output
+chub scan secrets git --redact
+
+# Only check for specific rule types
+chub scan secrets git --enable-rule aws-access-token --enable-rule github-pat
+
+# Filter known findings
+chub scan secrets git --baseline-path known-findings.json
+```
+
+#### Config File Discovery
+
+Chub searches for config files in this order:
+1. Explicit `--config` path
+2. Environment variables: `CHUB_SCAN_CONFIG`, `BETTERLEAKS_CONFIG`, `GITLEAKS_CONFIG`
+3. `.chub-scan.toml` in the target directory
+4. `.betterleaks.toml` in the target directory
+5. `.gitleaks.toml` in the target directory
+
+Config format is compatible with gitleaks TOML. See [Secret Scanning](/guide/scanning) for full config documentation.
+
 ## Tracking Commands
 
 ### chub track

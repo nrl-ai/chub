@@ -3,8 +3,8 @@ layout: home
 
 hero:
   name: Chub
-  text: Context, tracking, and analytics for AI coding agents
-  tagline: One tool for everything your AI agents need — curated docs, self-learning annotations, session tracking, cost analytics, and team knowledge sharing. Agent-agnostic. Git-native. Built in Rust.
+  text: The all-in-one infrastructure layer for AI-assisted development
+  tagline: Context, tracking, security, and team knowledge in one tool. Curated docs, session analytics, secret scanning, self-learning annotations — agent-agnostic, git-native, built in Rust.
   image:
     src: /logo.svg
     alt: Chub
@@ -35,6 +35,9 @@ features:
   - icon: 👥
     title: Team Sharing
     details: "Pin doc versions, scope context by role, sync agent configs to 10 targets, share annotations via git. The whole team sees the same truth."
+  - icon: 🔒
+    title: Security Scanning
+    details: "73+ secret detection rules. Scans git history, directories, and stdin. AI transcript-aware — catches secrets in agent chat logs. Drop-in gitleaks/betterleaks replacement. SARIF output for CI/CD."
   - icon: ⚡
     title: Fast & Portable
     details: "~44ms cold start. 10 MB single binary. Zero runtime deps. Works offline. Self-hostable. Runs on Linux, macOS, Windows, ARM64."
@@ -42,8 +45,8 @@ features:
 
 <div class="stats-bar">
   <div class="stat">
-    <div class="stat-num">3</div>
-    <div class="stat-label">Pillars: Context · Tracking · Analytics</div>
+    <div class="stat-num">4</div>
+    <div class="stat-label">Pillars: Context · Tracking · Security · Team</div>
   </div>
   <div class="stat">
     <div class="stat-num">1,553+</div>
@@ -61,7 +64,7 @@ features:
 
 ## The All-in-One Agent Layer
 
-Most tools do one thing: serve docs, or track usage, or sync configs. Chub does all three — because context, tracking, and team knowledge are one problem, not three.
+Most tools do one thing: serve docs, or track usage, or scan secrets, or sync configs. Chub does all four — because context, tracking, security, and team knowledge are one problem, not four.
 
 <p align="center">
   <img src="/architecture.svg" width="700" alt="Chub Architecture — Context, Tracking, Learning">
@@ -111,7 +114,15 @@ chub track report                          # costs, tokens, models, tools
 chub track dashboard                       # web dashboard at localhost:4243
 ```
 
-### 3. Build team knowledge
+### 3. Catch leaked secrets
+
+```sh
+chub scan secrets git                          # scan git history
+chub scan secrets git --staged                 # pre-commit hook mode
+chub scan secrets dir ./src                    # scan a directory
+```
+
+### 4. Build team knowledge
 
 ```sh
 chub init --from-deps                      # create .chub/, auto-pin docs
@@ -185,5 +196,10 @@ Measured on the production corpus (1,553 docs, 8 skills). Median of 5 runs.
 | Cost estimation | No | No | **Yes** |
 | Web dashboard | No | No | **Yes** |
 | Multi-agent support | — | — | **6+ agents** |
+| **Security** | | | |
+| Secret scanning (73+ rules) | No | No | **Yes** |
+| AI transcript scanning | No | No | **Yes** |
+| Gitleaks/betterleaks compatible | No | No | **Drop-in** |
+| SARIF/JSON/CSV output | No | No | **Yes** |
 
 Built on [Context Hub](https://github.com/andrewyng/context-hub) by Andrew Ng — fully format-compatible. Complementary to [Context7](https://context7.com). [Read the full story.](/guide/why-chub)

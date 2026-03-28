@@ -6,6 +6,7 @@
 
 pub mod branch_store;
 pub mod checkpoint;
+pub mod redact;
 pub mod session_state;
 pub mod transcript;
 pub mod types;

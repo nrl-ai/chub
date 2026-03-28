@@ -196,6 +196,55 @@ tracking:
       cache_write_per_m: 6.25
 ```
 
+## Custom Cost Rates
+
+The built-in rate table covers major models. For self-hosted models, fine-tuned variants, or providers with custom pricing, add your own rates in `.chub/config.yaml`:
+
+```yaml
+tracking:
+  cost_rates:
+    - model: "llama-3.1-70b"
+      input_per_m: 0.88
+      output_per_m: 0.88
+
+    - model: "gpt-4-turbo-company"
+      input_per_m: 10.0
+      output_per_m: 30.0
+      cache_read_per_m: 2.5       # defaults to input * 0.1 if omitted
+      cache_write_per_m: 12.5     # defaults to input * 1.25 if omitted
+```
+
+Model matching is case-insensitive and matches on substring — `"gpt-4-turbo"` matches any model ID containing that string. Custom rates take priority over built-in rates.
+
+### Reading cost reports
+
+```sh
+chub track report
+```
+
+```
+Cost report (last 30 days):
+  Total: $47.82 across 156 sessions
+
+  By model:
+    claude-opus-4-6     $32.10  (67%)  — 89 sessions
+    claude-sonnet-4-6    $12.40  (26%)  — 52 sessions
+    gpt-4o               $3.32   (7%)  — 15 sessions
+
+  By agent:
+    claude-code         $38.20  — 112 sessions
+    cursor               $9.62  —  44 sessions
+
+  Token breakdown:
+    Input: 12.4M  Output: 3.2M  Reasoning: 1.8M  Cache read: 5.1M
+```
+
+### Cost optimization tips
+
+- **Watch reasoning tokens** — extended thinking in Claude Opus costs $75/M tokens. If a session has high reasoning tokens for a simple task, consider using Sonnet instead
+- **Check cache hit rates** — high `cache_read` relative to `input` means the agent is efficiently reusing context
+- **Compare agents** — if Cursor and Claude Code produce similar results on your codebase, prefer the one with lower per-session cost
+
 ## Web Dashboard
 
 Launch a local dashboard for visual session tracking:
@@ -205,17 +254,19 @@ chub track dashboard               # http://localhost:4243
 chub track dashboard --port 8080   # custom port
 ```
 
-The dashboard shows:
-- Active session indicator
-- Total sessions, cost, and token usage
-- Agent and model breakdowns
-- Session history table
-- Top tools chart
-- Auto-refreshes every 10 seconds
+### Dashboard features
+
+- **Stat cards** — total sessions, total cost, token usage, and active session indicator at the top
+- **Agent and model breakdown charts** — see which agents and models your team uses most, with cost proportions
+- **Session history table** — sortable list of all sessions with agent, model, duration, tokens, and estimated cost
+- **Conversation viewer** — click a session to view its transcript (from local data only)
+- **Time range selector** — filter by last 7, 30, or 90 days
+- **Theme toggle** — light and dark mode
+- **Auto-refresh** — updates every 10 seconds while open
 
 ### JSON API
 
-The dashboard exposes a REST API:
+The dashboard exposes a REST API for scripting and custom integrations:
 
 | Endpoint | Description |
 |----------|-------------|
@@ -224,6 +275,25 @@ The dashboard exposes a REST API:
 | `GET /api/report?days=N` | Aggregate report |
 | `GET /api/session?id=X` | Single session detail |
 | `GET /api/entire-states` | entire.io session states |
+
+```sh
+# Fetch last 7 days of sessions as JSON
+curl http://localhost:4243/api/sessions?days=7
+
+# Get aggregate report
+curl http://localhost:4243/api/report?days=30
+```
+
+## Multi-Agent Tracking
+
+When multiple agents are enabled on the same project, each agent's sessions are tracked independently with their own session IDs. The report aggregates across all agents:
+
+```sh
+chub track enable               # installs hooks for all detected agents
+chub track report               # shows combined stats, broken down by agent
+```
+
+Sessions are linked to commits via git trailers regardless of which agent created them, so `git log` shows which sessions produced which code.
 
 ## entire.io Compatibility
 

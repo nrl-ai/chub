@@ -28,6 +28,30 @@ pub struct TrackingConfig {
     /// Monthly budget alert threshold in USD (0 = disabled).
     #[serde(default)]
     pub budget_alert_usd: f64,
+    /// Secret redaction settings for checkpoints.
+    #[serde(default)]
+    pub redaction: RedactionConfig,
+}
+
+/// Configuration for secret redaction in checkpoints.
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+pub struct RedactionConfig {
+    /// Set to true to disable redaction entirely.
+    #[serde(default)]
+    pub disabled: bool,
+    /// Extra regex patterns to detect (list of {id, pattern} objects).
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub extra_patterns: Vec<RedactionPattern>,
+    /// Regex patterns for secrets to allowlist (skip redaction if matched).
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub allowlist: Vec<String>,
+}
+
+/// A custom redaction pattern.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct RedactionPattern {
+    pub id: String,
+    pub pattern: String,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

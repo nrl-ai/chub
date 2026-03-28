@@ -61,6 +61,24 @@ Three-tier config inheritance: `~/.chub/` → `.chub/` → `.chub/profiles/<name
 
 Tools: `chub_search`, `chub_get`, `chub_list`, `chub_context`, `chub_pins`, `chub_annotate`, `chub_feedback`. Tool parameter structs use `schemars::JsonSchema` for schema generation. Registry exposed as a resource at `chub://registry`.
 
+## Secret Scanning
+
+`scan/` module — gitleaks/betterleaks-compatible secret scanner.
+
+```
+scan/config.rs    — ScanConfig: .gitleaks.toml compatible config loading (TOML/YAML)
+scan/finding.rs   — Finding struct with gitleaks-compatible PascalCase JSON
+scan/report.rs    — JSON, SARIF 2.1.0, CSV output
+scan/scanner.rs   — Scanner: orchestrates scanning of git repos, directories, stdin
+```
+
+The scanner reuses the `team/tracking/redact.rs` rule engine (73+ rules with Shannon entropy, stopwords, base64 decoding). `Scanner::scan_text()` wraps `Redactor::scan_text()` to produce `Finding` structs with line/column locations and fingerprints.
+
+Scan modes:
+- **Git** — parses `git log -p` output or `git diff --cached` (staged mode)
+- **Dir** — walks directory, skips binary/large/.git files
+- **Reader** — any `Read` source (stdin)
+
 ## Key Design Decisions
 
 1. **Format compatibility**: All on-disk formats are byte-for-byte identical with JS Context Hub (`serde(rename)` enforces camelCase)
@@ -68,3 +86,4 @@ Tools: `chub_search`, `chub_get`, `chub_list`, `chub_context`, `chub_pins`, `chu
 3. **MCP server**: Separate entry point via `rmcp` crate, not through CLI flow
 4. **Team features**: All git-tracked in `.chub/`, graceful degradation when absent
 5. **Incremental build**: SHA-256 manifest skips unchanged files during `chub build`
+6. **Shared rule engine**: Scanner and transcript redactor share the same 73+ detection rules in `redact.rs`

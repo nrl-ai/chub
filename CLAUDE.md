@@ -8,10 +8,11 @@ Do not add `Co-Authored-By` trailers to commits. Commit messages should be plain
 
 ## What this repo is
 
-Chub is the **agent-agnostic context and tracking layer** for AI-assisted development teams. Built as a high-performance Rust rewrite of [Context Hub](https://github.com/andrewyng/context-hub), it provides:
+Chub is the **all-in-one infrastructure layer** for AI-assisted development teams. Built as a high-performance Rust rewrite of [Context Hub](https://github.com/andrewyng/context-hub), it provides:
 
 - **Context** — curated, versioned API docs served to any AI coding agent via CLI + MCP
 - **Tracking** — session lifecycle recording, token/cost analytics, and reasoning capture across Claude Code, Cursor, Copilot, Gemini CLI, Codex, and more
+- **Security** — secret scanning (gitleaks/betterleaks-compatible) with AI transcript awareness, automatic transcript redaction
 - **Team** — git-tracked sharing of docs, annotations, profiles, agent configs, and usage reports
 
 Format-compatible with the original JS Context Hub and [entire.io](https://entire.io) checkpoint format. See `docs/plan.md` for roadmap.
@@ -78,6 +79,7 @@ For detailed architecture, data flow, conventions, and team feature design, use 
 | CLI commands | `crates/chub-cli/src/commands/` (one file per command) |
 | Team features | `crates/chub-core/src/team/` |
 | MCP server | `crates/chub-cli/src/mcp/` |
+| Secret scanning | `crates/chub-core/src/scan/` (config, finding, report, scanner) |
 | Search pipeline | `crates/chub-core/src/search/` (tokenizer → BM25 → inverted index → lexical boost) |
 | Shared helpers | `crates/chub-core/src/util.rs` |
 | Content registry | `content/<author>/docs/<entry>/<lang>/DOC.md` |
