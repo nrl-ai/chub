@@ -1,13 +1,12 @@
 //! Integration tests for build command parity with the JS implementation.
 //! Mirrors the e2e.test.js BUILD section and build.test.js.
 
-use std::path::{Path, PathBuf};
+use std::path::PathBuf;
 use std::process::Command;
 
 fn fixtures_dir() -> PathBuf {
-    // CARGO_MANIFEST_DIR = crates/chub-cli
-    // Fixtures are at tests/fixtures (workspace root)
-    Path::new(env!("CARGO_MANIFEST_DIR"))
+    // CARGO_MANIFEST_DIR = crates/chub
+    PathBuf::from(env!("CARGO_MANIFEST_DIR"))
         .join("..")
         .join("..")
         .join("tests")
@@ -15,17 +14,9 @@ fn fixtures_dir() -> PathBuf {
 }
 
 fn chub_binary() -> PathBuf {
-    // Binary is built to the workspace target dir: chub-rs/target/debug/chub
-    let mut path = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
-        .join("..")
-        .join("..")
-        .join("target")
-        .join("debug")
-        .join("chub");
-    if cfg!(windows) {
-        path.set_extension("exe");
-    }
-    path
+    // CARGO_BIN_EXE_chub is set automatically by cargo when testing
+    // a crate that defines the binary
+    PathBuf::from(env!("CARGO_BIN_EXE_chub"))
 }
 
 fn chub_json(args: &[&str]) -> serde_json::Value {
