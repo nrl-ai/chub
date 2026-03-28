@@ -43,6 +43,7 @@ echo "Bumping $CURRENT_VERSION → $NEW_VERSION"
 # --- Rust ---
 sed -i "s/^version = \"$CURRENT_VERSION\"/version = \"$NEW_VERSION\"/" "$ROOT/Cargo.toml"
 sed -i "s/chub-core = { path = \"crates\/chub-core\", version = \"$CURRENT_VERSION\"/chub-core = { path = \"crates\/chub-core\", version = \"$NEW_VERSION\"/" "$ROOT/Cargo.toml"
+sed -i "s/chub-cli = { path = \"crates\/chub-cli\", version = \"$CURRENT_VERSION\"/chub-cli = { path = \"crates\/chub-cli\", version = \"$NEW_VERSION\"/" "$ROOT/Cargo.toml"
 echo "  ✓ Cargo.toml"
 
 # --- npm ---

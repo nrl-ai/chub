@@ -157,10 +157,21 @@ jobs:
           CARGO_REGISTRY_TOKEN: ${{ secrets.CARGO_REGISTRY_TOKEN }}
         run: cargo publish -p chub-core
 
+      - name: Wait for crates.io index update
+        run: sleep 30
+
       - name: Publish chub-cli to crates.io
         env:
           CARGO_REGISTRY_TOKEN: ${{ secrets.CARGO_REGISTRY_TOKEN }}
         run: cargo publish -p chub-cli
+
+      - name: Wait for crates.io index update
+        run: sleep 30
+
+      - name: Publish chub to crates.io
+        env:
+          CARGO_REGISTRY_TOKEN: ${{ secrets.CARGO_REGISTRY_TOKEN }}
+        run: cargo publish -p chub
 
   publish-pypi:
     needs: [build, test]

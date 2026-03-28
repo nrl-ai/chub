@@ -11,6 +11,10 @@ keywords.workspace = true
 categories.workspace = true
 readme = "../../README.md"
 
+[lib]
+name = "chub_cli"
+path = "src/lib.rs"
+
 [[bin]]
 name = "chub"
 path = "src/main.rs"

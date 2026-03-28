@@ -13,7 +13,9 @@
   <a href="https://www.npmjs.com/package/@nrl-ai/chub"><img src="https://img.shields.io/npm/v/@nrl-ai/chub?color=0ea5e9&label=npm" alt="npm"></a>
   <a href="https://pypi.org/project/chub/"><img src="https://img.shields.io/pypi/v/chub?color=0ea5e9&label=pypi" alt="PyPI"></a>
   <a href="https://crates.io/crates/chub"><img src="https://img.shields.io/crates/v/chub?color=0ea5e9&label=crates.io" alt="crates.io"></a>
+  <a href="https://github.com/nrl-ai/chub/actions"><img src="https://img.shields.io/github/actions/workflow/status/nrl-ai/chub/ci.yml?color=0ea5e9&label=CI" alt="CI"></a>
   <a href="https://github.com/nrl-ai/chub/blob/main/LICENSE"><img src="https://img.shields.io/badge/license-MIT-0ea5e9" alt="License"></a>
+  <a href="https://www.npmjs.com/package/@nrl-ai/chub"><img src="https://img.shields.io/npm/dm/@nrl-ai/chub?color=0ea5e9&label=downloads" alt="Downloads"></a>
 </p>
 
 <p align="center">
@@ -67,7 +69,7 @@ Built on [Context Hub](https://github.com/andrewyng/context-hub) by Andrew Ng â€
 ```sh
 npm install -g @nrl-ai/chub     # npm (recommended)
 pip install chub                 # pip
-cargo install chub               # cargo (build from source)
+cargo install chub                # cargo (or: cargo install chub-cli)
 brew install nrl-ai/tap/chub     # homebrew (macOS / Linux)
 ```
 
