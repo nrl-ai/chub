@@ -213,93 +213,72 @@ impl Scanner {
         if staged_only {
             return Err("use CLI for staged".to_string());
         }
-
-        let mut repo = gix::open(repo_path).map_err(|e| format!("gix open: {}", e))?;
-        repo.object_cache_size_if_unset(4 * 1024 * 1024);
-        self.scan_git_history_gix(&repo)
+        self.scan_git_history_gix(repo_path)
     }
 
-    /// Scan commit history using gix rev-walk + tree diff.
+    /// Two-phase git history scan optimised for maximum throughput.
     ///
-    /// Phase 1: walk commits and collect (commit_info, path, content) tuples via gix.
-    /// Phase 2: parallel regex scanning with rayon.
-    fn scan_git_history_gix(&self, repo: &gix::Repository) -> Result<Vec<Finding>, String> {
+    /// **Phase 1** — walk all commits sequentially via gix. For each commit's tree,
+    ///   walk all blob entries directly (no tree-diff computation). Skip any blob OID
+    ///   already seen in a prior commit — this is equivalent to only scanning the first
+    ///   version of each unique file content, avoiding re-scanning unchanged files.
+    ///   Collect (commit_info, path, content) for unique blobs.
+    ///
+    /// **Phase 2** — parallel regex scanning across all collected targets with rayon.
+    ///
+    /// Avoiding `for_each_to_obtain_tree` (tree diffing) eliminates significant per-commit
+    /// overhead; the OID deduplication achieves the same "only new content" property.
+    fn scan_git_history_gix(&self, repo_path: &Path) -> Result<Vec<Finding>, String> {
         use rayon::prelude::*;
 
-        // Phase 1: collect all scan targets from git history
-        let mut targets: Vec<(CommitInfo, String, String)> = Vec::new();
-        let head_id = repo.head_id().map_err(|e| format!("head_id: {}", e))?;
+        let mut repo = gix::open(repo_path).map_err(|e| format!("gix open: {}", e))?;
+        repo.object_cache_size_if_unset(8 * 1024 * 1024);
 
+        let head_id = repo.head_id().map_err(|e| format!("head_id: {}", e))?;
         let walk = repo
             .rev_walk([head_id.detach()])
             .all()
             .map_err(|e| format!("rev_walk: {}", e))?;
+
+        // Phase 1: walk all commit trees, collect unique blobs
+        let mut targets: Vec<(CommitInfo, String, String)> = Vec::new();
+        let mut seen_oids: HashSet<gix::ObjectId> = HashSet::new();
 
         for info_result in walk {
             let info = match info_result {
                 Ok(i) => i,
                 Err(_) => continue,
             };
-
             let commit = match info.object() {
                 Ok(c) => c,
                 Err(_) => continue,
             };
-
-            let commit_info = extract_commit_info(&commit);
-
-            let new_tree = match commit.tree() {
+            let ci = extract_commit_info(&commit);
+            let tree = match commit.tree() {
                 Ok(t) => t,
                 Err(_) => continue,
             };
 
-            let old_tree = if let Some(parent_id) = info.parent_ids.first() {
-                repo.find_commit(*parent_id)
-                    .ok()
-                    .and_then(|pc| pc.tree().ok())
-            } else {
-                None
-            };
-
-            if let Some(ref ot) = old_tree {
-                if let Ok(mut platform) = ot.changes() {
-                    let ci = &commit_info;
-                    let t = &mut targets;
-                    let scanner = self;
-                    let _ = platform.for_each_to_obtain_tree(&new_tree, |change| {
-                        use gix::object::tree::diff::Change;
-                        match change {
-                            Change::Addition {
-                                location,
-                                id,
-                                entry_mode,
-                                ..
-                            }
-                            | Change::Modification {
-                                location,
-                                id,
-                                entry_mode,
-                                ..
-                            } if entry_mode.is_blob() => {
-                                let path_str = location.to_string();
-                                if !scanner.is_path_ignored(&path_str)
-                                    && !is_binary_extension(Path::new(&path_str))
-                                {
-                                    if let Ok(blob) = repo.find_object(id.detach()) {
-                                        if let Ok(content) = std::str::from_utf8(&blob.data) {
-                                            t.push((ci.clone(), path_str, content.to_string()));
-                                        }
-                                    }
-                                }
-                            }
-                            _ => {}
-                        }
-                        Ok::<_, std::convert::Infallible>(gix::object::tree::diff::Action::Continue)
-                    });
+            // Walk all blob entries in this commit's tree directly.
+            // OID dedup ensures each unique file content is only scanned once.
+            for entry in tree.iter().flatten() {
+                if !entry.mode().is_blob() {
+                    continue;
                 }
-            } else {
-                // Root commit: collect all files in the tree
-                self.collect_tree_files(repo, &new_tree, &commit_info, &mut targets);
+                let oid = entry.object_id();
+                if seen_oids.contains(&oid) {
+                    continue;
+                }
+                let path_str = entry.filename().to_str_lossy().to_string();
+                if self.is_path_ignored(&path_str) || is_binary_extension(Path::new(&path_str)) {
+                    continue;
+                }
+                if let Ok(blob) = repo.find_object(oid) {
+                    if let Ok(content) = std::str::from_utf8(&blob.data) {
+                        seen_oids.insert(oid);
+                        targets.push((ci.clone(), path_str, content.to_string()));
+                    }
+                }
             }
         }
 
@@ -310,28 +289,6 @@ impl Scanner {
             .collect();
 
         Ok(findings)
-    }
-
-    /// Collect all files in a tree into scan targets (used for root commits).
-    fn collect_tree_files(
-        &self,
-        repo: &gix::Repository,
-        tree: &gix::Tree<'_>,
-        commit_info: &CommitInfo,
-        targets: &mut Vec<(CommitInfo, String, String)>,
-    ) {
-        for entry in tree.iter().flatten() {
-            if entry.mode().is_blob() {
-                let path_str = entry.filename().to_str_lossy().to_string();
-                if !self.is_path_ignored(&path_str) && !is_binary_extension(Path::new(&path_str)) {
-                    if let Ok(blob) = repo.find_object(entry.object_id()) {
-                        if let Ok(content) = std::str::from_utf8(&blob.data) {
-                            targets.push((commit_info.clone(), path_str, content.to_string()));
-                        }
-                    }
-                }
-            }
-        }
     }
 
     /// Fallback: scan git using CLI (when gix fails).

@@ -27,6 +27,7 @@
 use std::collections::HashMap;
 use std::sync::OnceLock;
 
+use aho_corasick::{AhoCorasick, AhoCorasickBuilder, MatchKind};
 use regex::{Regex, RegexBuilder};
 
 use crate::scan::config::ScanConfig;
@@ -491,9 +492,57 @@ pub struct Redactor {
     extra_stopwords: Vec<String>,
     disabled: bool,
     skip_base64_decode: bool,
+    /// Aho-Corasick automaton over all unique lowercase keywords (all rules).
+    /// Single O(n) pass over content finds which keywords are present.
+    keyword_ac: AhoCorasick,
+    /// `keyword_ac` pattern index → list of rule indices that need this keyword.
+    keyword_to_rules: Vec<Vec<usize>>,
+    /// Rule indices for rules that have no keywords (must always be evaluated).
+    no_keyword_rules: Vec<usize>,
 }
 
 impl Redactor {
+    /// Build the Aho-Corasick keyword automaton and keyword→rules index.
+    ///
+    /// Returns `(ac, keyword_to_rules, no_keyword_rules)`:
+    /// - `ac`: automaton over all unique lowercase keywords
+    /// - `keyword_to_rules[pattern_id]`: rule indices that require pattern_id's keyword
+    /// - `no_keyword_rules`: rule indices with no keywords (always evaluated)
+    fn build_keyword_index(rules: &[Rule]) -> (AhoCorasick, Vec<Vec<usize>>, Vec<usize>) {
+        // Deduplicate keywords while preserving their AC pattern index → keyword string mapping
+        let mut keyword_list: Vec<String> = Vec::new();
+        let mut keyword_index: HashMap<String, usize> = HashMap::new();
+        let mut keyword_to_rules: Vec<Vec<usize>> = Vec::new();
+        let mut no_keyword_rules: Vec<usize> = Vec::new();
+
+        for (rule_idx, rule) in rules.iter().enumerate() {
+            if rule.keywords.is_empty() {
+                no_keyword_rules.push(rule_idx);
+                continue;
+            }
+            for kw in &rule.keywords {
+                let ac_idx = *keyword_index.entry(kw.clone()).or_insert_with(|| {
+                    let idx = keyword_list.len();
+                    keyword_list.push(kw.clone());
+                    keyword_to_rules.push(Vec::new());
+                    idx
+                });
+                keyword_to_rules[ac_idx].push(rule_idx);
+            }
+        }
+
+        let ac = AhoCorasickBuilder::new()
+            .ascii_case_insensitive(true)
+            .match_kind(MatchKind::LeftmostFirst)
+            .build(&keyword_list)
+            .unwrap_or_else(|_| {
+                // Fallback: empty AC (all rules will fall into no_keyword_rules path)
+                AhoCorasick::new(Vec::<String>::new()).unwrap()
+            });
+
+        (ac, keyword_to_rules, no_keyword_rules)
+    }
+
     /// Create a new redactor with default built-in rules.
     pub fn new() -> Self {
         let config = load_default_config();
@@ -504,13 +553,18 @@ impl Redactor {
             .filter_map(|p| Regex::new(p).ok())
             .collect();
         let extra_stopwords = config.allowlist.stopwords.clone();
+        let rules = built_in_rules();
+        let (keyword_ac, keyword_to_rules, no_keyword_rules) = Self::build_keyword_index(&rules);
         Self {
-            rules: built_in_rules(),
+            rules,
             allowlist_regexes,
             allowlist_path_regexes: Vec::new(),
             extra_stopwords,
             disabled: false,
             skip_base64_decode: false,
+            keyword_ac,
+            keyword_to_rules,
+            no_keyword_rules,
         }
     }
 
@@ -558,6 +612,7 @@ impl Redactor {
             .collect();
 
         let extra_stopwords = default_config.allowlist.stopwords.clone();
+        let (keyword_ac, keyword_to_rules, no_keyword_rules) = Self::build_keyword_index(&rules);
 
         Self {
             rules,
@@ -566,6 +621,9 @@ impl Redactor {
             extra_stopwords,
             disabled: config.disabled,
             skip_base64_decode: config.skip_base64_decode,
+            keyword_ac,
+            keyword_to_rules,
+            no_keyword_rules,
         }
     }
 
@@ -704,21 +762,33 @@ impl Redactor {
     }
 
     /// Internal: scan text and collect raw findings.
+    ///
+    /// Uses Aho-Corasick for a single O(n) keyword pass over the text to
+    /// identify which rules are candidates, then only runs regexes for those.
+    /// This replaces the previous O(rules × text_length) keyword loop.
     fn scan_text<'a>(&'a self, text: &str) -> Vec<(usize, usize, &'a str, bool)> {
-        let text_lower = text.to_lowercase();
         let mut all_findings: Vec<(usize, usize, &str, bool)> = Vec::new();
 
-        for rule in &self.rules {
-            // Keyword pre-filter: skip rule if no keyword found in text.
-            if !rule.keywords.is_empty()
-                && !rule
-                    .keywords
-                    .iter()
-                    .any(|kw| text_lower.contains(kw.as_str()))
-            {
+        // Phase 1: single Aho-Corasick pass to find which rules are candidates.
+        // Build a bitset of rule indices to check.
+        let mut rule_candidates = vec![false; self.rules.len()];
+
+        for m in self.keyword_ac.find_iter(text) {
+            for &rule_idx in &self.keyword_to_rules[m.pattern().as_usize()] {
+                rule_candidates[rule_idx] = true;
+            }
+        }
+        // Rules with no keywords always run.
+        for &rule_idx in &self.no_keyword_rules {
+            rule_candidates[rule_idx] = true;
+        }
+
+        // Phase 2: run regexes only for candidate rules.
+        for (rule_idx, is_candidate) in rule_candidates.iter().enumerate() {
+            if !is_candidate {
                 continue;
             }
-
+            let rule = &self.rules[rule_idx];
             let regex = match rule.regex() {
                 Some(r) => r,
                 None => continue,
