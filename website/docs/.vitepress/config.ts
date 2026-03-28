@@ -47,6 +47,7 @@ export default withMermaid(defineConfig({
           text: 'Context',
           items: [
             { text: 'Doc Pinning', link: '/guide/pinning' },
+            { text: 'Doc Bundles', link: '/guide/bundles' },
             { text: 'Context Profiles', link: '/guide/profiles' },
             { text: 'Project Context', link: '/guide/project-context' },
             { text: 'Dep Auto-Detection', link: '/guide/detect' },
@@ -65,6 +66,8 @@ export default withMermaid(defineConfig({
           items: [
             { text: 'AI Usage Tracking', link: '/guide/tracking' },
             { text: 'Snapshots & Freshness', link: '/guide/snapshots' },
+            { text: 'Secret Scanning', link: '/guide/scanning' },
+            { text: 'CI/CD Integration', link: '/guide/ci-cd' },
           ]
         },
         {
