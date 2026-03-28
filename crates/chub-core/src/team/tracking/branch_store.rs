@@ -201,16 +201,62 @@ pub fn branch_exists(branch: &str) -> bool {
 
 /// Push a branch to a remote. Returns true on success.
 /// Never fails loudly — designed for use in hooks.
+///
+/// If a plain push fails (non-fast-forward because another developer pushed
+/// first), fetches the remote branch and rebases local commits on top before
+/// retrying. This is always conflict-free because every file on the tracking
+/// branches has a globally unique path (unique session/checkpoint IDs).
 pub fn push_branch(branch: &str, remote: &str) -> bool {
-    // Check if there's anything to push
+    // Nothing to push if the branch doesn't exist locally.
     let local = git_output(&["rev-parse", branch]);
+    if local.is_none() {
+        return false;
+    }
+
     let remote_ref = git_output(&["rev-parse", &format!("refs/remotes/{}/{}", remote, branch)]);
 
-    // If both match, nothing to push
-    if local == remote_ref && local.is_some() {
+    // If both match, nothing to push.
+    if local == remote_ref {
         return true;
     }
 
+    // Fast path: try a plain push first (common case — no divergence).
+    if try_push(branch, remote) {
+        return true;
+    }
+
+    // Push failed (likely non-fast-forward). Fetch + rebase + retry.
+    let fetch_ok = Command::new("git")
+        .args(["fetch", "--no-tags", remote, branch])
+        .output()
+        .map(|o| o.status.success())
+        .unwrap_or(false);
+
+    if !fetch_ok {
+        // Fetch failed (remote branch may not exist yet, or network error).
+        // One more plain push attempt before giving up.
+        return try_push(branch, remote);
+    }
+
+    // Rebase local commits onto the fetched remote tip.
+    // Each commit touches a unique file path, so this is always conflict-free.
+    let remote_branch = format!("{}/{}", remote, branch);
+    let rebase_ok = Command::new("git")
+        .args(["rebase", &remote_branch, branch])
+        .output()
+        .map(|o| o.status.success())
+        .unwrap_or(false);
+
+    if !rebase_ok {
+        // Safety: abort on unexpected failure rather than leaving a broken state.
+        let _ = Command::new("git").args(["rebase", "--abort"]).output();
+        return false;
+    }
+
+    try_push(branch, remote)
+}
+
+fn try_push(branch: &str, remote: &str) -> bool {
     Command::new("git")
         .args(["push", "--no-verify", remote, branch])
         .output()
