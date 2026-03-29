@@ -75,6 +75,10 @@ pub struct RuleConfig {
     /// Skip this rule in reports (used for composite-only rules like aws-secret-access-key).
     #[serde(default)]
     pub skip_report: bool,
+    /// Apply BPE token-efficiency filter to findings from this rule.
+    /// Mirrors betterleaks `tokenEfficiency` field.
+    #[serde(rename = "tokenEfficiency", default)]
+    pub token_efficiency: bool,
 }
 
 #[derive(Debug, Clone, Default, Deserialize)]

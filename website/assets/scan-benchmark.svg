@@ -20,7 +20,7 @@
 
   <!-- Title -->
   <text x="400" y="40" text-anchor="middle" font-family="system-ui, -apple-system, sans-serif" font-size="22" font-weight="700" fill="#0f172a">Secret Scanner Benchmark</text>
-  <text x="400" y="62" text-anchor="middle" font-family="system-ui, -apple-system, sans-serif" font-size="12" fill="#64748b">Directory scan — median of 5 runs (lower is better)</text>
+  <text x="400" y="62" text-anchor="middle" font-family="system-ui, -apple-system, sans-serif" font-size="12" fill="#64748b">Median of 5 runs — lower is better</text>
 
   <!-- Legend -->
   <rect x="230" y="76" width="14" height="14" rx="3" fill="url(#chub-bar)"/>
@@ -30,84 +30,84 @@
   <rect x="480" y="76" width="14" height="14" rx="3" fill="url(#betterleaks-bar)"/>
   <text x="500" y="88" font-family="system-ui, -apple-system, sans-serif" font-size="12" font-weight="600" fill="#0f172a">Betterleaks (Go)</text>
 
-  <!-- Chart area: x=160..760, width=600 for bars. Max value = 303ms → scale = 600/320 = 1.875 -->
+  <!-- Chart area: x=160..760, width=600. Dir scale: max=448ms → 600/448=1.339px/ms -->
 
   <!-- ═══ 102 files ═══ -->
   <text x="145" y="140" text-anchor="end" font-family="system-ui, -apple-system, sans-serif" font-size="13" font-weight="600" fill="#334155">102 files</text>
 
-  <!-- Chub: 62ms -->
-  <rect x="160" y="120" width="116" height="20" rx="4" fill="url(#chub-bar)"/>
-  <text x="282" y="135" font-family="system-ui, -apple-system, sans-serif" font-size="11" font-weight="700" fill="#0ea5e9">62 ms</text>
+  <!-- Chub: 223ms → 299px -->
+  <rect x="160" y="120" width="299" height="20" rx="4" fill="url(#chub-bar)"/>
+  <text x="465" y="135" font-family="system-ui, -apple-system, sans-serif" font-size="11" font-weight="700" fill="#0ea5e9">223 ms</text>
 
-  <!-- Gitleaks: 303ms -->
-  <rect x="160" y="144" width="568" height="20" rx="4" fill="url(#gitleaks-bar)"/>
-  <text x="734" y="159" font-family="system-ui, -apple-system, sans-serif" font-size="11" font-weight="600" fill="#64748b">303 ms</text>
+  <!-- Gitleaks: 401ms → 537px -->
+  <rect x="160" y="144" width="537" height="20" rx="4" fill="url(#gitleaks-bar)"/>
+  <text x="703" y="159" font-family="system-ui, -apple-system, sans-serif" font-size="11" font-weight="600" fill="#475569">401 ms</text>
 
-  <!-- Betterleaks: 73ms -->
-  <rect x="160" y="168" width="137" height="20" rx="4" fill="url(#betterleaks-bar)"/>
-  <text x="303" y="183" font-family="system-ui, -apple-system, sans-serif" font-size="11" font-weight="600" fill="#7c3aed">73 ms</text>
+  <!-- Betterleaks: 446ms → 597px -->
+  <rect x="160" y="168" width="597" height="20" rx="4" fill="url(#betterleaks-bar)"/>
+  <text x="763" y="183" font-family="system-ui, -apple-system, sans-serif" font-size="11" font-weight="600" fill="#7c3aed">446 ms</text>
 
   <!-- Speedup label -->
-  <text x="760" y="140" text-anchor="end" font-family="system-ui, -apple-system, sans-serif" font-size="11" font-weight="700" fill="#0ea5e9">4.9x faster</text>
+  <text x="760" y="140" text-anchor="end" font-family="system-ui, -apple-system, sans-serif" font-size="11" font-weight="700" fill="#0ea5e9">1.8x faster</text>
 
   <!-- ═══ 502 files ═══ -->
   <text x="145" y="240" text-anchor="end" font-family="system-ui, -apple-system, sans-serif" font-size="13" font-weight="600" fill="#334155">502 files</text>
 
-  <!-- Chub: 79ms -->
-  <rect x="160" y="220" width="148" height="20" rx="4" fill="url(#chub-bar)"/>
-  <text x="314" y="235" font-family="system-ui, -apple-system, sans-serif" font-size="11" font-weight="700" fill="#0ea5e9">79 ms</text>
+  <!-- Chub: 240ms → 321px -->
+  <rect x="160" y="220" width="321" height="20" rx="4" fill="url(#chub-bar)"/>
+  <text x="487" y="235" font-family="system-ui, -apple-system, sans-serif" font-size="11" font-weight="700" fill="#0ea5e9">240 ms</text>
 
-  <!-- Gitleaks: 302ms -->
-  <rect x="160" y="244" width="566" height="20" rx="4" fill="url(#gitleaks-bar)"/>
-  <text x="732" y="259" font-family="system-ui, -apple-system, sans-serif" font-size="11" font-weight="600" fill="#64748b">302 ms</text>
+  <!-- Gitleaks: 397ms → 532px -->
+  <rect x="160" y="244" width="532" height="20" rx="4" fill="url(#gitleaks-bar)"/>
+  <text x="698" y="259" font-family="system-ui, -apple-system, sans-serif" font-size="11" font-weight="600" fill="#475569">397 ms</text>
 
-  <!-- Betterleaks: 70ms -->
-  <rect x="160" y="268" width="131" height="20" rx="4" fill="url(#betterleaks-bar)"/>
-  <text x="297" y="283" font-family="system-ui, -apple-system, sans-serif" font-size="11" font-weight="600" fill="#7c3aed">70 ms</text>
+  <!-- Betterleaks: 448ms → 600px -->
+  <rect x="160" y="268" width="600" height="20" rx="4" fill="url(#betterleaks-bar)"/>
+  <text x="756" y="283" text-anchor="end" font-family="system-ui, -apple-system, sans-serif" font-size="11" font-weight="600" fill="#5b21b6">448 ms</text>
 
   <!-- Speedup label -->
-  <text x="760" y="240" text-anchor="end" font-family="system-ui, -apple-system, sans-serif" font-size="11" font-weight="700" fill="#0ea5e9">3.8x faster</text>
+  <text x="760" y="240" text-anchor="end" font-family="system-ui, -apple-system, sans-serif" font-size="11" font-weight="700" fill="#0ea5e9">1.7x faster</text>
 
   <!-- ═══ 1002 files ═══ -->
   <text x="145" y="340" text-anchor="end" font-family="system-ui, -apple-system, sans-serif" font-size="13" font-weight="600" fill="#334155">1,002 files</text>
 
-  <!-- Chub: 116ms -->
-  <rect x="160" y="320" width="218" height="20" rx="4" fill="url(#chub-bar)"/>
-  <text x="384" y="335" font-family="system-ui, -apple-system, sans-serif" font-size="11" font-weight="700" fill="#0ea5e9">116 ms</text>
+  <!-- Chub: 255ms → 342px -->
+  <rect x="160" y="320" width="342" height="20" rx="4" fill="url(#chub-bar)"/>
+  <text x="508" y="335" font-family="system-ui, -apple-system, sans-serif" font-size="11" font-weight="700" fill="#0ea5e9">255 ms</text>
 
-  <!-- Gitleaks: 287ms -->
-  <rect x="160" y="344" width="538" height="20" rx="4" fill="url(#gitleaks-bar)"/>
-  <text x="704" y="359" font-family="system-ui, -apple-system, sans-serif" font-size="11" font-weight="600" fill="#64748b">287 ms</text>
+  <!-- Gitleaks: 395ms → 529px -->
+  <rect x="160" y="344" width="529" height="20" rx="4" fill="url(#gitleaks-bar)"/>
+  <text x="695" y="359" font-family="system-ui, -apple-system, sans-serif" font-size="11" font-weight="600" fill="#475569">395 ms</text>
 
-  <!-- Betterleaks: 72ms -->
-  <rect x="160" y="368" width="135" height="20" rx="4" fill="url(#betterleaks-bar)"/>
-  <text x="301" y="383" font-family="system-ui, -apple-system, sans-serif" font-size="11" font-weight="600" fill="#7c3aed">72 ms</text>
+  <!-- Betterleaks: 441ms → 591px -->
+  <rect x="160" y="368" width="591" height="20" rx="4" fill="url(#betterleaks-bar)"/>
+  <text x="757" y="383" font-family="system-ui, -apple-system, sans-serif" font-size="11" font-weight="600" fill="#7c3aed">441 ms</text>
 
   <!-- Speedup label -->
-  <text x="760" y="340" text-anchor="end" font-family="system-ui, -apple-system, sans-serif" font-size="11" font-weight="700" fill="#0ea5e9">2.5x faster</text>
+  <text x="760" y="340" text-anchor="end" font-family="system-ui, -apple-system, sans-serif" font-size="11" font-weight="700" fill="#0ea5e9">1.5x faster</text>
 
   <!-- Separator -->
   <line x1="40" y1="410" x2="760" y2="410" stroke="#e2e8f0" stroke-width="1"/>
 
-  <!-- ═══ Git history (84 commits) ═══ -->
+  <!-- ═══ Git history (86 commits) ═══ -->
+  <!-- Scale: max=794ms → 600/794=0.756px/ms -->
   <text x="145" y="448" text-anchor="end" font-family="system-ui, -apple-system, sans-serif" font-size="13" font-weight="600" fill="#334155">Git history</text>
-  <text x="145" y="463" text-anchor="end" font-family="system-ui, -apple-system, sans-serif" font-size="10" fill="#94a3b8">84 commits</text>
+  <text x="145" y="463" text-anchor="end" font-family="system-ui, -apple-system, sans-serif" font-size="10" fill="#94a3b8">86 commits</text>
 
-  <!-- Scale changes: max=795, scale=600/820 -->
-  <!-- Chub: 795ms -->
-  <rect x="160" y="436" width="582" height="20" rx="4" fill="url(#chub-bar)" opacity="0.7"/>
-  <text x="748" y="451" font-family="system-ui, -apple-system, sans-serif" font-size="11" font-weight="700" fill="#0ea5e9">795 ms</text>
+  <!-- Chub: 794ms → 600px (full width) -->
+  <rect x="160" y="436" width="600" height="20" rx="4" fill="url(#chub-bar)" opacity="0.7"/>
+  <text x="756" y="451" text-anchor="end" font-family="system-ui, -apple-system, sans-serif" font-size="11" font-weight="700" fill="#0369a1">794 ms</text>
 
-  <!-- Gitleaks: 300ms -->
-  <rect x="160" y="460" width="220" height="20" rx="4" fill="url(#gitleaks-bar)"/>
-  <text x="386" y="475" font-family="system-ui, -apple-system, sans-serif" font-size="11" font-weight="600" fill="#64748b">300 ms</text>
+  <!-- Gitleaks: 396ms → 299px -->
+  <rect x="160" y="460" width="299" height="20" rx="4" fill="url(#gitleaks-bar)"/>
+  <text x="465" y="475" font-family="system-ui, -apple-system, sans-serif" font-size="11" font-weight="600" fill="#475569">396 ms</text>
 
-  <!-- Betterleaks: 65ms -->
-  <rect x="160" y="484" width="48" height="20" rx="4" fill="url(#betterleaks-bar)"/>
-  <text x="214" y="499" font-family="system-ui, -apple-system, sans-serif" font-size="11" font-weight="600" fill="#7c3aed">65 ms</text>
+  <!-- Betterleaks: 435ms → 329px -->
+  <rect x="160" y="484" width="329" height="20" rx="4" fill="url(#betterleaks-bar)"/>
+  <text x="495" y="499" font-family="system-ui, -apple-system, sans-serif" font-size="11" font-weight="600" fill="#7c3aed">435 ms</text>
 
-  <!-- Note -->
-  <text x="760" y="450" text-anchor="end" font-family="system-ui, -apple-system, sans-serif" font-size="10" fill="#94a3b8">git log -p (shell)</text>
-  <text x="760" y="475" text-anchor="end" font-family="system-ui, -apple-system, sans-serif" font-size="10" fill="#94a3b8">go-git (native)</text>
-  <text x="760" y="499" text-anchor="end" font-family="system-ui, -apple-system, sans-serif" font-size="10" fill="#94a3b8">go-gitdiff (native)</text>
+  <!-- Notes -->
+  <text x="760" y="451" text-anchor="end" font-family="system-ui, -apple-system, sans-serif" font-size="10" fill="#94a3b8">full blob scan</text>
+  <text x="760" y="475" text-anchor="end" font-family="system-ui, -apple-system, sans-serif" font-size="10" fill="#94a3b8">diff lines only</text>
+  <text x="760" y="499" text-anchor="end" font-family="system-ui, -apple-system, sans-serif" font-size="10" fill="#94a3b8">diff lines only</text>
 </svg>

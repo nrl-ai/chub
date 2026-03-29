@@ -12,6 +12,15 @@ CHUB="./target/release/chub.exe"
 GITLEAKS="gitleaks"
 BETTERLEAKS="./references/betterleaks/betterleaks.exe"
 
+# Betterleaks on Windows re-runs `git config --global --add safe.directory` each
+# invocation; if the path already exists, git prints a hint to stderr which
+# betterleaks treats as fatal (0 commits scanned). Pass safe.directory via
+# GIT_CONFIG_COUNT env vars so git never touches the global config file.
+REPO_ABS="$(pwd -W 2>/dev/null || pwd)"
+export GIT_CONFIG_COUNT=1
+export GIT_CONFIG_KEY_0=safe.directory
+export GIT_CONFIG_VALUE_0="$REPO_ABS"
+
 REPO_DIR="."
 SMALL_DIR="./references/betterleaks/testdata/repos/small"
 BENCH_DIR="./target/bench-corpus"

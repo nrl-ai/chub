@@ -32,6 +32,9 @@ pub struct ScanOptions {
     pub follow_symlinks: bool,
     /// Path allowlist regexes from .gitleaksignore or config.
     pub ignore_paths: Vec<String>,
+    /// Scan only diff lines per commit (fast, matches gitleaks behaviour).
+    /// When false, scans full blob content of every unique file (thorough but slow).
+    pub diff_only: bool,
 }
 
 impl Default for ScanOptions {
@@ -44,6 +47,7 @@ impl Default for ScanOptions {
             enable_rules: Vec::new(),
             follow_symlinks: false,
             ignore_paths: Vec::new(),
+            diff_only: true,
         }
     }
 }
@@ -55,6 +59,8 @@ pub struct Scanner {
     baseline_fingerprints: HashSet<String>,
     path_allowlist: Vec<Regex>,
     _scan_config: Option<ScanConfig>,
+    /// Rule IDs that have `tokenEfficiency = true` in their config.
+    token_efficiency_rules: HashSet<String>,
 }
 
 impl Scanner {
@@ -63,6 +69,7 @@ impl Scanner {
         let (redactor, scan_config) = build_redactor(&options);
         let baseline_fingerprints = load_baseline(options.baseline_path.as_deref());
         let path_allowlist = build_path_allowlist(&options, scan_config.as_ref());
+        let token_efficiency_rules = build_token_efficiency_set(scan_config.as_ref());
 
         Self {
             redactor,
@@ -70,6 +77,7 @@ impl Scanner {
             baseline_fingerprints,
             path_allowlist,
             _scan_config: scan_config,
+            token_efficiency_rules,
         }
     }
 
@@ -107,6 +115,14 @@ impl Scanner {
 
             // Baseline check
             if self.baseline_fingerprints.contains(&fingerprint) {
+                continue;
+            }
+
+            // BPE token-efficiency filter (betterleaks-compatible): drop findings that look
+            // like natural language rather than random secrets.
+            if self.token_efficiency_rules.contains(&rf.rule_id)
+                && super::token_filter::fails_token_efficiency_filter(secret)
+            {
                 continue;
             }
 
@@ -208,26 +224,168 @@ impl Scanner {
         _log_opts: Option<&str>,
         staged_only: bool,
     ) -> Result<Vec<Finding>, String> {
-        // Staged scanning uses CLI (gix index API is complex, and staged scanning
-        // is typically fast since it's just a few files).
         if staged_only {
             return Err("use CLI for staged".to_string());
         }
-        self.scan_git_history_gix(repo_path)
+        if self.options.diff_only {
+            self.scan_git_history_diff(repo_path)
+        } else {
+            self.scan_git_history_gix(repo_path)
+        }
+    }
+
+    /// Diff-based git history scan using low-level gix_diff::tree.
+    ///
+    /// Uses gix_diff::tree() — pure OID-level tree comparison with no blob pipeline,
+    /// no gitattributes, no rename tracking. This is the fastest possible tree diff.
+    /// For each commit, only added/modified blobs are collected. OID dedup ensures
+    /// each unique file content is scanned at most once.
+    fn scan_git_history_diff(&self, repo_path: &Path) -> Result<Vec<Finding>, String> {
+        use gix::bstr::ByteSlice;
+        use gix::diff::tree::recorder::{Change as RecChange, Location};
+        use gix::objs::TreeRefIter;
+        use rayon::prelude::*;
+
+        let mut repo = gix::open(repo_path).map_err(|e| format!("gix open: {}", e))?;
+        repo.object_cache_size_if_unset(32 * 1024 * 1024);
+
+        let head_id = repo.head_id().map_err(|e| format!("head_id: {}", e))?;
+        let walk = repo
+            .rev_walk([head_id.detach()])
+            .all()
+            .map_err(|e| format!("rev_walk: {}", e))?;
+
+        let mut targets: Vec<(CommitInfo, String, gix::ObjectId)> = Vec::new();
+        let mut seen_oids: HashSet<gix::ObjectId> = HashSet::new();
+
+        // Reusable diff state — avoids reallocating buffers per commit.
+        let mut diff_state = gix::diff::tree::State::default();
+
+        for info_result in walk {
+            let info = match info_result {
+                Ok(i) => i,
+                Err(_) => continue,
+            };
+            let commit = match info.object() {
+                Ok(c) => c,
+                Err(_) => continue,
+            };
+            let ci = extract_commit_info(&commit);
+
+            // Get this commit's tree OID and parent tree OID.
+            let new_tree_id = match commit.tree() {
+                Ok(t) => t.id,
+                Err(_) => continue,
+            };
+            let old_tree_id = commit
+                .parent_ids()
+                .next()
+                .map(|pid| pid.detach())
+                .and_then(|pid| {
+                    repo.find_object(pid)
+                        .ok()
+                        .and_then(|obj| obj.try_into_commit().ok())
+                        .and_then(|p| p.tree().ok().map(|t| t.id))
+                })
+                .unwrap_or_else(|| gix::ObjectId::empty_tree(repo.object_hash()));
+
+            // Load raw tree bytes for old and new.
+            let old_data: Vec<u8>;
+            let new_data: Vec<u8>;
+
+            let old_iter = if old_tree_id.is_empty_tree() {
+                TreeRefIter::from_bytes(b"")
+            } else {
+                match repo.find_object(old_tree_id) {
+                    Ok(obj) => {
+                        old_data = obj.data.clone();
+                        TreeRefIter::from_bytes(&old_data)
+                    }
+                    Err(_) => continue,
+                }
+            };
+            let new_iter = match repo.find_object(new_tree_id) {
+                Ok(obj) => {
+                    new_data = obj.data.clone();
+                    TreeRefIter::from_bytes(&new_data)
+                }
+                Err(_) => continue,
+            };
+
+            // Pure tree diff — no blob content, no gitattributes.
+            let mut recorder =
+                gix::diff::tree::Recorder::default().track_location(Some(Location::Path));
+            let _ = gix::diff::tree(
+                old_iter,
+                new_iter,
+                &mut diff_state,
+                &repo.objects,
+                &mut recorder,
+            );
+
+            for record in &recorder.records {
+                let (oid, path, entry_mode) = match record {
+                    RecChange::Addition {
+                        oid,
+                        path,
+                        entry_mode,
+                        ..
+                    } => (oid, path, entry_mode),
+                    RecChange::Modification {
+                        oid,
+                        path,
+                        entry_mode,
+                        ..
+                    } => (oid, path, entry_mode),
+                    RecChange::Deletion { .. } => continue,
+                };
+                if !entry_mode.is_blob() {
+                    continue;
+                }
+                if seen_oids.contains(oid) {
+                    continue;
+                }
+                let path_str = path.to_str_lossy().into_owned();
+                if self.is_path_ignored(&path_str) || is_binary_extension(Path::new(&path_str)) {
+                    continue;
+                }
+                seen_oids.insert(*oid);
+                targets.push((ci.clone(), path_str, *oid));
+            }
+        }
+
+        // Phase 2: load blob contents sequentially (repo is not Sync).
+        let text_targets: Vec<(CommitInfo, String, String)> = targets
+            .into_iter()
+            .filter_map(|(ci, path, oid)| {
+                repo.find_object(oid)
+                    .ok()
+                    .and_then(|blob| String::from_utf8(blob.data.clone()).ok())
+                    .map(|content| (ci, path, content))
+            })
+            .collect();
+
+        // Phase 3: parallel regex scanning.
+        let findings = text_targets
+            .par_iter()
+            .flat_map(|(ci, path, content)| self.scan_text(content, path, Some(ci)))
+            .collect();
+
+        Ok(findings)
     }
 
     /// Two-phase git history scan optimised for maximum throughput.
     ///
     /// **Phase 1** — walk all commits sequentially via gix. For each commit's tree,
-    ///   walk all blob entries directly (no tree-diff computation). Skip any blob OID
-    ///   already seen in a prior commit — this is equivalent to only scanning the first
-    ///   version of each unique file content, avoiding re-scanning unchanged files.
+    ///   **recursively** walk all blob entries in the tree (including subdirectories).
+    ///   Skip any blob OID already seen in a prior commit — each unique file content is
+    ///   scanned at most once regardless of how many commits contain it.
     ///   Collect (commit_info, path, content) for unique blobs.
     ///
     /// **Phase 2** — parallel regex scanning across all collected targets with rayon.
     ///
-    /// Avoiding `for_each_to_obtain_tree` (tree diffing) eliminates significant per-commit
-    /// overhead; the OID deduplication achieves the same "only new content" property.
+    /// Avoids `for_each_to_obtain_tree` (tree diffing) overhead; OID deduplication
+    /// achieves the same "only new content" invariant without per-commit diff cost.
     fn scan_git_history_gix(&self, repo_path: &Path) -> Result<Vec<Finding>, String> {
         use rayon::prelude::*;
 
@@ -240,7 +398,7 @@ impl Scanner {
             .all()
             .map_err(|e| format!("rev_walk: {}", e))?;
 
-        // Phase 1: walk all commit trees, collect unique blobs
+        // Phase 1: walk all commit trees recursively, collect unique blobs
         let mut targets: Vec<(CommitInfo, String, String)> = Vec::new();
         let mut seen_oids: HashSet<gix::ObjectId> = HashSet::new();
 
@@ -259,27 +417,9 @@ impl Scanner {
                 Err(_) => continue,
             };
 
-            // Walk all blob entries in this commit's tree directly.
-            // OID dedup ensures each unique file content is only scanned once.
-            for entry in tree.iter().flatten() {
-                if !entry.mode().is_blob() {
-                    continue;
-                }
-                let oid = entry.object_id();
-                if seen_oids.contains(&oid) {
-                    continue;
-                }
-                let path_str = entry.filename().to_str_lossy().to_string();
-                if self.is_path_ignored(&path_str) || is_binary_extension(Path::new(&path_str)) {
-                    continue;
-                }
-                if let Ok(blob) = repo.find_object(oid) {
-                    if let Ok(content) = std::str::from_utf8(&blob.data) {
-                        seen_oids.insert(oid);
-                        targets.push((ci.clone(), path_str, content.to_string()));
-                    }
-                }
-            }
+            // Recursively walk all blobs in this commit's tree.
+            // OID dedup skips blobs already scanned from a newer commit.
+            self.walk_tree_blobs(&repo, tree.id, "", &ci, &mut targets, &mut seen_oids);
         }
 
         // Phase 2: parallel regex scanning
@@ -289,6 +429,55 @@ impl Scanner {
             .collect();
 
         Ok(findings)
+    }
+
+    /// Recursively walk a git tree, collecting (commit_info, path, content) for
+    /// blobs not yet seen. Traverses into subtrees (directories) recursively.
+    fn walk_tree_blobs(
+        &self,
+        repo: &gix::Repository,
+        tree_oid: gix::ObjectId,
+        prefix: &str,
+        ci: &CommitInfo,
+        targets: &mut Vec<(CommitInfo, String, String)>,
+        seen_oids: &mut HashSet<gix::ObjectId>,
+    ) {
+        let tree_obj = match repo.find_object(tree_oid) {
+            Ok(o) => o,
+            Err(_) => return,
+        };
+        let tree = match tree_obj.try_into_tree() {
+            Ok(t) => t,
+            Err(_) => return,
+        };
+
+        for entry in tree.iter().flatten() {
+            let name = entry.filename().to_str_lossy();
+            let full_path = if prefix.is_empty() {
+                name.into_owned()
+            } else {
+                format!("{}/{}", prefix, name)
+            };
+
+            if entry.mode().is_blob() {
+                let oid = entry.object_id();
+                if seen_oids.contains(&oid)
+                    || self.is_path_ignored(&full_path)
+                    || is_binary_extension(Path::new(&full_path))
+                {
+                    continue;
+                }
+                if let Ok(blob) = repo.find_object(oid) {
+                    if let Ok(content) = std::str::from_utf8(&blob.data) {
+                        seen_oids.insert(oid);
+                        targets.push((ci.clone(), full_path, content.to_string()));
+                    }
+                }
+            } else if entry.mode().is_tree() {
+                // Recurse into subdirectory
+                self.walk_tree_blobs(repo, entry.object_id(), &full_path, ci, targets, seen_oids);
+            }
+        }
     }
 
     /// Fallback: scan git using CLI (when gix fails).
@@ -525,6 +714,23 @@ fn build_redactor(options: &ScanOptions) -> (Redactor, Option<ScanConfig>) {
     redact_config.skip_base64_decode = true;
 
     (Redactor::from_config(&redact_config), scan_config)
+}
+
+/// Collect rule IDs that have `token_efficiency = true` from the merged (built-in + user) rule set.
+/// The built-in rules are parsed from `redact.rs` defaults, but `token_efficiency` is a config-only
+/// flag, so we read from `ScanConfig` (user config) plus the built-in `rules.toml` via `redact`.
+fn build_token_efficiency_set(scan_config: Option<&ScanConfig>) -> HashSet<String> {
+    use crate::team::tracking::redact::token_efficiency_rule_ids;
+    let mut set: HashSet<String> = token_efficiency_rule_ids().iter().cloned().collect();
+    // User config can override / extend
+    if let Some(cfg) = scan_config {
+        for rule in &cfg.rules {
+            if rule.token_efficiency {
+                set.insert(rule.id.clone());
+            }
+        }
+    }
+    set
 }
 
 /// Build path allowlist from config + .gitleaksignore.

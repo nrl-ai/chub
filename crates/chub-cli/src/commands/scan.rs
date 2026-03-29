@@ -102,6 +102,11 @@ struct GitArgs {
     /// Follow symlinks
     #[arg(long)]
     follow_symlinks: bool,
+
+    /// Scan full blob content of every file in history (thorough but slow).
+    /// Default: scan only added/modified files per commit, like gitleaks.
+    #[arg(long)]
+    thorough: bool,
 }
 
 #[derive(Args)]
@@ -138,6 +143,8 @@ fn run_secrets(args: SecretsArgs, cli_json: bool) -> Result<(), String> {
         None => 0,
     };
 
+    let thorough = matches!(&args.command, SecretsCommand::Git(g) if g.thorough);
+
     let options = ScanOptions {
         config_path: args.config.clone(),
         baseline_path: args.baseline_path.clone(),
@@ -146,6 +153,7 @@ fn run_secrets(args: SecretsArgs, cli_json: bool) -> Result<(), String> {
         enable_rules: args.enable_rule.clone(),
         follow_symlinks: false,
         ignore_paths: Vec::new(),
+        diff_only: !thorough,
     };
 
     let scanner = Scanner::new(options);

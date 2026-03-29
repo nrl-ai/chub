@@ -337,16 +337,16 @@ Chub's tracking system automatically redacts secrets from stored session transcr
 
 ## Performance
 
-Benchmarked against [gitleaks](https://github.com/gitleaks/gitleaks) v8.30.1 and [betterleaks](https://github.com/nicholasgasior/betterleaks) on a real-world Rust project (84 commits, ~20 MB history). Median of 5 runs.
+Benchmarked against [gitleaks](https://github.com/gitleaks/gitleaks) v8.30.1 and [betterleaks](https://github.com/nicholasgasior/betterleaks) on a synthetic corpus (Python files + embedded secrets) and this repo's git history (86 commits). Median of 5 runs.
 
 | Benchmark | Chub | Gitleaks | Betterleaks |
 |---|---|---|---|
-| Dir scan — 102 files | **315 ms** | 493 ms | 554 ms |
-| Dir scan — 502 files | **376 ms** | 498 ms | 556 ms |
-| Dir scan — 1002 files | **393 ms** | 500 ms | 567 ms |
-| Git history — 84 commits | 1056 ms | **476 ms** | 556 ms |
+| Dir scan — 102 files | **223 ms** | 401 ms | 446 ms |
+| Dir scan — 502 files | **240 ms** | 397 ms | 448 ms |
+| Dir scan — 1002 files | **255 ms** | 395 ms | 441 ms |
+| Git history — 86 commits | 794 ms | **396 ms** | 435 ms |
 
-**Directory scanning** is 1.4–1.8x faster than both Go tools due to Rust's rayon parallel file scanning.
+**Directory scanning** is 1.5–1.8x faster than both Go tools due to Rust's rayon parallel file scanning.
 
 **Git history scanning** is ~2x slower than gitleaks. Chub loads and scans the full blob content of each changed file per commit (more thorough — catches secrets introduced and later deleted). Gitleaks scans only the diff `+` lines via `git log -p`, which is faster but may miss secrets that were present in a file but not changed in that commit.
 

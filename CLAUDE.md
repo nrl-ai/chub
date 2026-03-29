@@ -2,6 +2,10 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+## Python commands
+
+Always use `python` instead of `python3` in commands — `python3` does not work reliably on Windows.
+
 ## Commit style
 
 Do not add `Co-Authored-By` trailers to commits. Commit messages should be plain, without AI attribution lines.

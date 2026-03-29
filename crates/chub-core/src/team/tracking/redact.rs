@@ -126,6 +126,25 @@ fn fixup_regex_pattern(pattern: &str) -> String {
             break; // malformed, stop processing
         }
     }
+    // Translate POSIX character classes to Rust regex equivalents.
+    // These appear in betterleaks rules but are not supported by the Rust regex crate.
+    s = s.replace("[[:alnum:]]", "[a-zA-Z0-9]");
+    s = s.replace("[[:alpha:]]", "[a-zA-Z]");
+    s = s.replace("[[:digit:]]", "[0-9]");
+    s = s.replace("[[:lower:]]", "[a-z]");
+    s = s.replace("[[:upper:]]", "[A-Z]");
+    s = s.replace("[[:space:]]", "[\\s]");
+    s = s.replace("[[:xdigit:]]", "[0-9a-fA-F]");
+    s = s.replace("[[:print:]]", "[\\x20-\\x7e]");
+    s = s.replace("[[:punct:]]", "[!-/:-@\\[-`{-~]");
+    // Also handle variants without outer brackets: [:alnum:] inside an existing class
+    // e.g. [[:alnum:]_-] — replace the inner POSIX class within a character class
+    s = s.replace("[:alnum:]", "a-zA-Z0-9");
+    s = s.replace("[:alpha:]", "a-zA-Z");
+    s = s.replace("[:digit:]", "0-9");
+    s = s.replace("[:lower:]", "a-z");
+    s = s.replace("[:upper:]", "A-Z");
+    s = s.replace("[:xdigit:]", "0-9a-fA-F");
     s
 }
 
@@ -178,10 +197,9 @@ fn get_base64_chunk_regex() -> &'static Regex {
     BASE64_CHUNK_RE.get_or_init(|| Regex::new(r"\b[A-Za-z0-9+/]{20,}={0,3}\b").unwrap())
 }
 
-/// Embedded default rules in betterleaks-compatible TOML format (261 rules).
+/// Embedded default rules in betterleaks-compatible TOML format.
 /// Parsed once at first use and cached for the lifetime of the process.
-const DEFAULT_RULES_TOML: &str =
-    include_str!("../../../../../references/betterleaks/config/betterleaks.toml");
+const DEFAULT_RULES_TOML: &str = include_str!("../../scan/rules.toml");
 
 static DEFAULT_CONFIG: OnceLock<ScanConfig> = OnceLock::new();
 
@@ -189,6 +207,16 @@ fn load_default_config() -> &'static ScanConfig {
     DEFAULT_CONFIG.get_or_init(|| {
         toml::from_str(DEFAULT_RULES_TOML).expect("embedded default rules TOML must parse")
     })
+}
+
+/// Return the IDs of built-in rules that have `tokenEfficiency = true` in rules.toml.
+pub fn token_efficiency_rule_ids() -> Vec<String> {
+    load_default_config()
+        .rules
+        .iter()
+        .filter(|r| r.token_efficiency)
+        .map(|r| r.id.clone())
+        .collect()
 }
 
 fn built_in_rules() -> Vec<Rule> {
@@ -531,9 +559,12 @@ impl Redactor {
             }
         }
 
+        // Use Standard match kind so that keywords which are prefixes of other
+        // keywords (e.g. "api" vs "api-") are both reported when they share a
+        // start position, ensuring every rule's regex gets a chance to run.
         let ac = AhoCorasickBuilder::new()
             .ascii_case_insensitive(true)
-            .match_kind(MatchKind::LeftmostFirst)
+            .match_kind(MatchKind::Standard)
             .build(&keyword_list)
             .unwrap_or_else(|_| {
                 // Fallback: empty AC (all rules will fall into no_keyword_rules path)
@@ -773,7 +804,7 @@ impl Redactor {
         // Build a bitset of rule indices to check.
         let mut rule_candidates = vec![false; self.rules.len()];
 
-        for m in self.keyword_ac.find_iter(text) {
+        for m in self.keyword_ac.find_overlapping_iter(text) {
             for &rule_idx in &self.keyword_to_rules[m.pattern().as_usize()] {
                 rule_candidates[rule_idx] = true;
             }

@@ -8,3 +8,4 @@ pub mod config;
 pub mod finding;
 pub mod report;
 pub mod scanner;
+pub mod token_filter;
