@@ -18,6 +18,7 @@ path = "src/main.rs"
 [dependencies]
 chub-cli = { workspace = true }
 tokio = { workspace = true }
+mimalloc = { workspace = true }
 
 [dev-dependencies]
 tempfile = "3"

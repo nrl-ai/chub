@@ -33,6 +33,7 @@ tiktoken-rs = { workspace = true }
 hmac = { workspace = true }
 md-5 = { workspace = true }
 base64 = { workspace = true }
+cel-interpreter = { workspace = true }
 gix = { workspace = true }
 
 [dev-dependencies]

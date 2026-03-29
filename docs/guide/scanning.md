@@ -325,7 +325,7 @@ disabledRules = [
 
 ## Relationship to transcript redaction
 
-Chub's tracking system automatically redacts secrets from stored session transcripts using the same 73-rule engine. The scanner and the redactor share their rule definitions — when a new detection rule is added, both scanning and redaction benefit immediately.
+Chub's tracking system automatically redacts secrets from stored session transcripts using the same 260-rule engine. The scanner and the redactor share their rule definitions — when a new detection rule is added, both scanning and redaction benefit immediately.
 
 | Feature | `chub scan` | Transcript redaction |
 |---|---|---|
@@ -337,17 +337,17 @@ Chub's tracking system automatically redacts secrets from stored session transcr
 
 ## Performance
 
-Benchmarked against [gitleaks](https://github.com/gitleaks/gitleaks) v8.30.1 and [betterleaks](https://github.com/nicholasgasior/betterleaks) on a synthetic corpus (Python files + embedded secrets) and this repo's git history (86 commits). Median of 5 runs.
+Benchmarked against [gitleaks](https://github.com/gitleaks/gitleaks) v8.30.1 and [betterleaks](https://github.com/nicholasgasior/betterleaks) on a synthetic corpus (Python files + embedded secrets) and this repo's git history (87 commits). Median of 5 runs.
 
 | Benchmark | Chub | Gitleaks | Betterleaks |
 |---|---|---|---|
-| Dir scan — 102 files | **223 ms** | 401 ms | 446 ms |
-| Dir scan — 502 files | **240 ms** | 397 ms | 448 ms |
-| Dir scan — 1002 files | **255 ms** | 395 ms | 441 ms |
-| Git history — 86 commits | 794 ms | **396 ms** | 435 ms |
+| Dir scan — 102 files | **117 ms** | 427 ms | 463 ms |
+| Dir scan — 502 files | **134 ms** | 412 ms | 455 ms |
+| Dir scan — 1002 files | **149 ms** | 413 ms | 462 ms |
+| Git history — 87 commits | **472 ms** | 402 ms | 454 ms |
 
-**Directory scanning** is 1.5–1.8x faster than both Go tools due to Rust's rayon parallel file scanning.
+**Directory scanning** is 3–4x faster than both Go tools due to Rust's rayon parallel file scanning and ASCII-optimised regex compilation (Unicode `\w` NFA expansion eliminated).
 
-**Git history scanning** is ~2x slower than gitleaks. Chub loads and scans the full blob content of each changed file per commit (more thorough — catches secrets introduced and later deleted). Gitleaks scans only the diff `+` lines via `git log -p`, which is faster but may miss secrets that were present in a file but not changed in that commit.
+**Git history scanning** now beats betterleaks and is within 15% of gitleaks. Key techniques: parallel `git log --no-walk --stdin` workers (betterleaks ParallelGit design), precompile overlapped with I/O, per-thread `Redactor` clones to eliminate `regex-automata` CachePool mutex contention, and `find_iter` + lazy capture extraction on matched substrings only.
 
 Run `bash scripts/benchmark-scan.sh` to reproduce on your machine.

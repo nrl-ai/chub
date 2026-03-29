@@ -197,8 +197,8 @@ for size in small medium large; do
     results["gitleaks_dir_$size"]=$t
     echo -e "  gitleaks:    ${YELLOW}${t} ms${RESET}"
 
-    # Betterleaks
-    t=$(median_time "$BETTERLEAKS dir --no-banner -r /dev/null $dir")
+    # Betterleaks (--validation=false to skip live HTTP API calls, matching chub/gitleaks behaviour)
+    t=$(median_time "$BETTERLEAKS dir --no-banner -r /dev/null --validation=false $dir")
     results["betterleaks_dir_$size"]=$t
     echo -e "  betterleaks: ${YELLOW}${t} ms${RESET}"
 
@@ -217,7 +217,7 @@ t=$(median_time "$GITLEAKS git --no-banner -r /dev/null .")
 results["gitleaks_git"]=$t
 echo -e "  gitleaks:    ${YELLOW}${t} ms${RESET}"
 
-t=$(median_time "$BETTERLEAKS git --no-banner -r /dev/null .")
+t=$(median_time "$BETTERLEAKS git --no-banner -r /dev/null --validation=false --git-workers=8 .")
 results["betterleaks_git"]=$t
 echo -e "  betterleaks: ${YELLOW}${t} ms${RESET}"
 

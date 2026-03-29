@@ -51,6 +51,14 @@ pub struct Finding {
     pub tags: Vec<String>,
     /// Unique fingerprint for deduplication.
     pub fingerprint: String,
+    /// Validation status from CEL validation (present only when `--validate` is
+    /// enabled).  One of: `"valid"`, `"invalid"`, `"revoked"`, `"unknown"`,
+    /// `"error"`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub validation_status: Option<String>,
+    /// Human-readable reason accompanying a non-`"valid"` validation status.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub validation_reason: Option<String>,
 }
 
 impl Finding {
@@ -133,6 +141,8 @@ mod tests {
             message: String::new(),
             tags: vec![],
             fingerprint: "abc".into(),
+            validation_status: None,
+            validation_reason: None,
         };
         let redacted = f.redacted(100);
         assert!(!redacted.secret.contains("secret123"));
@@ -160,6 +170,8 @@ mod tests {
             message: String::new(),
             tags: vec![],
             fingerprint: "abc".into(),
+            validation_status: None,
+            validation_reason: None,
         };
         let redacted = f.redacted(0);
         assert_eq!(redacted.secret, "secret123");

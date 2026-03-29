@@ -128,4 +128,44 @@ mod tests {
             "a1b2c3d4e5f67890abcdef1234567890"
         ));
     }
+
+    #[test]
+    fn filter_empty_string_is_kept() {
+        // Empty string has no tokens; filter should not suppress
+        assert!(!fails_token_efficiency_filter(""));
+    }
+
+    #[test]
+    fn has_word_match_min_len_four() {
+        // 4-char words should be found when min_len == 4
+        assert!(has_word_match("test", 4));
+        assert!(has_word_match("keytest", 4));
+        // But not when string is shorter than min_len
+        assert!(!has_word_match("abc", 4));
+    }
+
+    #[test]
+    fn has_word_match_case_insensitive() {
+        // Word list is lowercase; input should be lowercased before matching
+        assert!(has_word_match("PASSWORD", 5));
+        assert!(has_word_match("MySecret", 5));
+    }
+
+    #[test]
+    fn filter_api_key_format_kept() {
+        // Typical API key patterns (no real words, high entropy) → kept
+        assert!(!fails_token_efficiency_filter(
+            "sk-proj-xK9mP2xL5nQ8wR3zAbCdEfGh"
+        ));
+        assert!(!fails_token_efficiency_filter(
+            "ghp_AbCdEfGhIjKlMnOpQrStUvWxYz0123456789"
+        ));
+    }
+
+    #[test]
+    fn filter_newline_stripped_for_short_secrets() {
+        // Short secrets with embedded newlines — newlines stripped before analysis
+        // "pass\nword" → "password" which contains "password" (5+ chars) → filtered
+        assert!(fails_token_efficiency_filter("pass\nword"));
+    }
 }

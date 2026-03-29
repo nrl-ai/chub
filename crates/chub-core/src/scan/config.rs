@@ -79,6 +79,10 @@ pub struct RuleConfig {
     /// Mirrors betterleaks `tokenEfficiency` field.
     #[serde(rename = "tokenEfficiency", default)]
     pub token_efficiency: bool,
+    /// CEL expression to validate detected secrets against a live API.
+    /// Mirrors betterleaks `validate` field.
+    #[serde(default)]
+    pub validate: Option<String>,
 }
 
 #[derive(Debug, Clone, Default, Deserialize)]

@@ -21,6 +21,13 @@ paths = [
   '''crates/chub-core/src/scan/scanner\.rs''',
   # Benchmark script corpus uses realistic-looking tokens for timing
   '''scripts/benchmark-scan\.sh''',
+  # Rules/word list files contain regex patterns and common words, not real secrets
+  '''crates/chub-core/src/scan/rules\.toml''',
+  '''crates/chub-core/src/scan/words\.txt''',
+  # Lock files (package-lock.json, yarn.lock, etc.) contain hashes, not secrets
+  '''package-lock\.json''',
+  '''yarn\.lock''',
+  '''pnpm-lock\.yaml''',
 ]
 
 # Ignore committed placeholder / example values in config examples

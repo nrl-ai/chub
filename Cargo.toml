@@ -26,6 +26,7 @@ reqwest = { version = "0.12", features = ["rustls-tls", "json", "blocking"], def
 hmac = "0.12"
 md-5 = "0.10"
 base64 = "0.22"
+cel-interpreter = "0.10"
 clap = { version = "4", features = ["derive"] }
 walkdir = "2"
 dirs = "6"
@@ -45,3 +46,4 @@ tiktoken-rs = "0.9"
 axum = "0.7"
 tower-http = { version = "0.6", features = ["fs", "cors"] }
 gix = { version = "0.72", default-features = false, features = ["max-performance-safe", "blob-diff", "index"] }
+mimalloc = { version = "0.1", default-features = false }

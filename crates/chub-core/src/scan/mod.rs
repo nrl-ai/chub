@@ -4,6 +4,7 @@
 //! multiple output formats (JSON, SARIF, CSV). Reuses the redaction engine's
 //! rule set and adds location tracking, fingerprinting, and report generation.
 
+pub mod cel_validate;
 pub mod config;
 pub mod finding;
 pub mod report;

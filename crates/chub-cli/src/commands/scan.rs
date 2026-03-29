@@ -69,6 +69,11 @@ struct SecretsArgs {
     /// Suppress colored output
     #[arg(long, global = true)]
     no_color: bool,
+
+    /// Validate detected secrets against live APIs using CEL expressions.
+    /// Makes outbound HTTP calls — disabled by default.
+    #[arg(long, global = true)]
+    validate: bool,
 }
 
 #[derive(Subcommand)]
@@ -154,6 +159,7 @@ fn run_secrets(args: SecretsArgs, cli_json: bool) -> Result<(), String> {
         follow_symlinks: false,
         ignore_paths: Vec::new(),
         diff_only: !thorough,
+        validate: args.validate,
     };
 
     let scanner = Scanner::new(options);

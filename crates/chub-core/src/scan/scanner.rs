@@ -35,6 +35,9 @@ pub struct ScanOptions {
     /// Scan only diff lines per commit (fast, matches gitleaks behaviour).
     /// When false, scans full blob content of every unique file (thorough but slow).
     pub diff_only: bool,
+    /// Run CEL validation on findings that have a `validate` expression.
+    /// Makes live HTTP/API calls — disabled by default, opt-in only.
+    pub validate: bool,
 }
 
 impl Default for ScanOptions {
@@ -48,6 +51,7 @@ impl Default for ScanOptions {
             follow_symlinks: false,
             ignore_paths: Vec::new(),
             diff_only: true,
+            validate: false,
         }
     }
 }
@@ -61,6 +65,8 @@ pub struct Scanner {
     _scan_config: Option<ScanConfig>,
     /// Rule IDs that have `tokenEfficiency = true` in their config.
     token_efficiency_rules: HashSet<String>,
+    /// Rule ID → CEL validate expression (rules that have `validate = "..."` set).
+    validate_exprs: std::collections::HashMap<String, String>,
 }
 
 impl Scanner {
@@ -70,6 +76,7 @@ impl Scanner {
         let baseline_fingerprints = load_baseline(options.baseline_path.as_deref());
         let path_allowlist = build_path_allowlist(&options, scan_config.as_ref());
         let token_efficiency_rules = build_token_efficiency_set(scan_config.as_ref());
+        let validate_exprs = build_validate_exprs(scan_config.as_ref());
 
         Self {
             redactor,
@@ -78,6 +85,7 @@ impl Scanner {
             path_allowlist,
             _scan_config: scan_config,
             token_efficiency_rules,
+            validate_exprs,
         }
     }
 
@@ -89,7 +97,19 @@ impl Scanner {
         file: &str,
         commit_info: Option<&CommitInfo>,
     ) -> Vec<Finding> {
-        let result = self.redactor.redact(text);
+        self.scan_text_with(&self.redactor, text, file, commit_info)
+    }
+
+    /// Like `scan_text` but uses an explicit redactor (enables per-thread redactor clones
+    /// to eliminate `regex-automata` CachePool mutex contention in parallel scans).
+    fn scan_text_with(
+        &self,
+        redactor: &Redactor,
+        text: &str,
+        file: &str,
+        commit_info: Option<&CommitInfo>,
+    ) -> Vec<Finding> {
+        let result = redactor.redact(text);
         if result.findings.is_empty() {
             return Vec::new();
         }
@@ -147,7 +167,23 @@ impl Scanner {
                 message: commit_info.map(|c| c.message.clone()).unwrap_or_default(),
                 tags: Vec::new(),
                 fingerprint,
+                validation_status: None,
+                validation_reason: None,
             };
+
+            // CEL validation: call the live API to confirm the secret is active.
+            if self.options.validate {
+                if let Some(expr) = self.validate_exprs.get(&rf.rule_id) {
+                    let vr = super::cel_validate::evaluate_validate(
+                        &rf.rule_id,
+                        expr,
+                        secret,
+                        &std::collections::HashMap::new(),
+                    );
+                    finding.validation_status = Some(vr.status);
+                    finding.validation_reason = vr.reason;
+                }
+            }
 
             // Apply redaction to output if requested
             if self.options.redact_percent > 0 {
@@ -199,47 +235,210 @@ impl Scanner {
             })
             .collect();
 
-        // Parallel scan with rayon
+        // Parallel scan with rayon (per-thread Redactor clones to avoid CachePool contention)
+        let n = rayon::current_num_threads().max(1);
+        let redactors: Vec<Redactor> = (0..n).map(|_| self.redactor.clone()).collect();
         files
             .par_iter()
             .flat_map(|(path, rel_path)| {
+                let idx = rayon::current_thread_index().unwrap_or(0) % n;
                 std::fs::read_to_string(path)
-                    .map(|content| self.scan_text(&content, rel_path, None))
+                    .map(|content| self.scan_text_with(&redactors[idx], &content, rel_path, None))
                     .unwrap_or_default()
             })
             .collect()
     }
 
-    /// Scan git history using native gix library.
-    /// Falls back to `git` CLI if gix fails (e.g. unsupported repo format).
+    /// Scan git history.
+    ///
+    /// Strategy:
+    /// - `diff_only = true` (default): parallel `git log -p --no-walk --stdin` workers,
+    ///   matching the betterleaks ParallelGit design. Falls back to gix if git unavailable.
+    /// - `diff_only = false`: full-blob scan via gix with OID deduplication (thorough mode).
+    /// - `staged_only`: use git CLI diff --cached.
     pub fn scan_git(&self, repo: &Path, log_opts: Option<&str>, staged_only: bool) -> Vec<Finding> {
-        self.scan_git_gix(repo, log_opts, staged_only)
+        if staged_only {
+            return self.scan_git_cli(repo, log_opts, staged_only);
+        }
+        if self.options.diff_only {
+            // Parallel workers (betterleaks ParallelGit design): partition commits across
+            // min(cpu, 4) OS threads each running its own `git log --no-walk --stdin`.
+            // Falls back to single subprocess, then gix tree-diff.
+            if let Some(findings) = self.scan_git_log_parallel(repo, log_opts) {
+                return findings;
+            }
+            if let Some(findings) = self.scan_git_log_single(repo, log_opts) {
+                return findings;
+            }
+            return self.scan_git_history_diff(repo).unwrap_or_default();
+        }
+        // Full-blob mode: gix with OID dedup.
+        self.scan_git_history_gix(repo)
             .unwrap_or_else(|_| self.scan_git_cli(repo, log_opts, staged_only))
     }
 
-    /// Native gix-based git scanning.
-    fn scan_git_gix(
-        &self,
-        repo_path: &Path,
-        _log_opts: Option<&str>,
-        staged_only: bool,
-    ) -> Result<Vec<Finding>, String> {
-        if staged_only {
-            return Err("use CLI for staged".to_string());
+    /// Parallel git history scan — betterleaks ParallelGit design.
+    ///
+    /// Phase A (I/O, parallel OS threads): partition commits across min(cpu, 4) workers,
+    ///   each running its own `git log -p --no-walk --stdin` process. Each worker streams
+    ///   output into a Vec of (file, content, commit_info) batches. Workers run on real OS
+    ///   threads so blocking I/O doesn't starve the rayon thread pool.
+    ///
+    /// Single git log subprocess — simple approach, faster for small repos.
+    fn scan_git_log_single(&self, repo: &Path, log_opts: Option<&str>) -> Option<Vec<Finding>> {
+        use rayon::prelude::*;
+        let mut args = vec![
+            "log".to_string(),
+            "-p".to_string(),
+            "-U0".to_string(),
+            "--diff-filter=ACDM".to_string(),
+            "--format=%H%n%an%n%ae%n%aI%n%s%n---COMMIT_END---".to_string(),
+        ];
+        if let Some(opts) = log_opts {
+            args.extend(opts.split_whitespace().map(String::from));
         }
-        if self.options.diff_only {
-            self.scan_git_history_diff(repo_path)
+        let out = std::process::Command::new("git")
+            .args(&args)
+            .current_dir(repo)
+            .output()
+            .ok()?;
+        if !out.status.success() {
+            return None;
+        }
+        let log_output = String::from_utf8_lossy(&out.stdout);
+        let batches =
+            collect_git_log_batches_from_reader(std::io::Cursor::new(log_output.as_bytes()));
+        let max_bytes = if self.options.max_target_bytes > 0 {
+            self.options.max_target_bytes as usize
         } else {
-            self.scan_git_history_gix(repo_path)
-        }
+            usize::MAX
+        };
+        let filtered: Vec<_> = batches
+            .into_iter()
+            .filter(|(f, c, _)| {
+                !self.is_path_ignored(f)
+                    && !is_binary_extension(Path::new(f))
+                    && c.len() <= max_bytes
+            })
+            .collect();
+
+        // Precompile all rule regexes once on this thread, then clone per rayon thread.
+        // Cloning an initialized Regex shares the compiled automaton (Arc) but creates a
+        // fresh independent CachePool — eliminates regex-automata Pool<Cache> mutex contention.
+        self.redactor.precompile_rules();
+        let n = rayon::current_num_threads().max(1);
+        let redactors: Vec<Redactor> = (0..n).map(|_| self.redactor.clone()).collect();
+
+        Some(
+            filtered
+                .par_iter()
+                .flat_map(|(file, content, ci)| {
+                    let idx = rayon::current_thread_index().unwrap_or(0) % n;
+                    self.scan_text_with(&redactors[idx], content, file, ci.as_ref())
+                })
+                .collect(),
+        )
     }
 
-    /// Diff-based git history scan using low-level gix_diff::tree.
+    /// Phase B (CPU, rayon): merge all batches and run parallel regex scan.
+    fn scan_git_log_parallel(&self, repo: &Path, log_opts: Option<&str>) -> Option<Vec<Finding>> {
+        use rayon::prelude::*;
+
+        // Step 1: enumerate all SHAs
+        let rev_out = std::process::Command::new("git")
+            .args(["rev-list", "HEAD"])
+            .current_dir(repo)
+            .output()
+            .ok()?;
+        if !rev_out.status.success() {
+            return None;
+        }
+        let rev_str = String::from_utf8_lossy(&rev_out.stdout);
+        let shas: Vec<String> = rev_str.lines().map(String::from).collect();
+        if shas.is_empty() {
+            return Some(Vec::new());
+        }
+
+        // Step 2: partition across workers (min(cpu, 4), like betterleaks)
+        let num_workers = std::thread::available_parallelism()
+            .map(|n| n.get().min(4))
+            .unwrap_or(2)
+            .min(shas.len());
+
+        let chunk_size = shas.len().div_ceil(num_workers);
+        let chunks: Vec<Vec<String>> = shas.chunks(chunk_size).map(|c| c.to_vec()).collect();
+
+        let repo_path = repo.to_path_buf();
+        let log_opts_owned = log_opts.map(String::from);
+
+        // Phase A: I/O — collect batches in parallel OS threads (no rayon thread blocking)
+        let thread_handles: Vec<_> = chunks
+            .into_iter()
+            .map(|chunk| {
+                let repo_clone = repo_path.clone();
+                let opts_clone = log_opts_owned.clone();
+                std::thread::spawn(move || {
+                    collect_git_log_batches(&repo_clone, &chunk, opts_clone.as_deref())
+                        .unwrap_or_default()
+                })
+            })
+            .collect();
+
+        // Overlap: precompile all rule regexes on THIS thread while the git I/O workers run.
+        // The rayon thread pool is idle during Phase A, so we use this dead time for
+        // parallel regex compilation. Workers take ~380ms and precompile ~18ms; they overlap.
+        // Critical path = max(I/O, precompile) + scan, instead of I/O + precompile + scan.
+        self.redactor.precompile_rules();
+
+        // Pre-create per-thread Redactor clones NOW (after precompile so each clone inherits
+        // populated OnceLocks and fresh independent CachePools — no mutex contention).
+        let n = rayon::current_num_threads().max(1);
+        let redactors: Vec<Redactor> = (0..n).map(|_| self.redactor.clone()).collect();
+
+        // Collect all batches from workers; filter ignored paths on the main thread
+        let max_bytes = if self.options.max_target_bytes > 0 {
+            self.options.max_target_bytes as usize
+        } else {
+            usize::MAX
+        };
+        let mut all_batches: Vec<(String, String, Option<CommitInfo>)> = Vec::new();
+        for handle in thread_handles {
+            if let Ok(batches) = handle.join() {
+                for batch in batches {
+                    if !self.is_path_ignored(&batch.0)
+                        && !is_binary_extension(Path::new(&batch.0))
+                        && batch.1.len() <= max_bytes
+                    {
+                        all_batches.push(batch);
+                    }
+                }
+            }
+        }
+
+        // Phase B: CPU — parallel regex scan.
+        // Clone per rayon thread for independent CachePools (no mutex contention).
+        let findings: Vec<Finding> = all_batches
+            .par_iter()
+            .flat_map(|(file, content, ci)| {
+                let idx = rayon::current_thread_index().unwrap_or(0) % n;
+                self.scan_text_with(&redactors[idx], content, file, ci.as_ref())
+            })
+            .collect();
+
+        Some(findings)
+    }
+
+    /// Diff-based git history scan with OID deduplication.
     ///
-    /// Uses gix_diff::tree() — pure OID-level tree comparison with no blob pipeline,
-    /// no gitattributes, no rename tracking. This is the fastest possible tree diff.
-    /// For each commit, only added/modified blobs are collected. OID dedup ensures
-    /// each unique file content is scanned at most once.
+    /// **Phase 1** — walk all commits, tree-diff each against its parent to find
+    ///   added/modified blobs. Skip any blob OID already seen in a newer commit.
+    ///   Collect (commit_info, path, content) for unique new-blob OIDs only.
+    ///   Deletions are skipped (we care about introduced secrets, not removed ones).
+    ///
+    /// **Phase 2** — parallel regex scanning across all collected targets with rayon.
+    ///
+    /// Tree-diff keeps the scan set small (only changed files); OID dedup avoids
+    /// re-scanning the same content that persists across many commits.
     fn scan_git_history_diff(&self, repo_path: &Path) -> Result<Vec<Finding>, String> {
         use gix::bstr::ByteSlice;
         use gix::diff::tree::recorder::{Change as RecChange, Location};
@@ -255,11 +454,16 @@ impl Scanner {
             .all()
             .map_err(|e| format!("rev_walk: {}", e))?;
 
-        let mut targets: Vec<(CommitInfo, String, gix::ObjectId)> = Vec::new();
+        // Phase 1: collect unique (ci, path, content) targets via tree-diff + OID dedup.
+        let mut targets: Vec<(CommitInfo, String, String)> = Vec::new();
         let mut seen_oids: HashSet<gix::ObjectId> = HashSet::new();
 
-        // Reusable diff state — avoids reallocating buffers per commit.
+        // Reusable per-loop buffers.
         let mut diff_state = gix::diff::tree::State::default();
+        let mut recorder =
+            gix::diff::tree::Recorder::default().track_location(Some(Location::Path));
+        let mut old_tree_buf: Vec<u8> = Vec::new();
+        let mut new_tree_buf: Vec<u8> = Vec::new();
 
         for info_result in walk {
             let info = match info_result {
@@ -272,7 +476,6 @@ impl Scanner {
             };
             let ci = extract_commit_info(&commit);
 
-            // Get this commit's tree OID and parent tree OID.
             let new_tree_id = match commit.tree() {
                 Ok(t) => t.id,
                 Err(_) => continue,
@@ -289,32 +492,28 @@ impl Scanner {
                 })
                 .unwrap_or_else(|| gix::ObjectId::empty_tree(repo.object_hash()));
 
-            // Load raw tree bytes for old and new.
-            let old_data: Vec<u8>;
-            let new_data: Vec<u8>;
-
             let old_iter = if old_tree_id.is_empty_tree() {
                 TreeRefIter::from_bytes(b"")
             } else {
                 match repo.find_object(old_tree_id) {
                     Ok(obj) => {
-                        old_data = obj.data.clone();
-                        TreeRefIter::from_bytes(&old_data)
+                        old_tree_buf.clear();
+                        old_tree_buf.extend_from_slice(&obj.data);
+                        TreeRefIter::from_bytes(&old_tree_buf)
                     }
                     Err(_) => continue,
                 }
             };
-            let new_iter = match repo.find_object(new_tree_id) {
+            match repo.find_object(new_tree_id) {
                 Ok(obj) => {
-                    new_data = obj.data.clone();
-                    TreeRefIter::from_bytes(&new_data)
+                    new_tree_buf.clear();
+                    new_tree_buf.extend_from_slice(&obj.data);
                 }
                 Err(_) => continue,
-            };
+            }
+            let new_iter = TreeRefIter::from_bytes(&new_tree_buf);
 
-            // Pure tree diff — no blob content, no gitattributes.
-            let mut recorder =
-                gix::diff::tree::Recorder::default().track_location(Some(Location::Path));
+            recorder.records.clear();
             let _ = gix::diff::tree(
                 old_iter,
                 new_iter,
@@ -342,33 +541,31 @@ impl Scanner {
                 if !entry_mode.is_blob() {
                     continue;
                 }
-                if seen_oids.contains(oid) {
-                    continue;
-                }
                 let path_str = path.to_str_lossy().into_owned();
-                if self.is_path_ignored(&path_str) || is_binary_extension(Path::new(&path_str)) {
+                if self.is_path_ignored(&path_str)
+                    || is_binary_extension(Path::new(&path_str))
+                    || seen_oids.contains(oid)
+                {
                     continue;
                 }
-                seen_oids.insert(*oid);
-                targets.push((ci.clone(), path_str, *oid));
+                if let Ok(blob) = repo.find_object(*oid) {
+                    if let Ok(content) = std::str::from_utf8(&blob.data) {
+                        seen_oids.insert(*oid);
+                        targets.push((ci.clone(), path_str, content.to_string()));
+                    }
+                }
             }
         }
 
-        // Phase 2: load blob contents sequentially (repo is not Sync).
-        let text_targets: Vec<(CommitInfo, String, String)> = targets
-            .into_iter()
-            .filter_map(|(ci, path, oid)| {
-                repo.find_object(oid)
-                    .ok()
-                    .and_then(|blob| String::from_utf8(blob.data.clone()).ok())
-                    .map(|content| (ci, path, content))
-            })
-            .collect();
-
-        // Phase 3: parallel regex scanning.
-        let findings = text_targets
+        // Phase 2: parallel regex scanning (per-thread Redactor clones).
+        let n = rayon::current_num_threads().max(1);
+        let redactors: Vec<Redactor> = (0..n).map(|_| self.redactor.clone()).collect();
+        let findings = targets
             .par_iter()
-            .flat_map(|(ci, path, content)| self.scan_text(content, path, Some(ci)))
+            .flat_map(|(ci, path, content)| {
+                let idx = rayon::current_thread_index().unwrap_or(0) % n;
+                self.scan_text_with(&redactors[idx], content, path, Some(ci))
+            })
             .collect();
 
         Ok(findings)
@@ -422,10 +619,15 @@ impl Scanner {
             self.walk_tree_blobs(&repo, tree.id, "", &ci, &mut targets, &mut seen_oids);
         }
 
-        // Phase 2: parallel regex scanning
+        // Phase 2: parallel regex scanning (per-thread Redactor clones).
+        let n = rayon::current_num_threads().max(1);
+        let redactors: Vec<Redactor> = (0..n).map(|_| self.redactor.clone()).collect();
         let findings = targets
             .par_iter()
-            .flat_map(|(ci, path, content)| self.scan_text(content, path, Some(ci)))
+            .flat_map(|(ci, path, content)| {
+                let idx = rayon::current_thread_index().unwrap_or(0) % n;
+                self.scan_text_with(&redactors[idx], content, path, Some(ci))
+            })
             .collect();
 
         Ok(findings)
@@ -540,42 +742,68 @@ impl Scanner {
     }
 
     /// Parse unified diff output and scan added lines.
+    ///
+    /// Batches added lines per file before calling `scan_text`, which avoids
+    /// per-line `scan_text` call overhead on large diffs.
     fn scan_diff(&self, diff: &str, default_commit: Option<&CommitInfo>) -> Vec<Finding> {
         let mut findings = Vec::new();
         let mut current_file = String::new();
+        let mut batch = String::new();
+
+        let flush = |file: &str, batch: &mut String, findings: &mut Vec<Finding>| {
+            if !batch.is_empty() && !file.is_empty() {
+                findings.extend(self.scan_text(batch, file, default_commit));
+                batch.clear();
+            }
+        };
 
         for line in diff.lines() {
             if let Some(rest) = line.strip_prefix("+++ b/") {
+                flush(&current_file.clone(), &mut batch, &mut findings);
                 current_file = rest.to_string();
-            } else if line.starts_with('+') && !line.starts_with("+++") {
-                // Added line — scan it
-                let content = &line[1..];
-                if !current_file.is_empty() && !self.is_path_ignored(&current_file) {
-                    let file_findings = self.scan_text(content, &current_file, default_commit);
-                    findings.extend(file_findings);
-                }
+            } else if line.starts_with('+')
+                && !line.starts_with("+++")
+                && !current_file.is_empty()
+                && !self.is_path_ignored(&current_file)
+            {
+                batch.push_str(&line[1..]);
+                batch.push('\n');
             }
         }
+        flush(&current_file, &mut batch, &mut findings);
 
         findings
     }
 
-    /// Parse `git log -p` output with commit metadata.
+    /// Parse `git log -p` output: collect (file, added_lines, commit_info) batches,
+    /// then scan all batches in parallel with rayon.
     fn parse_git_log(&self, log_output: &str) -> Vec<Finding> {
-        let mut findings = Vec::new();
+        use rayon::prelude::*;
+
+        // Phase 1: collect batches (sequential parse)
+        let mut batches: Vec<(String, String, Option<CommitInfo>)> = Vec::new();
         let mut current_commit: Option<CommitInfo> = None;
-        let mut diff_lines = Vec::new();
+        let mut current_file = String::new();
+        let mut batch = String::new();
         let mut in_header = false;
         let mut header_line = 0u8;
 
+        macro_rules! flush {
+            () => {
+                if !batch.is_empty() && !current_file.is_empty() {
+                    batches.push((
+                        current_file.clone(),
+                        std::mem::take(&mut batch),
+                        current_commit.clone(),
+                    ));
+                }
+            };
+        }
+
         for line in log_output.lines() {
             if line == "---COMMIT_END---" {
-                // Process accumulated diff for this commit
-                if !diff_lines.is_empty() {
-                    let diff_text = diff_lines.join("\n");
-                    findings.extend(self.scan_diff(&diff_text, current_commit.as_ref()));
-                    diff_lines.clear();
-                }
+                flush!();
+                current_file.clear();
                 in_header = true;
                 header_line = 0;
                 current_commit = None;
@@ -585,7 +813,6 @@ impl Scanner {
             if in_header && header_line < 5 {
                 match header_line {
                     0 => {
-                        // Commit hash (40 hex chars)
                         if line.len() == 40 && line.chars().all(|c| c.is_ascii_hexdigit()) {
                             current_commit = Some(CommitInfo {
                                 hash: line.to_string(),
@@ -623,22 +850,174 @@ impl Scanner {
                 continue;
             }
 
-            diff_lines.push(line);
+            if let Some(rest) = line.strip_prefix("+++ b/") {
+                flush!();
+                current_file = rest.to_string();
+            } else if line.starts_with('+')
+                && !line.starts_with("+++")
+                && !current_file.is_empty()
+                && !self.is_path_ignored(&current_file)
+            {
+                batch.push_str(&line[1..]);
+                batch.push('\n');
+            }
         }
+        flush!();
 
-        // Process any remaining diff
-        if !diff_lines.is_empty() {
-            let diff_text = diff_lines.join("\n");
-            findings.extend(self.scan_diff(&diff_text, current_commit.as_ref()));
-        }
-
-        findings
+        // Phase 2: parallel regex scan across all batches
+        batches
+            .par_iter()
+            .flat_map(|(file, content, ci)| self.scan_text(content, file, ci.as_ref()))
+            .collect()
     }
 
     /// Return the number of rules loaded.
     pub fn rule_count(&self) -> usize {
         self.redactor.rule_count()
     }
+}
+
+/// Spawn a `git log -p --no-walk --stdin` process for a specific set of commit SHAs,
+/// stream the patch output, and return all (file, added_lines, commit_info) batches.
+///
+/// Runs on a plain OS thread (not rayon) so blocking I/O doesn't starve the thread pool.
+fn collect_git_log_batches(
+    repo: &Path,
+    shas: &[String],
+    log_opts: Option<&str>,
+) -> Option<Vec<(String, String, Option<CommitInfo>)>> {
+    use std::io::{BufReader, Write};
+
+    let mut args = vec![
+        "log".to_string(),
+        "-p".to_string(),
+        "-U0".to_string(),
+        "--no-walk".to_string(),
+        "--stdin".to_string(),
+        "--diff-filter=ACDM".to_string(),
+        "--format=%H%n%an%n%ae%n%aI%n%s%n---COMMIT_END---".to_string(),
+    ];
+    if let Some(opts) = log_opts {
+        args.extend(opts.split_whitespace().map(String::from));
+    }
+
+    let mut child = std::process::Command::new("git")
+        .args(&args)
+        .current_dir(repo)
+        .stdin(std::process::Stdio::piped())
+        .stdout(std::process::Stdio::piped())
+        .spawn()
+        .ok()?;
+
+    // Write SHAs to stdin in a background thread (avoid deadlock if stdout fills)
+    let mut stdin = child.stdin.take()?;
+    let shas_copy: Vec<String> = shas.to_vec();
+    std::thread::spawn(move || {
+        for sha in &shas_copy {
+            let _ = writeln!(stdin, "{}", sha);
+        }
+    });
+
+    let stdout = child.stdout.take()?;
+    let reader = BufReader::new(stdout);
+    let batches = collect_git_log_batches_from_reader(reader);
+
+    let _ = child.wait();
+    Some(batches)
+}
+
+/// Parse `git log -p` output from a reader into (file, added_lines, commit_info) batches.
+fn collect_git_log_batches_from_reader<R: std::io::BufRead>(
+    reader: R,
+) -> Vec<(String, String, Option<CommitInfo>)> {
+    let mut batches: Vec<(String, String, Option<CommitInfo>)> = Vec::new();
+    let mut current_commit: Option<CommitInfo> = None;
+    let mut current_file = String::new();
+    let mut batch = String::new();
+    let mut in_header = false;
+    let mut header_line = 0u8;
+
+    macro_rules! flush {
+        () => {
+            if !batch.is_empty() && !current_file.is_empty() {
+                batches.push((
+                    current_file.clone(),
+                    std::mem::take(&mut batch),
+                    current_commit.clone(),
+                ));
+            }
+        };
+    }
+
+    let mut line_buf = String::new();
+    let mut reader = reader;
+    loop {
+        line_buf.clear();
+        match reader.read_line(&mut line_buf) {
+            Ok(0) | Err(_) => break,
+            Ok(_) => {}
+        }
+        let line = line_buf.trim_end_matches('\n').trim_end_matches('\r');
+
+        if line == "---COMMIT_END---" {
+            flush!();
+            current_file.clear();
+            in_header = true;
+            header_line = 0;
+            current_commit = None;
+            continue;
+        }
+
+        if in_header && header_line < 5 {
+            match header_line {
+                0 => {
+                    if line.len() == 40 && line.chars().all(|c| c.is_ascii_hexdigit()) {
+                        current_commit = Some(CommitInfo {
+                            hash: line.to_string(),
+                            author: String::new(),
+                            email: String::new(),
+                            date: String::new(),
+                            message: String::new(),
+                        });
+                    }
+                }
+                1 => {
+                    if let Some(ref mut c) = current_commit {
+                        c.author = line.to_string();
+                    }
+                }
+                2 => {
+                    if let Some(ref mut c) = current_commit {
+                        c.email = line.to_string();
+                    }
+                }
+                3 => {
+                    if let Some(ref mut c) = current_commit {
+                        c.date = line.to_string();
+                    }
+                }
+                4 => {
+                    if let Some(ref mut c) = current_commit {
+                        c.message = line.to_string();
+                    }
+                    in_header = false;
+                }
+                _ => {}
+            }
+            header_line += 1;
+            continue;
+        }
+
+        if let Some(rest) = line.strip_prefix("+++ b/") {
+            flush!();
+            current_file = rest.to_string();
+        } else if line.starts_with('+') && !line.starts_with("+++") && !current_file.is_empty() {
+            batch.push_str(&line[1..]);
+            batch.push('\n');
+        }
+    }
+    flush!();
+    batches
 }
 
 /// Git commit metadata.
@@ -719,6 +1098,23 @@ fn build_redactor(options: &ScanOptions) -> (Redactor, Option<ScanConfig>) {
 /// Collect rule IDs that have `token_efficiency = true` from the merged (built-in + user) rule set.
 /// The built-in rules are parsed from `redact.rs` defaults, but `token_efficiency` is a config-only
 /// flag, so we read from `ScanConfig` (user config) plus the built-in `rules.toml` via `redact`.
+/// Collect rule ID → CEL validate expression from the merged rule set.
+fn build_validate_exprs(
+    scan_config: Option<&ScanConfig>,
+) -> std::collections::HashMap<String, String> {
+    use crate::team::tracking::redact::validate_exprs_map;
+    let mut map = validate_exprs_map();
+    // User config can add or override validate expressions
+    if let Some(cfg) = scan_config {
+        for rule in &cfg.rules {
+            if let Some(ref expr) = rule.validate {
+                map.insert(rule.id.clone(), expr.clone());
+            }
+        }
+    }
+    map
+}
+
 fn build_token_efficiency_set(scan_config: Option<&ScanConfig>) -> HashSet<String> {
     use crate::team::tracking::redact::token_efficiency_rule_ids;
     let mut set: HashSet<String> = token_efficiency_rule_ids().iter().cloned().collect();

@@ -37,6 +37,7 @@ use crate::scan::config::ScanConfig;
 // ---------------------------------------------------------------------------
 
 /// A single secret detection rule.
+#[derive(Clone)]
 struct Rule {
     /// Unique identifier (e.g. "aws-access-token").
     id: String,
@@ -97,6 +98,12 @@ impl Rule {
 /// - `[:alnum:]` POSIX classes → character ranges
 fn fixup_regex_pattern(pattern: &str) -> String {
     let mut s = pattern.replace("\\x60", "`");
+    // Replace \w / \W with ASCII-only equivalents. Unicode \w expands to thousands of
+    // code points and inflates the NFA by 10-100x, causing pathological compile times
+    // (e.g. [\w-]{50,1000} in pypi-upload-token: 368ms → 0ms with ASCII class).
+    // All secret patterns match ASCII keys/tokens, so this is semantically equivalent.
+    s = s.replace("\\w", "[a-zA-Z0-9_]");
+    s = s.replace("\\W", "[^a-zA-Z0-9_]");
     // Remove (?-i:...) wrappers — Rust regex doesn't support inline flag toggles.
     // Simple approach: strip (?-i: and its matching ) to make it case-sensitive by default.
     // This is a slight loss in specificity but avoids compile failures.
@@ -216,6 +223,16 @@ pub fn token_efficiency_rule_ids() -> Vec<String> {
         .iter()
         .filter(|r| r.token_efficiency)
         .map(|r| r.id.clone())
+        .collect()
+}
+
+/// Return a map of rule_id → CEL validate expression for all built-in rules
+/// that have a `validate` field set.
+pub fn validate_exprs_map() -> std::collections::HashMap<String, String> {
+    load_default_config()
+        .rules
+        .iter()
+        .filter_map(|r| r.validate.as_ref().map(|expr| (r.id.clone(), expr.clone())))
         .collect()
 }
 
@@ -513,6 +530,7 @@ impl From<&crate::config::RedactionConfig> for RedactConfig {
 }
 
 /// The redaction engine. Compile once and reuse across many texts.
+#[derive(Clone)]
 pub struct Redactor {
     rules: Vec<Rule>,
     allowlist_regexes: Vec<Regex>,
@@ -658,6 +676,22 @@ impl Redactor {
         }
     }
 
+    /// Pre-compile all rule regexes eagerly (initialises every `OnceLock<Option<Regex>>`).
+    ///
+    /// Called at construction time so that multi-threaded scan paths never contend on
+    /// `OnceLock::get_or_init` — each thread would block until the first initialiser
+    /// finishes, serialising the scan despite rayon parallelism.
+    pub fn precompile_rules(&self) {
+        // Compile all rules in parallel across rayon threads.
+        // Each OnceLock initialises exactly once (first writer wins, others block then reuse).
+        // Parallelising cuts sequential 2s+ compilation to ~compile_time / num_threads.
+        use rayon::prelude::*;
+        self.rules.par_iter().for_each(|rule| {
+            let _ = rule.regex();
+            let _ = rule.allowlists();
+        });
+    }
+
     /// Check if a file path is allowlisted (skip redaction entirely).
     pub fn is_path_allowlisted(&self, path: &str) -> bool {
         self.allowlist_path_regexes
@@ -801,12 +835,30 @@ impl Redactor {
         let mut all_findings: Vec<(usize, usize, &str, bool)> = Vec::new();
 
         // Phase 1: single Aho-Corasick pass to find which rules are candidates.
-        // Build a bitset of rule indices to check.
+        // Use find_overlapping_iter (not find_iter): the AC uses Standard match kind so that
+        // keywords which are prefixes of other keywords (e.g. "sk" vs "sk_live") can both
+        // match at the same position. find_iter (non-overlapping) would skip "sk_live" if
+        // "sk" matches first at the same offset, causing false negatives (stripe-access-token
+        // not found when "sk_live" is blocked by a shorter "sk" keyword).
+        //
+        // Dedup with `seen_kw`: each keyword only triggers its rules ONCE regardless of how
+        // many times it appears in the text. Early exit when all keywords have fired.
         let mut rule_candidates = vec![false; self.rules.len()];
+        let num_kw_patterns = self.keyword_to_rules.len();
+        let mut seen_kw = vec![false; num_kw_patterns];
+        let mut remaining_kw = num_kw_patterns;
 
         for m in self.keyword_ac.find_overlapping_iter(text) {
-            for &rule_idx in &self.keyword_to_rules[m.pattern().as_usize()] {
-                rule_candidates[rule_idx] = true;
+            let pat = m.pattern().as_usize();
+            if !seen_kw[pat] {
+                seen_kw[pat] = true;
+                remaining_kw -= 1;
+                for &rule_idx in &self.keyword_to_rules[pat] {
+                    rule_candidates[rule_idx] = true;
+                }
+                if remaining_kw == 0 {
+                    break;
+                }
             }
         }
         // Rules with no keywords always run.
@@ -815,6 +867,10 @@ impl Redactor {
         }
 
         // Phase 2: run regexes only for candidate rules.
+        // Betterleaks approach: always use find_iter (fast DFA scan, no capture tracking)
+        // for the initial match pass over the full text. If secret_group > 0, extract the
+        // capture group from just the matched substring (cheap, O(match_length) not O(text_length)).
+        // This mirrors Go's FindAllStringIndex + FindStringSubmatch on the match.
         for (rule_idx, is_candidate) in rule_candidates.iter().enumerate() {
             if !is_candidate {
                 continue;
@@ -824,56 +880,73 @@ impl Redactor {
                 Some(r) => r,
                 None => continue,
             };
-            for cap in regex.captures_iter(text) {
-                let m = match cap.get(rule.secret_group).or_else(|| cap.get(0)) {
-                    Some(m) => m,
-                    None => continue,
-                };
-                let secret = m.as_str();
 
-                // Stopword check — skip if it looks like a placeholder/example
+            for m in regex.find_iter(text) {
+                let matched = m.as_str();
+
+                // Extract actual secret and its byte range within the original text.
+                // Betterleaks approach: use find_iter (fast DFA, no capture tracking) for the
+                // initial pass over the full text. For rules with secret_group > 0, run
+                // captures on just the matched substring to extract the capture group —
+                // O(match_length) not O(text_length), since matched is typically < 200 chars.
+                //
+                // IMPORTANT: store the SECRET BOUNDS (capture group) not the full-match bounds.
+                // Rules like jfrog-api-key have a context prefix in their pattern (e.g. matching
+                // "ARTIFACTORY_KEY=<token>") while the secret is just "<token>". Storing full-
+                // match bounds would cause earlier-starting jfrog to preempt artifactory-api-key
+                // (a more-specific direct-pattern rule) during overlap deduplication. Using the
+                // secret bounds keeps both at the same position, preserving rule priority.
+                let (secret, secret_start, secret_end): (&str, usize, usize) =
+                    if rule.secret_group == 0 {
+                        (matched, m.start(), m.end())
+                    } else {
+                        match regex
+                            .captures(matched)
+                            .and_then(|caps| caps.get(rule.secret_group).or_else(|| caps.get(0)))
+                        {
+                            Some(g) => {
+                                let abs_start = m.start() + g.start();
+                                let abs_end = m.start() + g.end();
+                                (&text[abs_start..abs_end], abs_start, abs_end)
+                            }
+                            None => (matched, m.start(), m.end()),
+                        }
+                    };
+
                 if contains_stopword(secret) {
                     continue;
                 }
-                // Extra stopwords from TOML config (global)
                 if !self.extra_stopwords.is_empty() {
-                    let lower_secret = secret.to_lowercase();
+                    let lower = secret.to_lowercase();
                     if self
                         .extra_stopwords
                         .iter()
-                        .any(|sw| lower_secret.contains(sw.as_str()))
+                        .any(|sw| lower.contains(sw.as_str()))
                     {
                         continue;
                     }
                 }
-                // Per-rule stopwords
                 if !rule.rule_stopwords.is_empty() {
-                    let lower_secret = secret.to_lowercase();
+                    let lower = secret.to_lowercase();
                     if rule
                         .rule_stopwords
                         .iter()
-                        .any(|sw| lower_secret.contains(sw.as_str()))
+                        .any(|sw| lower.contains(sw.as_str()))
                     {
                         continue;
                     }
                 }
-
-                // Entropy check
                 if rule.min_entropy > 0.0 && shannon_entropy(secret) < rule.min_entropy {
                     continue;
                 }
-
-                // Global allowlist check
                 if self.allowlist_regexes.iter().any(|al| al.is_match(secret)) {
                     continue;
                 }
-
-                // Per-rule allowlist check
                 if rule.allowlists().iter().any(|al| al.is_match(secret)) {
                     continue;
                 }
 
-                all_findings.push((m.start(), m.end(), rule.id.as_str(), rule.generic));
+                all_findings.push((secret_start, secret_end, rule.id.as_str(), rule.generic));
             }
         }
 

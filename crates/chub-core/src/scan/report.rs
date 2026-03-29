@@ -202,6 +202,8 @@ mod tests {
             message: "add key".to_string(),
             tags: vec![],
             fingerprint: "abc123def456".to_string(),
+            validation_status: None,
+            validation_reason: None,
         }
     }
 
