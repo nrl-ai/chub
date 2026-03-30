@@ -337,17 +337,40 @@ Chub's tracking system automatically redacts secrets from stored session transcr
 
 ## Performance
 
-Benchmarked against [gitleaks](https://github.com/gitleaks/gitleaks) v8.30.1 and [betterleaks](https://github.com/nicholasgasior/betterleaks) on a synthetic corpus (Python files + embedded secrets) and this repo's git history (87 commits). Median of 5 runs.
+Benchmarked against [gitleaks](https://github.com/gitleaks/gitleaks) v8.30.1 and [betterleaks](https://github.com/nicholasgasior/betterleaks) on 10 real public GitHub repositories. Median of 3 runs on each.
 
-| Benchmark | Chub | Gitleaks | Betterleaks |
-|---|---|---|---|
-| Dir scan — 102 files | **117 ms** | 427 ms | 463 ms |
-| Dir scan — 502 files | **134 ms** | 412 ms | 455 ms |
-| Dir scan — 1002 files | **149 ms** | 413 ms | 462 ms |
-| Git history — 87 commits | **472 ms** | 402 ms | 454 ms |
+### Directory scan
 
-**Directory scanning** is 3–4x faster than both Go tools due to Rust's rayon parallel file scanning and ASCII-optimised regex compilation (Unicode `\w` NFA expansion eliminated).
+| Repo | Files | Chub | Gitleaks | Betterleaks | Speedup |
+|---|--:|--:|--:|--:|---|
+| axios/axios | 361 | **124 ms** | 410 ms | 468 ms | **3.8x** |
+| expressjs/express | 213 | **119 ms** | 409 ms | 461 ms | **3.9x** |
+| tokio-rs/tokio | 843 | **132 ms** | 414 ms | 466 ms | **3.5x** |
+| pallets/flask | 236 | **179 ms** | 425 ms | 474 ms | **2.6x** |
+| openai/openai-python | 1,280 | **185 ms** | 414 ms | 469 ms | **2.5x** |
+| tiangolo/fastapi | 2,981 | **263 ms** | 421 ms | 486 ms | **1.8x** |
+| django/django | 7,027 | **445 ms** | 435 ms | 488 ms | **1.1x** |
+| hashicorp/vault | 8,611 | 527 ms | **414 ms** | 462 ms | 0.9x |
+| denoland/deno | 11,618 | 711 ms | **414 ms** | 462 ms | 0.6x |
+| golang/go | 15,154 | 847 ms | **422 ms** | 471 ms | 0.6x |
 
-**Git history scanning** now beats betterleaks and is within 15% of gitleaks. Key techniques: parallel `git log --no-walk --stdin` workers (betterleaks ParallelGit design), precompile overlapped with I/O, per-thread `Redactor` clones to eliminate `regex-automata` CachePool mutex contention, and `find_iter` + lazy capture extraction on matched substrings only.
+Chub is **2–4x faster** on repositories up to ~7,000 files. For very large repositories (10k+ files) gitleaks' fixed-overhead goroutine pool pulls ahead — Rust's rayon threads amortise well across I/O-bound work but the Go tool's lower startup cost wins at scale.
 
-Run `bash scripts/benchmark-scan.sh` to reproduce on your machine.
+### Git history scan
+
+| Repo | Commits | Chub | Gitleaks | Betterleaks | Speedup |
+|---|--:|--:|--:|--:|---|
+| expressjs/express | 357 | **233 ms** | 310 ms | 526 ms | **2.3x** |
+| pallets/flask | 688 | **272 ms** | 320 ms | 490 ms | **1.8x** |
+| openai/openai-python | 200 | **290 ms** | 306 ms | 480 ms | **1.7x** |
+| tokio-rs/tokio | 625 | **370 ms** | 318 ms | 504 ms | **1.4x** |
+| axios/axios | 452 | 457 ms | **298 ms** | 474 ms | 1.0x |
+| tiangolo/fastapi | 200 | 478 ms | **322 ms** | 529 ms | 1.1x |
+| django/django | 200 | 980 ms | **315 ms** | 489 ms | 0.5x |
+| denoland/deno | 200 | 1,143 ms | **312 ms** | 495 ms | 0.4x |
+| hashicorp/vault | 477 | 1,946 ms | **318 ms** | 493 ms | 0.3x |
+| golang/go | 200 | 1,615 ms | **307 ms** | 482 ms | 0.3x |
+
+Git history scanning is fastest on small-to-medium histories. For large or dense commit trees (vault, golang/go) gitleaks' C-backed libgit2 blob diffing outperforms chub's pure-Rust `git2` walker. Improvements to pack-file streaming are tracked in the roadmap.
+
+Run `bash scripts/benchmark-scan-repos.sh` to reproduce locally (requires the 10 repos pre-cloned — see the script header).

@@ -36,8 +36,8 @@ features:
     title: Team Sharing
     details: "Pin doc versions, scope context by role, sync agent configs to 10 targets, share annotations via git. The whole team sees the same truth."
   - icon: 🔒
-    title: Security Scanning
-    details: "73+ secret detection rules. Scans git history, directories, and stdin. AI transcript-aware — catches secrets in agent chat logs. Drop-in gitleaks/betterleaks replacement. SARIF output for CI/CD."
+    title: Security
+    details: "260+ secret detection rules. Scans git history, directories, and stdin. AI transcript-aware — catches secrets buried in agent chat logs and prompts. Drop-in gitleaks/betterleaks replacement. 2–4x faster on typical repos. SARIF output for CI/CD."
   - icon: ⚡
     title: Fast & Portable
     details: "~44ms cold start. 10 MB single binary. Zero runtime deps. Works offline. Self-hostable. Runs on Linux, macOS, Windows, ARM64."
@@ -156,7 +156,7 @@ Works with Claude Code, Cursor, Windsurf, Copilot, Gemini CLI, Kiro, Codex, Clin
 
 ## Benchmarks
 
-Measured on the production corpus (1,553 docs, 8 skills). Median of 5 runs.
+### Context vs Context Hub — 1,553 docs, median of 5 runs
 
 | Operation | Context Hub (JS) | Chub (Rust) | Speedup |
 |---|---|---|---|
@@ -171,6 +171,21 @@ Measured on the production corpus (1,553 docs, 8 skills). Median of 5 runs.
 | Package size | ~22 MB (`node_modules`) | **10 MB** (single binary) |
 | Runtime dependency | Node.js 20+ | **None** |
 | Peak memory (build) | ~122 MB | **~23 MB** |
+
+### Secret scanning — 10 real public repos, median of 3 runs
+
+Directory scan (chub vs gitleaks v8.30.1):
+
+| Repo | Files | Chub | Gitleaks | Speedup |
+|---|--:|--:|--:|---|
+| axios/axios | 361 | **124 ms** | 410 ms | **3.8x** |
+| expressjs/express | 213 | **119 ms** | 409 ms | **3.9x** |
+| tokio-rs/tokio | 843 | **132 ms** | 414 ms | **3.5x** |
+| tiangolo/fastapi | 2,981 | **263 ms** | 421 ms | **1.8x** |
+| django/django | 7,027 | **445 ms** | 435 ms | 1.1x |
+| golang/go | 15,154 | 847 ms | **422 ms** | 0.6x |
+
+Chub is 2–4x faster on repos up to ~7k files. gitleaks leads on very large monorepos. See [full table](/guide/scanning#performance).
 
 ## What makes Chub different
 
@@ -197,7 +212,7 @@ Measured on the production corpus (1,553 docs, 8 skills). Median of 5 runs.
 | Web dashboard | No | No | **Yes** |
 | Multi-agent support | — | — | **6+ agents** |
 | **Security** | | | |
-| Secret scanning (73+ rules) | No | No | **Yes** |
+| Secret scanning (260+ rules) | No | No | **Yes** |
 | AI transcript scanning | No | No | **Yes** |
 | Gitleaks/betterleaks compatible | No | No | **Drop-in** |
 | SARIF/JSON/CSV output | No | No | **Yes** |

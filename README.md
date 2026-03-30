@@ -15,7 +15,9 @@
   <a href="https://crates.io/crates/chub"><img src="https://img.shields.io/crates/v/chub?color=0ea5e9&label=crates.io" alt="crates.io"></a>
   <a href="https://github.com/nrl-ai/chub/actions"><img src="https://img.shields.io/github/actions/workflow/status/nrl-ai/chub/ci.yml?color=0ea5e9&label=CI" alt="CI"></a>
   <a href="https://github.com/nrl-ai/chub/blob/main/LICENSE"><img src="https://img.shields.io/badge/license-MIT-0ea5e9" alt="License"></a>
-  <a href="https://www.npmjs.com/package/@nrl-ai/chub"><img src="https://img.shields.io/npm/dm/@nrl-ai/chub?color=0ea5e9&label=downloads" alt="Downloads"></a>
+  <a href="https://www.npmjs.com/package/@nrl-ai/chub"><img src="https://img.shields.io/npm/dm/@nrl-ai/chub?color=0ea5e9&label=npm%20downloads" alt="npm downloads"></a>
+  <a href="https://pypi.org/project/chub/"><img src="https://img.shields.io/pypi/dm/chub?color=0ea5e9&label=pypi%20downloads" alt="PyPI downloads"></a>
+  <a href="https://crates.io/crates/chub"><img src="https://img.shields.io/crates/d/chub?color=0ea5e9&label=crate%20downloads" alt="crate downloads"></a>
 </p>
 
 <p align="center">
@@ -201,7 +203,7 @@ Supported agents: **Claude Code**, **Cursor**, **GitHub Copilot**, **Gemini CLI*
 
 ## Security Scanning
 
-Drop-in replacement for gitleaks and betterleaks — with built-in strength for AI agent transcript scanning. 73+ secret detection rules, Shannon entropy analysis, stopword filtering, and structured output.
+Drop-in replacement for gitleaks and betterleaks — with built-in strength for AI agent transcript scanning. 260+ secret detection rules, Shannon entropy analysis, stopword filtering, and structured output.
 
 ```sh
 chub scan secrets git                        # scan git history for secrets
@@ -216,7 +218,7 @@ AI coding agents introduce a new class of secret leak: keys pasted into prompts,
 
 ### Features
 
-- **73+ built-in rules** — AWS, GCP, Azure, GitHub, GitLab, Anthropic, OpenAI, Stripe, and dozens more
+- **260+ built-in rules** — AWS, GCP, Azure, GitHub, GitLab, Anthropic, OpenAI, Stripe, and dozens more
 - **AI transcript-aware** — detects secrets in agent chat logs, prompts, and tool call outputs
 - **Shannon entropy** — reduces false positives by measuring randomness of captured secrets
 - **Stopword filtering** — ignores placeholders like `your_api_key_here` and `${VARIABLE}`
@@ -379,9 +381,9 @@ Works with any MCP-compatible agent: Claude Code, Cursor, Windsurf, and others. 
 
 Chub includes proactive security scanning and defensive measures for AI-assisted development:
 
-- **Secret scanning** — 73+ rules detect leaked credentials in source code, git history, directories, and stdin. Shannon entropy and stopword filtering reduce false positives. Drop-in replacement for gitleaks/betterleaks with native AI transcript awareness.
+- **Secret scanning** — 260+ rules detect leaked credentials in source code, git history, directories, and stdin. Shannon entropy and stopword filtering reduce false positives. Drop-in replacement for gitleaks/betterleaks with native AI transcript awareness.
 - **Agent transcript protection** — Secrets pasted into AI agent prompts, chat logs, and tool outputs are detected — a blind spot for traditional scanners.
-- **Automatic redaction** — Session tracking automatically redacts secrets from stored transcripts using the same 73-rule engine.
+- **Automatic redaction** — Session tracking automatically redacts secrets from stored transcripts using the same 260-rule engine.
 - **Content integrity verification** — `chub build` computes SHA-256 hashes of all doc content, stored in the registry. Fetched content is verified against these hashes to detect CDN tampering.
 - **Annotation trust framing** — User-contributed annotations are clearly marked as non-official content when served to agents, mitigating prompt injection risks.
 - **Annotation length limits** — Notes are capped at 4,000 characters to prevent context flooding.
@@ -392,9 +394,9 @@ Chub includes proactive security scanning and defensive measures for AI-assisted
 
 ## Benchmarks
 
-Measured on the production corpus (1,553 docs, 8 skills). Median of 5 runs. Full methodology in [Chub vs Context Hub](docs/guide/vs-context-hub.md).
+### Context vs Context Hub — 1,553 docs, median of 5 runs
 
-### Performance
+Full methodology in [Chub vs Context Hub](docs/guide/vs-context-hub.md).
 
 | Operation | Context Hub (JS) | Chub (Rust) | Speedup |
 |---|---|---|---|
@@ -404,13 +406,26 @@ Measured on the production corpus (1,553 docs, 8 skills). Median of 5 runs. Full
 | `get stripe/api` | 148 ms | **63 ms** | **2.3x** |
 | Cold start (`--help`) | 131 ms | **44 ms** | **3x** |
 
-### Resources
-
 | Metric | Context Hub (JS) | Chub (Rust) |
 |---|---|---|
 | Package size | ~22 MB (`node_modules`) | **10 MB** (single binary) |
 | Runtime dependency | Node.js 20+ | **None** |
 | Peak memory (build) | ~122 MB | **~23 MB** (5.3x less) |
+
+### Secret scanning — 10 real public repos, median of 3 runs
+
+Directory scan vs [gitleaks](https://github.com/gitleaks/gitleaks) v8.30.1 and [betterleaks](https://github.com/nicholasgasior/betterleaks):
+
+| Repo | Files | Chub | Gitleaks | Betterleaks | Speedup |
+|---|--:|--:|--:|--:|---|
+| expressjs/express | 213 | **119 ms** | 409 ms | 461 ms | **3.9x** |
+| axios/axios | 361 | **124 ms** | 410 ms | 468 ms | **3.8x** |
+| tokio-rs/tokio | 843 | **132 ms** | 414 ms | 466 ms | **3.5x** |
+| tiangolo/fastapi | 2,981 | **263 ms** | 421 ms | 486 ms | **1.8x** |
+| django/django | 7,027 | **445 ms** | 435 ms | 488 ms | 1.1x |
+| golang/go | 15,154 | 847 ms | **422 ms** | 471 ms | 0.6x |
+
+2–4x faster on repos up to ~7k files. For very large monorepos gitleaks leads. Full results (all 10 repos, dir + git history) in [Secret Scanning](docs/guide/scanning.md#performance).
 
 ### Feature comparison
 
@@ -484,7 +499,7 @@ Comprehensive test coverage across unit, parity, and integration tests:
 | Build parity | Output format matches JS Context Hub byte-for-byte |
 | Search parity | Multi-word, tags, descriptions match JS results |
 | Team features | Pins, profiles, snapshots, detect, freshness, org HTTP |
-| Secret scanning | 73+ rules, entropy, false positives, AI transcripts, git/dir/stdin, SARIF/CSV/JSON output, baseline filtering |
+| Secret scanning | 260+ rules, entropy, false positives, AI transcripts, git/dir/stdin, SARIF/CSV/JSON output, baseline filtering |
 
 ```sh
 cargo test --all                     # run all tests

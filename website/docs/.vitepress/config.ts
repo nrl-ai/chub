@@ -66,8 +66,13 @@ export default withMermaid(defineConfig({
           items: [
             { text: 'AI Usage Tracking', link: '/guide/tracking' },
             { text: 'Snapshots & Freshness', link: '/guide/snapshots' },
-            { text: 'Secret Scanning', link: '/guide/scanning' },
             { text: 'CI/CD Integration', link: '/guide/ci-cd' },
+          ]
+        },
+        {
+          text: 'Security',
+          items: [
+            { text: 'Secret Scanning', link: '/guide/scanning' },
           ]
         },
         {
